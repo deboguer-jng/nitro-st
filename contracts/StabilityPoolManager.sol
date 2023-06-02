@@ -3,9 +3,10 @@ pragma solidity ^0.8.10;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "./Dependencies/CheckContract.sol";
+import "./Dependencies/ArbitroveBase.sol";
 import "./Interfaces/IStabilityPoolManager.sol";
 
-contract StabilityPoolManager is OwnableUpgradeable, CheckContract, IStabilityPoolManager {
+contract StabilityPoolManager is OwnableUpgradeable, CheckContract, ArbitroveBase, IStabilityPoolManager {
 	mapping(address => address) stabilityPools;
 	mapping(address => bool) validStabilityPools;
 
@@ -64,6 +65,7 @@ contract StabilityPoolManager is OwnableUpgradeable, CheckContract, IStabilityPo
 		external
 		view
 		override
+		onlyWstETH(asset)
 		returns (IStabilityPool)
 	{
 		require(stabilityPools[asset] != address(0), "Invalid asset StabilityPool");
@@ -74,6 +76,7 @@ contract StabilityPoolManager is OwnableUpgradeable, CheckContract, IStabilityPo
 		external
 		view
 		override
+		onlyWstETH(_asset)
 		returns (address)
 	{
 		return stabilityPools[_asset];

@@ -8,6 +8,7 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import "./Interfaces/IDefaultPool.sol";
 import "./Dependencies/CheckContract.sol";
 import "./Dependencies/SafetyTransfer.sol";
+import "./Dependencies/ArbitroveBase.sol";
 
 /*
  * The Default Pool holds the ETH and VST debt (but not VST tokens) from liquidations that have been redistributed
@@ -16,7 +17,7 @@ import "./Dependencies/SafetyTransfer.sol";
  * When a trove makes an operation that applies its pending ETH and VST debt, its pending ETH and VST debt is moved
  * from the Default Pool to the Active Pool.
  */
-contract DefaultPool is OwnableUpgradeable, CheckContract, IDefaultPool {
+contract DefaultPool is OwnableUpgradeable, CheckContract, ArbitroveBase, IDefaultPool {
 	using SafeMathUpgradeable for uint256;
 	using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -61,11 +62,11 @@ contract DefaultPool is OwnableUpgradeable, CheckContract, IDefaultPool {
 	 *
 	 * Not necessarily equal to the the contract's raw ETH balance - ether can be forcibly sent to contracts.
 	 */
-	function getAssetBalance(address _asset) external view override returns (uint256) {
+	function getAssetBalance(address _asset) external view override onlyWstETH(_asset) returns (uint256) {
 		return assetsBalance[_asset];
 	}
 
-	function getVSTDebt(address _asset) external view override returns (uint256) {
+	function getVSTDebt(address _asset) external view override onlyWstETH(_asset) returns (uint256) {
 		return VSTDebts[_asset];
 	}
 
@@ -74,6 +75,7 @@ contract DefaultPool is OwnableUpgradeable, CheckContract, IDefaultPool {
 	function sendAssetToActivePool(address _asset, uint256 _amount)
 		external
 		override
+		onlyWstETH(_asset)
 		callerIsTroveManager
 	{
 		address activePool = activePoolAddress; // cache to save an SLOAD
@@ -98,6 +100,7 @@ contract DefaultPool is OwnableUpgradeable, CheckContract, IDefaultPool {
 	function increaseVSTDebt(address _asset, uint256 _amount)
 		external
 		override
+		onlyWstETH(_asset)
 		callerIsTroveManager
 	{
 		VSTDebts[_asset] = VSTDebts[_asset].add(_amount);
@@ -107,6 +110,7 @@ contract DefaultPool is OwnableUpgradeable, CheckContract, IDefaultPool {
 	function decreaseVSTDebt(address _asset, uint256 _amount)
 		external
 		override
+		onlyWstETH(_asset)
 		callerIsTroveManager
 	{
 		VSTDebts[_asset] = VSTDebts[_asset].sub(_amount);
@@ -128,6 +132,7 @@ contract DefaultPool is OwnableUpgradeable, CheckContract, IDefaultPool {
 	function receivedERC20(address _asset, uint256 _amount)
 		external
 		override
+		onlyWstETH(_asset)
 		callerIsActivePool
 	{
 		require(_asset != ETH_REF_ADDRESS, "ETH Cannot use this functions");

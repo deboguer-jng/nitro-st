@@ -13,6 +13,7 @@ import "./Interfaces/IStabilityPool.sol";
 import "./Interfaces/ICollSurplusPool.sol";
 import "./Interfaces/IDeposit.sol";
 import "./Dependencies/CheckContract.sol";
+import "./Dependencies/ArbitroveBase.sol";
 import "./Dependencies/SafetyTransfer.sol";
 
 /*
@@ -26,6 +27,7 @@ contract ActivePool is
 	OwnableUpgradeable,
 	ReentrancyGuardUpgradeable,
 	CheckContract,
+	ArbitroveBase,
 	IActivePool
 {
 	using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -87,11 +89,11 @@ contract ActivePool is
 	 *
 	 *Not necessarily equal to the the contract's raw ETH balance - ether can be forcibly sent to contracts.
 	 */
-	function getAssetBalance(address _asset) external view override returns (uint256) {
+	function getAssetBalance(address _asset) external view override onlyWstETH(_asset) returns (uint256) {
 		return assetsBalance[_asset];
 	}
 
-	function getVSTDebt(address _asset) external view override returns (uint256) {
+	function getVSTDebt(address _asset) external view override onlyWstETH(_asset) returns (uint256) {
 		return VSTDebts[_asset];
 	}
 
@@ -101,7 +103,7 @@ contract ActivePool is
 		address _asset,
 		address _account,
 		uint256 _amount
-	) external override nonReentrant callerIsBOorTroveMorSP {
+	) external override nonReentrant callerIsBOorTroveMorSP onlyWstETH(_asset) {
 		if (stabilityPoolManager.isStabilityPool(msg.sender)) {
 			assert(address(stabilityPoolManager.getAssetStabilityPool(_asset)) == msg.sender);
 		}
@@ -136,6 +138,7 @@ contract ActivePool is
 		external
 		override
 		callerIsBOorTroveM
+		onlyWstETH(_asset)
 	{
 		VSTDebts[_asset] = VSTDebts[_asset].add(_amount);
 		emit ActivePoolVSTDebtUpdated(_asset, VSTDebts[_asset]);
@@ -145,6 +148,7 @@ contract ActivePool is
 		external
 		override
 		callerIsBOorTroveMorSP
+		onlyWstETH(_asset)
 	{
 		VSTDebts[_asset] = VSTDebts[_asset].sub(_amount);
 		emit ActivePoolVSTDebtUpdated(_asset, VSTDebts[_asset]);
@@ -184,6 +188,7 @@ contract ActivePool is
 		external
 		override
 		callerIsBorrowerOperationOrDefaultPool
+		onlyWstETH(_asset)
 	{
 		assetsBalance[_asset] = assetsBalance[_asset].add(_amount);
 		emit ActivePoolAssetBalanceUpdated(_asset, assetsBalance[_asset]);

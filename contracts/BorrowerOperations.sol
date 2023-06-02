@@ -150,7 +150,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		uint256 _VSTAmount,
 		address _upperHint,
 		address _lowerHint
-	) external payable override {
+	) external payable override onlyWstETH(_asset) {
 		vestaParams.sanitizeParameters(_asset);
 
 		ContractsCache memory contractsCache = ContractsCache(
@@ -254,7 +254,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		uint256 _assetSent,
 		address _upperHint,
 		address _lowerHint
-	) external payable override {
+	) external payable override onlyWstETH(_asset) {
 		_adjustTrove(
 			_asset,
 			getMethodValue(_asset, _assetSent, false),
@@ -275,7 +275,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		address _borrower,
 		address _upperHint,
 		address _lowerHint
-	) external payable override {
+	) external payable override onlyWstETH(_asset) {
 		_requireCallerIsStabilityPool();
 		_adjustTrove(
 			_asset,
@@ -296,7 +296,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		uint256 _collWithdrawal,
 		address _upperHint,
 		address _lowerHint
-	) external override {
+	) external override onlyWstETH(_asset) {
 		_adjustTrove(_asset, 0, msg.sender, _collWithdrawal, 0, false, _upperHint, _lowerHint, 0);
 	}
 
@@ -307,7 +307,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		uint256 _VSTAmount,
 		address _upperHint,
 		address _lowerHint
-	) external override {
+	) external override onlyWstETH(_asset) {
 		_adjustTrove(
 			_asset,
 			0,
@@ -327,7 +327,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		uint256 _VSTAmount,
 		address _upperHint,
 		address _lowerHint
-	) external override {
+	) external override onlyWstETH(_asset) {
 		_adjustTrove(_asset, 0, msg.sender, 0, _VSTAmount, false, _upperHint, _lowerHint, 0);
 	}
 
@@ -340,7 +340,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		bool _isDebtIncrease,
 		address _upperHint,
 		address _lowerHint
-	) external payable override {
+	) external payable override onlyWstETH(_asset) {
 		_adjustTrove(
 			_asset,
 			getMethodValue(_asset, _assetSent, true),
@@ -505,27 +505,33 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		);
 	}
 
-	function closeTrove(address _asset) external override {
+	struct CloseTroveVars {
+		uint256 price;
+		uint256 coll;
+		uint256 debt;
+	}
+
+	function closeTrove(address _asset) external override onlyWstETH(_asset) {
+		CloseTroveVars memory vars;
 		ITroveManager troveManagerCached = troveManager;
 		IActivePool activePoolCached = vestaParams.activePool();
 		IVSTToken VSTTokenCached = VSTToken;
-
 		_requireTroveisActive(_asset, troveManagerCached, msg.sender);
-		uint256 price = vestaParams.priceFeed().fetchPrice(_asset);
-		_requireNotInRecoveryMode(_asset, price);
+		vars.price = vestaParams.priceFeed().fetchPrice(_asset);
+		_requireNotInRecoveryMode(_asset, vars.price);
 
 		troveManagerCached.applyPendingRewards(_asset, msg.sender);
 
-		uint256 coll = troveManagerCached.getTroveColl(_asset, msg.sender);
-		uint256 debt = troveManagerCached.getTroveDebt(_asset, msg.sender);
+		vars.coll = troveManagerCached.getTroveColl(_asset, msg.sender);
+		vars.debt = troveManagerCached.getTroveDebt(_asset, msg.sender);
 
 		_requireSufficientVSTBalance(
 			VSTTokenCached,
 			msg.sender,
-			debt.sub(vestaParams.VST_GAS_COMPENSATION(_asset))
+			vars.debt.sub(vestaParams.VST_GAS_COMPENSATION(_asset))
 		);
 
-		uint256 newTCR = _getNewTCRFromTroveChange(_asset, coll, false, debt, false, price);
+		uint256 newTCR = _getNewTCRFromTroveChange(_asset, vars.coll, false, vars.debt, false, vars.price);
 		_requireNewTCRisAboveCCR(_asset, newTCR);
 
 		troveManagerCached.removeStake(_asset, msg.sender);
@@ -539,7 +545,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 			activePoolCached,
 			VSTTokenCached,
 			msg.sender,
-			debt.sub(vestaParams.VST_GAS_COMPENSATION(_asset))
+			vars.debt.sub(vestaParams.VST_GAS_COMPENSATION(_asset))
 		);
 		_repayVST(
 			_asset,
@@ -550,13 +556,13 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		);
 
 		// Send the collateral back to the user
-		activePoolCached.sendAsset(_asset, msg.sender, coll);
+		activePoolCached.sendAsset(_asset, msg.sender, vars.coll);
 	}
 
 	/**
 	 * Claim remaining collateral from a redemption or from a liquidation with ICR > MCR in Recovery Mode
 	 */
-	function claimCollateral(address _asset) external override {
+	function claimCollateral(address _asset) external override onlyWstETH(_asset) {
 		// send ETH from CollSurplus Pool to owner
 		collSurplusPool.claimColl(_asset, msg.sender);
 	}
@@ -966,6 +972,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		external
 		view
 		override
+		onlyWstETH(_asset)
 		returns (uint256)
 	{
 		return _getCompositeDebt(_asset, _debt);
@@ -975,7 +982,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		address _asset,
 		uint256 _amount,
 		bool canBeZero
-	) private view returns (uint256) {
+	) private view onlyWstETH(_asset) returns (uint256) {
 		bool isEth = _asset == address(0);
 
 		require(

@@ -5,9 +5,10 @@ pragma experimental ABIEncoderV2;
 
 import "./TroveManager.sol";
 import "./SortedTroves.sol";
+import "./Dependencies/ArbitroveBase.sol";
 
 /*  Helper contract for grabbing Trove data for the front end. Not part of the core Vesta system. */
-contract MultiTroveGetter {
+contract MultiTroveGetter is ArbitroveBase {
 	struct CombinedTroveData {
 		address owner;
 		address asset;
@@ -30,7 +31,7 @@ contract MultiTroveGetter {
 		address _asset,
 		int256 _startIdx,
 		uint256 _count
-	) external view returns (CombinedTroveData[] memory _troves) {
+	) external view onlyWstETH(_asset) returns (CombinedTroveData[] memory _troves) {
 		uint256 startIdx;
 		bool descend;
 

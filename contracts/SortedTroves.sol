@@ -7,6 +7,7 @@ import "./Interfaces/IBorrowerOperations.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./Dependencies/CheckContract.sol";
+import "./Dependencies/ArbitroveBase.sol";
 
 /*
  * A sorted doubly linked list with nodes sorted in descending order.
@@ -41,7 +42,7 @@ import "./Dependencies/CheckContract.sol";
  *
  * - Public functions with parameters have been made internal to save gas, and given an external wrapper function for external access
  */
-contract SortedTroves is OwnableUpgradeable, CheckContract, ISortedTroves {
+contract SortedTroves is OwnableUpgradeable, CheckContract, ArbitroveBase, ISortedTroves {
 	using SafeMathUpgradeable for uint256;
 
 	bool public isInitialized;
@@ -113,7 +114,7 @@ contract SortedTroves is OwnableUpgradeable, CheckContract, ISortedTroves {
 		uint256 _NICR,
 		address _prevId,
 		address _nextId
-	) external override {
+	) external override onlyWstETH(_asset) {
 		ITroveManager troveManagerCached = troveManager;
 		_requireCallerIsBOorTroveM(troveManagerCached);
 		_insert(_asset, troveManagerCached, _id, _NICR, _prevId, _nextId);
@@ -177,7 +178,7 @@ contract SortedTroves is OwnableUpgradeable, CheckContract, ISortedTroves {
 		emit NodeAdded(_asset, _id, _NICR);
 	}
 
-	function remove(address _asset, address _id) external override {
+	function remove(address _asset, address _id) external override onlyWstETH(_asset) {
 		_requireCallerIsTroveManager();
 		_remove(_asset, _id);
 	}
@@ -240,7 +241,7 @@ contract SortedTroves is OwnableUpgradeable, CheckContract, ISortedTroves {
 		uint256 _newNICR,
 		address _prevId,
 		address _nextId
-	) external override {
+	) external override onlyWstETH(_asset) {
 		ITroveManager troveManagerCached = troveManager;
 
 		_requireCallerIsBOorTroveM(troveManagerCached);
@@ -258,49 +259,49 @@ contract SortedTroves is OwnableUpgradeable, CheckContract, ISortedTroves {
 	/*
 	 * @dev Checks if the list contains a node
 	 */
-	function contains(address _asset, address _id) public view override returns (bool) {
+	function contains(address _asset, address _id) public view override onlyWstETH(_asset) returns (bool) {
 		return data[_asset].nodes[_id].exists;
 	}
 
 	/*
 	 * @dev Checks if the list is full
 	 */
-	function isFull(address _asset) public view override returns (bool) {
+	function isFull(address _asset) public view override onlyWstETH(_asset) returns (bool) {
 		return data[_asset].size == data[_asset].maxSize;
 	}
 
 	/*
 	 * @dev Checks if the list is empty
 	 */
-	function isEmpty(address _asset) public view override returns (bool) {
+	function isEmpty(address _asset) public view override onlyWstETH(_asset) returns (bool) {
 		return data[_asset].size == 0;
 	}
 
 	/*
 	 * @dev Returns the current size of the list
 	 */
-	function getSize(address _asset) external view override returns (uint256) {
+	function getSize(address _asset) external view override onlyWstETH(_asset) returns (uint256) {
 		return data[_asset].size;
 	}
 
 	/*
 	 * @dev Returns the maximum size of the list
 	 */
-	function getMaxSize(address _asset) external view override returns (uint256) {
+	function getMaxSize(address _asset) external view override onlyWstETH(_asset) returns (uint256) {
 		return data[_asset].maxSize;
 	}
 
 	/*
 	 * @dev Returns the first node in the list (node with the largest NICR)
 	 */
-	function getFirst(address _asset) external view override returns (address) {
+	function getFirst(address _asset) external view override onlyWstETH(_asset) returns (address) {
 		return data[_asset].head;
 	}
 
 	/*
 	 * @dev Returns the last node in the list (node with the smallest NICR)
 	 */
-	function getLast(address _asset) external view override returns (address) {
+	function getLast(address _asset) external view override onlyWstETH(_asset) returns (address) {
 		return data[_asset].tail;
 	}
 
@@ -308,7 +309,7 @@ contract SortedTroves is OwnableUpgradeable, CheckContract, ISortedTroves {
 	 * @dev Returns the next node (with a smaller NICR) in the list for a given node
 	 * @param _id Node's id
 	 */
-	function getNext(address _asset, address _id) external view override returns (address) {
+	function getNext(address _asset, address _id) external view override onlyWstETH(_asset) returns (address) {
 		return data[_asset].nodes[_id].nextId;
 	}
 
@@ -316,7 +317,7 @@ contract SortedTroves is OwnableUpgradeable, CheckContract, ISortedTroves {
 	 * @dev Returns the previous node (with a larger NICR) in the list for a given node
 	 * @param _id Node's id
 	 */
-	function getPrev(address _asset, address _id) external view override returns (address) {
+	function getPrev(address _asset, address _id) external view override onlyWstETH(_asset) returns (address) {
 		return data[_asset].nodes[_id].prevId;
 	}
 
@@ -331,7 +332,7 @@ contract SortedTroves is OwnableUpgradeable, CheckContract, ISortedTroves {
 		uint256 _NICR,
 		address _prevId,
 		address _nextId
-	) external view override returns (bool) {
+	) external view override onlyWstETH(_asset) returns (bool) {
 		return _validInsertPosition(_asset, troveManager, _NICR, _prevId, _nextId);
 	}
 
@@ -441,7 +442,7 @@ contract SortedTroves is OwnableUpgradeable, CheckContract, ISortedTroves {
 		uint256 _NICR,
 		address _prevId,
 		address _nextId
-	) external view override returns (address, address) {
+	) external view override onlyWstETH(_asset) returns (address, address) {
 		return _findInsertPosition(_asset, troveManager, _NICR, _prevId, _nextId);
 	}
 

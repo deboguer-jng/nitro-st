@@ -9,8 +9,9 @@ import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./Dependencies/CheckContract.sol";
 import "./Dependencies/SafetyTransfer.sol";
+import "./Dependencies/ArbitroveBase.sol";
 
-contract CollSurplusPool is OwnableUpgradeable, CheckContract, ICollSurplusPool {
+contract CollSurplusPool is OwnableUpgradeable, CheckContract, ArbitroveBase, ICollSurplusPool {
 	using SafeMathUpgradeable for uint256;
 	using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -56,7 +57,7 @@ contract CollSurplusPool is OwnableUpgradeable, CheckContract, ICollSurplusPool 
 
 	/* Returns the Asset state variable at ActivePool address.
        Not necessarily equal to the raw ether balance - ether can be forcibly sent to contracts. */
-	function getAssetBalance(address _asset) external view override returns (uint256) {
+	function getAssetBalance(address _asset) external view override onlyWstETH(_asset) returns (uint256) {
 		return balances[_asset];
 	}
 
@@ -64,6 +65,7 @@ contract CollSurplusPool is OwnableUpgradeable, CheckContract, ICollSurplusPool 
 		external
 		view
 		override
+		onlyWstETH(_asset)
 		returns (uint256)
 	{
 		return userBalances[_account][_asset];
@@ -75,7 +77,7 @@ contract CollSurplusPool is OwnableUpgradeable, CheckContract, ICollSurplusPool 
 		address _asset,
 		address _account,
 		uint256 _amount
-	) external override {
+	) external override onlyWstETH(_asset) {
 		_requireCallerIsTroveManager();
 
 		uint256 newAmount = userBalances[_account][_asset].add(_amount);
@@ -84,7 +86,7 @@ contract CollSurplusPool is OwnableUpgradeable, CheckContract, ICollSurplusPool 
 		emit CollBalanceUpdated(_account, newAmount);
 	}
 
-	function claimColl(address _asset, address _account) external override {
+	function claimColl(address _asset, address _account) external override onlyWstETH(_asset) {
 		_requireCallerIsBorrowerOperations();
 		uint256 claimableCollEther = userBalances[_account][_asset];
 
@@ -112,7 +114,7 @@ contract CollSurplusPool is OwnableUpgradeable, CheckContract, ICollSurplusPool 
 		}
 	}
 
-	function receivedERC20(address _asset, uint256 _amount) external override {
+	function receivedERC20(address _asset, uint256 _amount) external override onlyWstETH(_asset) {
 		_requireCallerIsActivePool();
 		balances[_asset] = balances[_asset].add(_amount);
 	}

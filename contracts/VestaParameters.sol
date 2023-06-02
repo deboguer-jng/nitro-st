@@ -3,9 +3,10 @@ pragma solidity ^0.8.10;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "./Dependencies/CheckContract.sol";
+import "./Dependencies/ArbitroveBase.sol";
 import "./Interfaces/IVestaParameters.sol";
 
-contract VestaParameters is IVestaParameters, OwnableUpgradeable, CheckContract {
+contract VestaParameters is IVestaParameters, OwnableUpgradeable, CheckContract, ArbitroveBase {
 	string public constant NAME = "VestaParameters";
 
 	uint256 public constant override DECIMAL_PRECISION = 1 ether;
@@ -84,18 +85,19 @@ contract VestaParameters is IVestaParameters, OwnableUpgradeable, CheckContract 
 		emit PriceFeedChanged(_priceFeed);
 	}
 
-	function sanitizeParameters(address _asset) external {
+	function sanitizeParameters(address _asset) external onlyWstETH(_asset) {
 		if (!hasCollateralConfigured[_asset]) {
 			_setAsDefault(_asset);
 		}
 	}
 
-	function setAsDefault(address _asset) external onlyOwner {
+	function setAsDefault(address _asset) external onlyOwner onlyWstETH(_asset) {
 		_setAsDefault(_asset);
 	}
 
 	function setAsDefaultWithRemptionBlock(address _asset, uint256 blockInDays)
 		external
+		onlyWstETH(_asset)
 		isController
 	{
 		if (blockInDays > 14) {
@@ -132,7 +134,7 @@ contract VestaParameters is IVestaParameters, OwnableUpgradeable, CheckContract 
 		uint256 borrowingFeeFloor,
 		uint256 maxBorrowingFee,
 		uint256 redemptionFeeFloor
-	) public onlyOwner {
+	) public onlyOwner onlyWstETH(_asset) {
 		hasCollateralConfigured[_asset] = true;
 
 		setMCR(_asset, newMCR);
@@ -149,6 +151,7 @@ contract VestaParameters is IVestaParameters, OwnableUpgradeable, CheckContract 
 		public
 		override
 		onlyOwner
+		onlyWstETH(_asset)
 		safeCheck("MCR", _asset, newMCR, 1010000000000000000, 10000000000000000000) /// 101% - 1000%
 	{
 		uint256 oldMCR = MCR[_asset];
@@ -160,6 +163,7 @@ contract VestaParameters is IVestaParameters, OwnableUpgradeable, CheckContract 
 	function setCCR(address _asset, uint256 newCCR)
 		public
 		override
+		onlyWstETH(_asset)
 		onlyOwner
 		safeCheck("CCR", _asset, newCCR, 1010000000000000000, 10000000000000000000) /// 101% - 1000%
 	{
@@ -172,6 +176,7 @@ contract VestaParameters is IVestaParameters, OwnableUpgradeable, CheckContract 
 	function setPercentDivisor(address _asset, uint256 precentDivisor)
 		public
 		override
+		onlyWstETH(_asset)
 		onlyOwner
 		safeCheck("Percent Divisor", _asset, precentDivisor, 2, 200)
 	{
@@ -184,6 +189,7 @@ contract VestaParameters is IVestaParameters, OwnableUpgradeable, CheckContract 
 	function setBorrowingFeeFloor(address _asset, uint256 borrowingFeeFloor)
 		public
 		override
+		onlyWstETH(_asset)
 		onlyOwner
 		safeCheck("Borrowing Fee Floor", _asset, borrowingFeeFloor, 0, 1000) /// 0% - 10%
 	{
@@ -198,6 +204,7 @@ contract VestaParameters is IVestaParameters, OwnableUpgradeable, CheckContract 
 	function setMaxBorrowingFee(address _asset, uint256 maxBorrowingFee)
 		public
 		override
+		onlyWstETH(_asset)
 		onlyOwner
 		safeCheck("Max Borrowing Fee", _asset, maxBorrowingFee, 0, 1000) /// 0% - 10%
 	{
@@ -211,6 +218,7 @@ contract VestaParameters is IVestaParameters, OwnableUpgradeable, CheckContract 
 	function setVSTGasCompensation(address _asset, uint256 gasCompensation)
 		public
 		override
+		onlyWstETH(_asset)
 		onlyOwner
 		safeCheck("Gas Compensation", _asset, gasCompensation, 1 ether, 400 ether)
 	{
@@ -223,6 +231,7 @@ contract VestaParameters is IVestaParameters, OwnableUpgradeable, CheckContract 
 	function setMinNetDebt(address _asset, uint256 minNetDebt)
 		public
 		override
+		onlyWstETH(_asset)
 		onlyOwner
 		safeCheck("Min Net Debt", _asset, minNetDebt, 0, 1800 ether)
 	{
@@ -235,6 +244,7 @@ contract VestaParameters is IVestaParameters, OwnableUpgradeable, CheckContract 
 	function setRedemptionFeeFloor(address _asset, uint256 redemptionFeeFloor)
 		public
 		override
+		onlyWstETH(_asset)
 		onlyOwner
 		safeCheck("Redemption Fee Floor", _asset, redemptionFeeFloor, 10, 1000) /// 0.10% - 10%
 	{
@@ -245,7 +255,7 @@ contract VestaParameters is IVestaParameters, OwnableUpgradeable, CheckContract 
 		emit RedemptionFeeFloorChanged(oldRedemptionFeeFloor, newRedemptionFeeFloor);
 	}
 
-	function removeRedemptionBlock(address _asset) external override onlyOwner {
+	function removeRedemptionBlock(address _asset) external override onlyWstETH(_asset) onlyOwner {
 		redemptionBlock[_asset] = block.timestamp;
 
 		emit RedemptionBlockRemoved(_asset);

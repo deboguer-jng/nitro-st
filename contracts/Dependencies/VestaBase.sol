@@ -5,6 +5,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "./BaseMath.sol";
 import "./VestaMath.sol";
+import "./ArbitroveBase.sol";
 import "../Interfaces/IActivePool.sol";
 import "../Interfaces/IDefaultPool.sol";
 import "../Interfaces/IPriceFeed.sol";
@@ -14,7 +15,7 @@ import "../Interfaces/IVestaBase.sol";
  * Base contract for TroveManager, BorrowerOperations and StabilityPool. Contains global system constants and
  * common functions.
  */
-contract VestaBase is BaseMath, IVestaBase, OwnableUpgradeable {
+contract VestaBase is ArbitroveBase, BaseMath, IVestaBase, OwnableUpgradeable {
 	using SafeMathUpgradeable for uint256;
 	address public constant ETH_REF_ADDRESS = address(0);
 

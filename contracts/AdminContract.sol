@@ -5,13 +5,14 @@ import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.so
 import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
 
 import "./Dependencies/CheckContract.sol";
+import "./Dependencies/ArbitroveBase.sol";
 
 import "./Interfaces/IStabilityPoolManager.sol";
 import "./Interfaces/IVestaParameters.sol";
 import "./Interfaces/IStabilityPool.sol";
 import "./Interfaces/ICommunityIssuance.sol";
 
-contract AdminContract is ProxyAdmin {
+contract AdminContract is ProxyAdmin, ArbitroveBase {
 	string public constant NAME = "AdminContract";
 
 	bytes32 public constant STABILITY_POOL_NAME_BYTES =
@@ -65,7 +66,7 @@ contract AdminContract is ProxyAdmin {
 		uint256 assignedToken,
 		uint256 _tokenPerWeekDistributed,
 		uint256 redemptionLockInDay
-	) external onlyOwner {
+	) external onlyOwner onlyWstETH(_asset) {
 		require(
 			stabilityPoolManager.unsafeGetAssetStabilityPool(_asset) == address(0),
 			"This collateral already exists"

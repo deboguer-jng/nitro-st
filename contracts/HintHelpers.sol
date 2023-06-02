@@ -78,6 +78,7 @@ contract HintHelpers is VestaBase, CheckContract {
 	)
 		external
 		view
+		onlyWstETH(_asset)
 		returns (
 			address firstRedemptionHint,
 			uint256 partialRedemptionHintNICR,
@@ -163,6 +164,7 @@ contract HintHelpers is VestaBase, CheckContract {
 	)
 		external
 		view
+		onlyWstETH(_asset)
 		returns (
 			address hintAddress,
 			uint256 diff,
