@@ -6,6 +6,8 @@ import "./Interfaces/ITroveManager.sol";
 import "./Dependencies/VestaBase.sol";
 import "./Dependencies/CheckContract.sol";
 
+error NoBorrowerOperations();
+
 contract TroveManager is VestaBase, CheckContract, ITroveManager {
 	using SafeMathUpgradeable for uint256;
 	string public constant NAME = "TroveManager";
@@ -89,19 +91,14 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 	mapping(address => bool) public redemptionWhitelist;
 	bool public isRedemptionWhitelisted;
 
-	modifier onlyBorrowerOperations() {
-		require(
-			msg.sender == borrowerOperationsAddress,
-			"TroveManager: Caller is not the BorrowerOperations contract"
-		);
-		_;
+	function onlyBorrowerOperations() private {
+		if (msg.sender != borrowerOperationsAddress) {
+			revert NoBorrowerOperations();
+		}
 	}
 
 	modifier troveIsActive(address _asset, address _borrower) {
-		require(
-			isTroveActive(_asset, _borrower),
-			"TroveManager: Trove does not exist or is closed"
-		);
+		require(isTroveActive(_asset, _borrower), "TroveManager: Trove is not active");
 		_;
 	}
 
@@ -117,7 +114,8 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		address _vstaStakingAddress,
 		address _vestaParamsAddress
 	) external override initializer {
-		require(!isInitialized, "Already initialized");
+		require(!isInitialized, "!initialized");
+
 		checkContract(_borrowerOperationsAddress);
 		checkContract(_stabilityPoolManagerAddress);
 		checkContract(_gasPoolAddress);
@@ -151,29 +149,27 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 
 	// --- Getters ---
 
-	function getTroveOwnersCount(address _asset) external view override onlyWstETH(_asset) returns (uint256) {
+	function getTroveOwnersCount(address _asset) external view override returns (uint256) {
+		_isWstETH(_asset);
 		return TroveOwners[_asset].length;
 	}
 
-	function getTroveFromTroveOwnersArray(address _asset, uint256 _index)
-		external
-		view
-		override
-		onlyWstETH(_asset)
-		returns (address)
-	{
+	function getTroveFromTroveOwnersArray(
+		address _asset,
+		uint256 _index
+	) external view override returns (address) {
+		_isWstETH(_asset);
 		return TroveOwners[_asset][_index];
 	}
 
 	// --- Trove Liquidation functions ---
 
 	// Single liquidation function. Closes the trove if its ICR is lower than the minimum collateral ratio.
-	function liquidate(address _asset, address _borrower)
-		external
-		override
-		onlyWstETH(_asset)
-		troveIsActive(_asset, _borrower)
-	{
+	function liquidate(
+		address _asset,
+		address _borrower
+	) external override troveIsActive(_asset, _borrower) {
+		_isWstETH(_asset);
 		address[] memory borrowers = new address[](1);
 		borrowers[0] = _borrower;
 		batchLiquidateTroves(_asset, borrowers);
@@ -467,7 +463,8 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 	 * Liquidate a sequence of troves. Closes a maximum number of n under-collateralized Troves,
 	 * starting from the one with the lowest collateral ratio in the system, and moving upwards
 	 */
-	function liquidateTroves(address _asset, uint256 _n) external override onlyWstETH(_asset) {
+	function liquidateTroves(address _asset, uint256 _n) external override {
+		_isWstETH(_asset);
 		ContractsCache memory contractsCache = ContractsCache(
 			vestaParams.activePool(),
 			vestaParams.defaultPool(),
@@ -693,8 +690,9 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 	/*
 	 * Attempt to liquidate a custom list of troves provided by the caller.
 	 */
-	function batchLiquidateTroves(address _asset, address[] memory _troveArray) public override onlyWstETH(_asset) {
-		require(_troveArray.length != 0, "TroveManager: Calldata address array must not be empty");
+	function batchLiquidateTroves(address _asset, address[] memory _troveArray) public override {
+		require(_troveArray.length != 0, "TroveManager: address array is empty");
+		_isWstETH(_asset);
 
 		IActivePool activePoolCached = vestaParams.activePool();
 		IDefaultPool defaultPoolCached = vestaParams.defaultPool();
@@ -1119,7 +1117,6 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 	struct RedeemCollateralVars {
 		address currentBorrower;
 		address nextUserToCheck;
-
 	}
 
 	/* Send _VSTamount VST to the system and redeem the corresponding amount of collateral from as many Troves as are needed to fill the redemption
@@ -1152,9 +1149,10 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		uint256 _partialRedemptionHintNICR,
 		uint256 _maxIterations,
 		uint256 _maxFeePercentage
-	) external override onlyWstETH(_asset) {
+	) external override {
+		_isWstETH(_asset);
 		if (isRedemptionWhitelisted) {
-			require(redemptionWhitelist[msg.sender], "You are not allowed to use Redemption");
+			require(redemptionWhitelist[msg.sender], "Not whitelisted for Redemption");
 		}
 
 		require(
@@ -1200,7 +1198,10 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 				vars.currentBorrower != address(0) &&
 				getCurrentICR(_asset, vars.currentBorrower, totals.price) < vestaParams.MCR(_asset)
 			) {
-				vars.currentBorrower = contractsCache.sortedTroves.getPrev(_asset, vars.currentBorrower);
+				vars.currentBorrower = contractsCache.sortedTroves.getPrev(
+					_asset,
+					vars.currentBorrower
+				);
 			}
 		}
 
@@ -1208,7 +1209,9 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		if (_maxIterations == 0) {
 			_maxIterations = type(uint256).max;
 		}
-		while (vars.currentBorrower != address(0) && totals.remainingVST > 0 && _maxIterations > 0) {
+		while (
+			vars.currentBorrower != address(0) && totals.remainingVST > 0 && _maxIterations > 0
+		) {
 			_maxIterations--;
 			// Save the address of the Trove preceding the current one, before potentially modifying the list
 			vars.nextUserToCheck = contractsCache.sortedTroves.getPrev(_asset, vars.currentBorrower);
@@ -1239,7 +1242,7 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 			totals.remainingVST = totals.remainingVST.sub(singleRedemption.VSTLot);
 			vars.currentBorrower = vars.nextUserToCheck;
 		}
-		require(totals.totalAssetDrawn > 0, "TroveManager: Unable to redeem any amount");
+		require(totals.totalAssetDrawn > 0, "TroveManager: Unable to redeem");
 
 		// Decay the baseRate due to time passed, and then increase it according to the size of this redemption.
 		// Use the saved total VST supply value, from before it was reduced by the redemption.
@@ -1283,13 +1286,11 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 	// --- Helper functions ---
 
 	// Return the nominal collateral ratio (ICR) of a given Trove, without the price. Takes a trove's pending coll and debt rewards from redistributions into account.
-	function getNominalICR(address _asset, address _borrower)
-		public
-		view
-		override
-		onlyWstETH(_asset)
-		returns (uint256)
-	{
+	function getNominalICR(
+		address _asset,
+		address _borrower
+	) public view override returns (uint256) {
+		_isWstETH(_asset);
 		(uint256 currentAsset, uint256 currentVSTDebt) = _getCurrentTroveAmounts(
 			_asset,
 			_borrower
@@ -1304,7 +1305,8 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		address _asset,
 		address _borrower,
 		uint256 _price
-	) public view override onlyWstETH(_asset) returns (uint256) {
+	) public view override returns (uint256) {
+		_isWstETH(_asset);
 		(uint256 currentAsset, uint256 currentVSTDebt) = _getCurrentTroveAmounts(
 			_asset,
 			_borrower
@@ -1314,11 +1316,10 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		return ICR;
 	}
 
-	function _getCurrentTroveAmounts(address _asset, address _borrower)
-		internal
-		view
-		returns (uint256, uint256)
-	{
+	function _getCurrentTroveAmounts(
+		address _asset,
+		address _borrower
+	) internal view returns (uint256, uint256) {
 		uint256 pendingAssetReward = getPendingAssetReward(_asset, _borrower);
 		uint256 pendingVSTDebtReward = getPendingVSTDebtReward(_asset, _borrower);
 
@@ -1328,12 +1329,9 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		return (currentAsset, currentVSTDebt);
 	}
 
-	function applyPendingRewards(address _asset, address _borrower)
-		external
-		override
-		onlyWstETH(_asset)
-		onlyBorrowerOperations
-	{
+	function applyPendingRewards(address _asset, address _borrower) external override {
+		_isWstETH(_asset);
+		onlyBorrowerOperations();
 		return
 			_applyPendingRewards(
 				_asset,
@@ -1386,12 +1384,9 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 	}
 
 	// Update borrower's snapshots of L_ETH and L_VSTDebt to reflect the current values
-	function updateTroveRewardSnapshots(address _asset, address _borrower)
-		external
-		override
-		onlyWstETH(_asset)
-		onlyBorrowerOperations
-	{
+	function updateTroveRewardSnapshots(address _asset, address _borrower) external override {
+		_isWstETH(_asset);
+		onlyBorrowerOperations();
 		return _updateTroveRewardSnapshots(_asset, _borrower);
 	}
 
@@ -1402,13 +1397,11 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 	}
 
 	// Get the borrower's pending accumulated ETH reward, earned by their stake
-	function getPendingAssetReward(address _asset, address _borrower)
-		public
-		view
-		override
-		onlyWstETH(_asset)
-		returns (uint256)
-	{
+	function getPendingAssetReward(
+		address _asset,
+		address _borrower
+	) public view override returns (uint256) {
+		_isWstETH(_asset);
 		uint256 snapshotAsset = rewardSnapshots[_borrower][_asset].asset;
 		uint256 rewardPerUnitStaked = L_ASSETS[_asset].sub(snapshotAsset);
 
@@ -1424,13 +1417,11 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 	}
 
 	// Get the borrower's pending accumulated VST reward, earned by their stake
-	function getPendingVSTDebtReward(address _asset, address _borrower)
-		public
-		view
-		override
-		onlyWstETH(_asset)
-		returns (uint256)
-	{
+	function getPendingVSTDebtReward(
+		address _asset,
+		address _borrower
+	) public view override returns (uint256) {
+		_isWstETH(_asset);
 		uint256 snapshotVSTDebt = rewardSnapshots[_borrower][_asset].VSTDebt;
 		uint256 rewardPerUnitStaked = L_VSTDebts[_asset].sub(snapshotVSTDebt);
 
@@ -1445,13 +1436,11 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		return pendingVSTDebtReward;
 	}
 
-	function hasPendingRewards(address _asset, address _borrower)
-		public
-		view
-		override
-		onlyWstETH(_asset)
-		returns (bool)
-	{
+	function hasPendingRewards(
+		address _asset,
+		address _borrower
+	) public view override returns (bool) {
+		_isWstETH(_asset);
 		if (!isTroveActive(_asset, _borrower)) {
 			return false;
 		}
@@ -1459,11 +1448,13 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		return (rewardSnapshots[_borrower][_asset].asset < L_ASSETS[_asset]);
 	}
 
-	function getEntireDebtAndColl(address _asset, address _borrower)
+	function getEntireDebtAndColl(
+		address _asset,
+		address _borrower
+	)
 		public
 		view
 		override
-		onlyWstETH(_asset)
 		returns (
 			uint256 debt,
 			uint256 coll,
@@ -1471,6 +1462,7 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 			uint256 pendingAssetReward
 		)
 	{
+		_isWstETH(_asset);
 		debt = Troves[_borrower][_asset].debt;
 		coll = Troves[_borrower][_asset].coll;
 
@@ -1481,12 +1473,9 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		coll = coll.add(pendingAssetReward);
 	}
 
-	function removeStake(address _asset, address _borrower)
-		external
-		override
-		onlyWstETH(_asset)
-		onlyBorrowerOperations
-	{
+	function removeStake(address _asset, address _borrower) external override {
+		_isWstETH(_asset);
+		onlyBorrowerOperations();
 		return _removeStake(_asset, _borrower);
 	}
 
@@ -1496,21 +1485,20 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		Troves[_borrower][_asset].stake = 0;
 	}
 
-	function updateStakeAndTotalStakes(address _asset, address _borrower)
-		external
-		override
-		onlyWstETH(_asset)
-		onlyBorrowerOperations
-		returns (uint256)
-	{
+	function updateStakeAndTotalStakes(
+		address _asset,
+		address _borrower
+	) external override returns (uint256) {
+		_isWstETH(_asset);
+		onlyBorrowerOperations();
 		return _updateStakeAndTotalStakes(_asset, _borrower);
 	}
 
 	// Update borrower's stake based on their latest collateral value
-	function _updateStakeAndTotalStakes(address _asset, address _borrower)
-		internal
-		returns (uint256)
-	{
+	function _updateStakeAndTotalStakes(
+		address _asset,
+		address _borrower
+	) internal returns (uint256) {
 		uint256 newStake = _computeNewStake(_asset, Troves[_borrower][_asset].coll);
 		uint256 oldStake = Troves[_borrower][_asset].stake;
 		Troves[_borrower][_asset].stake = newStake;
@@ -1590,20 +1578,13 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		_activePool.sendAsset(_asset, address(_defaultPool), _coll);
 	}
 
-	function closeTrove(address _asset, address _borrower)
-		external
-		override
-		onlyWstETH(_asset)
-		onlyBorrowerOperations
-	{
+	function closeTrove(address _asset, address _borrower) external override {
+		_isWstETH(_asset);
+		onlyBorrowerOperations();
 		return _closeTrove(_asset, _borrower, Status.closedByOwner);
 	}
 
-	function _closeTrove(
-		address _asset,
-		address _borrower,
-		Status closedStatus
-	) internal {
+	function _closeTrove(address _asset, address _borrower, Status closedStatus) internal {
 		assert(closedStatus != Status.nonExistent && closedStatus != Status.active);
 
 		uint256 TroveOwnersArrayLength = TroveOwners[_asset].length;
@@ -1638,20 +1619,19 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		);
 	}
 
-	function addTroveOwnerToArray(address _asset, address _borrower)
-		external
-		override
-		onlyWstETH(_asset)
-		onlyBorrowerOperations
-		returns (uint256 index)
-	{
+	function addTroveOwnerToArray(
+		address _asset,
+		address _borrower
+	) external override returns (uint256 index) {
+		_isWstETH(_asset);
+		onlyBorrowerOperations();
 		return _addTroveOwnerToArray(_asset, _borrower);
 	}
 
-	function _addTroveOwnerToArray(address _asset, address _borrower)
-		internal
-		returns (uint128 index)
-	{
+	function _addTroveOwnerToArray(
+		address _asset,
+		address _borrower
+	) internal returns (uint128 index) {
 		TroveOwners[_asset].push(_borrower);
 
 		index = uint128(TroveOwners[_asset].length.sub(1));
@@ -1683,17 +1663,16 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		TroveOwners[_asset].pop();
 	}
 
-	function getTCR(address _asset, uint256 _price) external view override onlyWstETH(_asset) returns (uint256) {
+	function getTCR(address _asset, uint256 _price) external view override returns (uint256) {
+		_isWstETH(_asset);
 		return _getTCR(_asset, _price);
 	}
 
-	function checkRecoveryMode(address _asset, uint256 _price)
-		external
-		view
-		override
-		onlyWstETH(_asset)
-		returns (bool)
-	{
+	function checkRecoveryMode(
+		address _asset,
+		uint256 _price
+	) external view override returns (bool) {
+		_isWstETH(_asset);
 		return _checkRecoveryMode(_asset, _price);
 	}
 
@@ -1730,19 +1709,20 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		return newBaseRate;
 	}
 
-	function getRedemptionRate(address _asset) public view override onlyWstETH(_asset) returns (uint256) {
+	function getRedemptionRate(address _asset) public view override returns (uint256) {
+		_isWstETH(_asset);
 		return _calcRedemptionRate(_asset, baseRate[_asset]);
 	}
 
-	function getRedemptionRateWithDecay(address _asset) public view override onlyWstETH(_asset) returns (uint256) {
+	function getRedemptionRateWithDecay(address _asset) public view override returns (uint256) {
+		_isWstETH(_asset);
 		return _calcRedemptionRate(_asset, _calcDecayedBaseRate(_asset));
 	}
 
-	function _calcRedemptionRate(address _asset, uint256 _baseRate)
-		internal
-		view
-		returns (uint256)
-	{
+	function _calcRedemptionRate(
+		address _asset,
+		uint256 _baseRate
+	) internal view returns (uint256) {
 		return
 			VestaMath._min(
 				vestaParams.REDEMPTION_FEE_FLOOR(_asset).add(_baseRate),
@@ -1750,50 +1730,44 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 			);
 	}
 
-	function _getRedemptionFee(address _asset, uint256 _assetDraw)
-		internal
-		view
-		returns (uint256)
-	{
+	function _getRedemptionFee(
+		address _asset,
+		uint256 _assetDraw
+	) internal view returns (uint256) {
 		return _calcRedemptionFee(getRedemptionRate(_asset), _assetDraw);
 	}
 
-	function getRedemptionFeeWithDecay(address _asset, uint256 _assetDraw)
-		external
-		view
-		override
-		onlyWstETH(_asset)
-		returns (uint256)
-	{
+	function getRedemptionFeeWithDecay(
+		address _asset,
+		uint256 _assetDraw
+	) external view override returns (uint256) {
+		_isWstETH(_asset);
 		return _calcRedemptionFee(getRedemptionRateWithDecay(_asset), _assetDraw);
 	}
 
-	function _calcRedemptionFee(uint256 _redemptionRate, uint256 _assetDraw)
-		internal
-		pure
-		returns (uint256)
-	{
+	function _calcRedemptionFee(
+		uint256 _redemptionRate,
+		uint256 _assetDraw
+	) internal pure returns (uint256) {
 		uint256 redemptionFee = _redemptionRate.mul(_assetDraw).div(DECIMAL_PRECISION);
-		require(
-			redemptionFee < _assetDraw,
-			"TroveManager: Fee would eat up all returned collateral"
-		);
+		require(redemptionFee < _assetDraw, "TroveManager: Too much fee");
 		return redemptionFee;
 	}
 
-	function getBorrowingRate(address _asset) public view override onlyWstETH(_asset) returns (uint256) {
+	function getBorrowingRate(address _asset) public view override returns (uint256) {
+		_isWstETH(_asset);
 		return _calcBorrowingRate(_asset, baseRate[_asset]);
 	}
 
-	function getBorrowingRateWithDecay(address _asset) public view override onlyWstETH(_asset) returns (uint256) {
+	function getBorrowingRateWithDecay(address _asset) public view override returns (uint256) {
+		_isWstETH(_asset);
 		return _calcBorrowingRate(_asset, _calcDecayedBaseRate(_asset));
 	}
 
-	function _calcBorrowingRate(address _asset, uint256 _baseRate)
-		internal
-		view
-		returns (uint256)
-	{
+	function _calcBorrowingRate(
+		address _asset,
+		uint256 _baseRate
+	) internal view returns (uint256) {
 		return
 			VestaMath._min(
 				vestaParams.BORROWING_FEE_FLOOR(_asset).add(_baseRate),
@@ -1801,40 +1775,32 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 			);
 	}
 
-	function getBorrowingFee(address _asset, uint256 _VSTDebt)
-		external
-		view
-		override
-		onlyWstETH(_asset)
-		returns (uint256)
-	{
+	function getBorrowingFee(
+		address _asset,
+		uint256 _VSTDebt
+	) external view override returns (uint256) {
+		_isWstETH(_asset);
 		return _calcBorrowingFee(getBorrowingRate(_asset), _VSTDebt);
 	}
 
-	function getBorrowingFeeWithDecay(address _asset, uint256 _VSTDebt)
-		external
-		view
-		override
-		onlyWstETH(_asset)
-		returns (uint256)
-	{
+	function getBorrowingFeeWithDecay(
+		address _asset,
+		uint256 _VSTDebt
+	) external view override returns (uint256) {
+		_isWstETH(_asset);
 		return _calcBorrowingFee(getBorrowingRateWithDecay(_asset), _VSTDebt);
 	}
 
-	function _calcBorrowingFee(uint256 _borrowingRate, uint256 _VSTDebt)
-		internal
-		pure
-		returns (uint256)
-	{
+	function _calcBorrowingFee(
+		uint256 _borrowingRate,
+		uint256 _VSTDebt
+	) internal pure returns (uint256) {
 		return _borrowingRate.mul(_VSTDebt).div(DECIMAL_PRECISION);
 	}
 
-	function decayBaseRateFromBorrowing(address _asset)
-		external
-		override
-		onlyWstETH(_asset)
-		onlyBorrowerOperations
-	{
+	function decayBaseRateFromBorrowing(address _asset) external override {
+		onlyBorrowerOperations();
+		_isWstETH(_asset);
 		uint256 decayedBaseRate = _calcDecayedBaseRate(_asset);
 		assert(decayedBaseRate <= DECIMAL_PRECISION);
 
@@ -1872,39 +1838,36 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 	) internal view {
 		require(
 			_vstToken.balanceOf(_redeemer) >= _amount,
-			"TroveManager: Requested redemption amount must be <= user's VST token balance"
+			"TroveManager: Too much redemption amount"
 		);
 	}
 
-	function _requireMoreThanOneTroveInSystem(address _asset, uint256 TroveOwnersArrayLength)
-		internal
-		view
-	{
+	function _requireMoreThanOneTroveInSystem(
+		address _asset,
+		uint256 TroveOwnersArrayLength
+	) internal view {
 		require(
 			TroveOwnersArrayLength > 1 && sortedTroves.getSize(_asset) > 1,
-			"TroveManager: Only one trove in the system"
+			"TroveManager: Too much trove"
 		);
 	}
 
 	function _requireAmountGreaterThanZero(uint256 _amount) internal pure {
-		require(_amount > 0, "TroveManager: Amount must be greater than zero");
+		require(_amount > 0, "TroveManager: !_amount");
 	}
 
 	function _requireTCRoverMCR(address _asset, uint256 _price) internal view {
-		require(
-			_getTCR(_asset, _price) >= vestaParams.MCR(_asset),
-			"TroveManager: Cannot redeem when TCR < MCR"
-		);
+		require(_getTCR(_asset, _price) >= vestaParams.MCR(_asset), "TroveManager: !TCR < MCR");
 	}
 
-	function _requireValidMaxFeePercentage(address _asset, uint256 _maxFeePercentage)
-		internal
-		view
-	{
+	function _requireValidMaxFeePercentage(
+		address _asset,
+		uint256 _maxFeePercentage
+	) internal view {
 		require(
 			_maxFeePercentage >= vestaParams.REDEMPTION_FEE_FLOOR(_asset) &&
 				_maxFeePercentage <= DECIMAL_PRECISION,
-			"Max fee percentage must be between 0.5% and 100%"
+			"Max fee percent must be between 0.5% and 100%"
 		);
 	}
 
@@ -1914,53 +1877,43 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 
 	// --- Trove property getters ---
 
-	function getTroveStatus(address _asset, address _borrower)
-		external
-		view
-		override
-		onlyWstETH(_asset)
-		returns (uint256)
-	{
+	function getTroveStatus(
+		address _asset,
+		address _borrower
+	) external view override returns (uint256) {
+		_isWstETH(_asset);
 		return uint256(Troves[_borrower][_asset].status);
 	}
 
-	function getTroveStake(address _asset, address _borrower)
-		external
-		view
-		override
-		onlyWstETH(_asset)
-		returns (uint256)
-	{
+	function getTroveStake(
+		address _asset,
+		address _borrower
+	) external view override returns (uint256) {
+		_isWstETH(_asset);
 		return Troves[_borrower][_asset].stake;
 	}
 
-	function getTroveDebt(address _asset, address _borrower)
-		external
-		view
-		override
-		onlyWstETH(_asset)
-		returns (uint256)
-	{
+	function getTroveDebt(
+		address _asset,
+		address _borrower
+	) external view override returns (uint256) {
+		_isWstETH(_asset);
 		return Troves[_borrower][_asset].debt;
 	}
 
-	function getTroveColl(address _asset, address _borrower)
-		external
-		view
-		override
-		onlyWstETH(_asset)
-		returns (uint256)
-	{
+	function getTroveColl(
+		address _asset,
+		address _borrower
+	) external view override returns (uint256) {
+		_isWstETH(_asset);
 		return Troves[_borrower][_asset].coll;
 	}
 
 	// --- Trove property setters, called by BorrowerOperations ---
 
-	function setTroveStatus(
-		address _asset,
-		address _borrower,
-		uint256 _num
-	) external override onlyBorrowerOperations onlyWstETH(_asset) {
+	function setTroveStatus(address _asset, address _borrower, uint256 _num) external override {
+		_isWstETH(_asset);
+		onlyBorrowerOperations();
 		Troves[_borrower][_asset].asset = _asset;
 		Troves[_borrower][_asset].status = Status(_num);
 	}
@@ -1969,7 +1922,9 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		address _asset,
 		address _borrower,
 		uint256 _collIncrease
-	) external override onlyBorrowerOperations onlyWstETH(_asset) returns (uint256) {
+	) external override returns (uint256) {
+		_isWstETH(_asset);
+		onlyBorrowerOperations();
 		uint256 newColl = Troves[_borrower][_asset].coll.add(_collIncrease);
 		Troves[_borrower][_asset].coll = newColl;
 		return newColl;
@@ -1979,7 +1934,9 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		address _asset,
 		address _borrower,
 		uint256 _collDecrease
-	) external override onlyBorrowerOperations onlyWstETH(_asset) returns (uint256) {
+	) external override returns (uint256) {
+		_isWstETH(_asset);
+		onlyBorrowerOperations();
 		uint256 newColl = Troves[_borrower][_asset].coll.sub(_collDecrease);
 		Troves[_borrower][_asset].coll = newColl;
 		return newColl;
@@ -1989,7 +1946,9 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		address _asset,
 		address _borrower,
 		uint256 _debtIncrease
-	) external override onlyBorrowerOperations onlyWstETH(_asset) returns (uint256) {
+	) external override returns (uint256) {
+		_isWstETH(_asset);
+		onlyBorrowerOperations();
 		uint256 newDebt = Troves[_borrower][_asset].debt.add(_debtIncrease);
 		Troves[_borrower][_asset].debt = newDebt;
 		return newDebt;
@@ -1999,7 +1958,9 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		address _asset,
 		address _borrower,
 		uint256 _debtDecrease
-	) external override onlyBorrowerOperations onlyWstETH(_asset) returns (uint256) {
+	) external override returns (uint256) {
+		_isWstETH(_asset);
+		onlyBorrowerOperations();
 		uint256 newDebt = Troves[_borrower][_asset].debt.sub(_debtDecrease);
 		Troves[_borrower][_asset].debt = newDebt;
 		return newDebt;

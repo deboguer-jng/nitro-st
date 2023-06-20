@@ -38,11 +38,10 @@ contract VestaBase is ArbitroveBase, BaseMath, IVestaBase, OwnableUpgradeable {
 	}
 
 	// Return the amount of ETH to be drawn from a trove's collateral and sent as gas compensation.
-	function _getCollGasCompensation(address _asset, uint256 _entireColl)
-		internal
-		view
-		returns (uint256)
-	{
+	function _getCollGasCompensation(
+		address _asset,
+		uint256 _entireColl
+	) internal view returns (uint256) {
 		return _entireColl / vestaParams.PERCENT_DIVISOR(_asset);
 	}
 

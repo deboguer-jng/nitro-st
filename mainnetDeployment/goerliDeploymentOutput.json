@@ -1,0 +1,67 @@
+{
+  "priceFeed": {
+    "address": "0x6F1F45E4edB00FAf670F4868bAa4d6178b27e15E",
+    "txHash": "0xc25de50753aec782c7b46be409a306738a4af47556a50bb6e7e63cba50017752",
+    "verification": "https://goerli-explorer.arbitrum.io/address/0x6F1F45E4edB00FAf670F4868bAa4d6178b27e15E#code"
+  },
+  "sortedTroves": {
+    "address": "0xD13f9C7fdEdDbB00E288CF94388e3087E98A8067",
+    "txHash": "0x2e3efea863e69e6662c4db00b55c13e2d2b2ed316301a0c7bca3bc8cccc45653",
+    "verification": "https://goerli-explorer.arbitrum.io/address/0xD13f9C7fdEdDbB00E288CF94388e3087E98A8067#code"
+  },
+  "activePool": {
+    "address": "0xB921fC079D87eC9842aa3d9A6B99ABB804A03855",
+    "txHash": "0x0e7846e064bc94368f3b349e39575e278e8ff408dce6a072efe4523cf06f8011",
+    "verification": "https://goerli-explorer.arbitrum.io/address/0xB921fC079D87eC9842aa3d9A6B99ABB804A03855#code"
+  },
+  "stabilityPoolManager": {
+    "address": "0x860F1bd1e2E05A6CA660ADBe0A5cE1B39E4C9377",
+    "txHash": "0xb8e613c7d4f7b4ea6c947bce9794727f9de0bc9bc0761bfeab3a9e6d53817961",
+    "verification": "https://goerli-explorer.arbitrum.io/address/0x860F1bd1e2E05A6CA660ADBe0A5cE1B39E4C9377#code"
+  },
+  "defaultPool": {
+    "address": "0x4987FBF40E8aa44A2F5cFa891A91Eb489242D00f",
+    "txHash": "0x3ca936231b5b35937c82c877fdff99927b50d0c9ebc27ca5579f259c3fe352c4",
+    "verification": "https://goerli-explorer.arbitrum.io/address/0x4987FBF40E8aa44A2F5cFa891A91Eb489242D00f#code"
+  },
+  "collSurplusPool": {
+    "address": "0x6f32297cC026813705Aa5EC457227898C9b9BF68",
+    "txHash": "0x4b00605e107172bb3f0ef00887e4191dd599b8d7d726f158c19bdeb92d0d3a5e",
+    "verification": "https://goerli-explorer.arbitrum.io/address/0x6f32297cC026813705Aa5EC457227898C9b9BF68#code"
+  },
+  "hintHelpers": {
+    "address": "0x06f298aD395929d4D5B4853d249Fc0b4F7741A31",
+    "txHash": "0x056febc997092773d3ead6f2087b90e0a3e4e711435453b8daf17949d471a671",
+    "verification": "https://goerli-explorer.arbitrum.io/address/0x06f298aD395929d4D5B4853d249Fc0b4F7741A31#code"
+  },
+  "gasPool": {
+    "address": "0x2bEFdB7EB1262Adf825552D6b2845722e5aC8748",
+    "txHash": "0xc865efc3a5d0f2afa274b6bc580237507b7f4d4b6a1b102380062801e93cf852",
+    "verification": "https://goerli-explorer.arbitrum.io/address/0x2bEFdB7EB1262Adf825552D6b2845722e5aC8748#code"
+  },
+  "borrowerOperations": {
+    "address": "0x6512E23200E00Dc676DE09f1bA88983c9D97a6Ca",
+    "txHash": "0x639390ae91e1527cb669d7d7f5b99a08228b70b4ccc3bafa72cebe0413c4e4e7",
+    "verification": "https://goerli-explorer.arbitrum.io/address/0x6512E23200E00Dc676DE09f1bA88983c9D97a6Ca#code"
+  },
+  "vestaParameters": {
+    "address": "0xC8dB204D8202ce4ee5BC8f8b12e7f86bB0aef7Db",
+    "txHash": "0x5cbf549e79b569fb7b1f7cfa42f78802cf7fdf4a090ccc2f82eea9edddbf311f",
+    "verification": "https://goerli-explorer.arbitrum.io/address/0xC8dB204D8202ce4ee5BC8f8b12e7f86bB0aef7Db#code"
+  },
+  "stabilityPoolV1": {
+    "address": "0x7E28Eca7141EA04226cCcDc554a97cC41D5C569C",
+    "txHash": "0xe61373b2d2bbbbe0cc13d20aab01f8fd30869c2e508429feb261c3fa1e007497",
+    "verification": "https://goerli-explorer.arbitrum.io/address/0x7E28Eca7141EA04226cCcDc554a97cC41D5C569C#code"
+  },
+  "lockedVsta": {
+    "address": "0xc8A5c0E23d53e13a7174E1Ee7d7938D35c4bEe01",
+    "txHash": "0xab3cb8f9815ee0e210a2d6c87fe145ecb8a68fa3c06fd902687de6e04ce56f16",
+    "verification": "https://goerli-explorer.arbitrum.io/address/0xc8A5c0E23d53e13a7174E1Ee7d7938D35c4bEe01#code"
+  },
+  "adminContract": {
+    "address": "0xaB7D2bedCC5A59cbf25C03195dcC4208a592bb3A",
+    "txHash": "0xf7760a23b40085318bd78679d457b403de72d2b9213f5006cf0b333713cebff2",
+    "verification": "https://goerli-explorer.arbitrum.io/address/0xaB7D2bedCC5A59cbf25C03195dcC4208a592bb3A#code"
+  }
+}

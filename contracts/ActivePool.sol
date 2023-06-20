@@ -89,11 +89,15 @@ contract ActivePool is
 	 *
 	 *Not necessarily equal to the the contract's raw ETH balance - ether can be forcibly sent to contracts.
 	 */
-	function getAssetBalance(address _asset) external view override onlyWstETH(_asset) returns (uint256) {
+	function getAssetBalance(
+		address _asset
+	) external view override onlyWstETH(_asset) returns (uint256) {
 		return assetsBalance[_asset];
 	}
 
-	function getVSTDebt(address _asset) external view override onlyWstETH(_asset) returns (uint256) {
+	function getVSTDebt(
+		address _asset
+	) external view override onlyWstETH(_asset) returns (uint256) {
 		return VSTDebts[_asset];
 	}
 
@@ -134,22 +138,18 @@ contract ActivePool is
 			stabilityPoolManager.isStabilityPool(_account));
 	}
 
-	function increaseVSTDebt(address _asset, uint256 _amount)
-		external
-		override
-		callerIsBOorTroveM
-		onlyWstETH(_asset)
-	{
+	function increaseVSTDebt(
+		address _asset,
+		uint256 _amount
+	) external override callerIsBOorTroveM onlyWstETH(_asset) {
 		VSTDebts[_asset] = VSTDebts[_asset].add(_amount);
 		emit ActivePoolVSTDebtUpdated(_asset, VSTDebts[_asset]);
 	}
 
-	function decreaseVSTDebt(address _asset, uint256 _amount)
-		external
-		override
-		callerIsBOorTroveMorSP
-		onlyWstETH(_asset)
-	{
+	function decreaseVSTDebt(
+		address _asset,
+		uint256 _amount
+	) external override callerIsBOorTroveMorSP onlyWstETH(_asset) {
 		VSTDebts[_asset] = VSTDebts[_asset].sub(_amount);
 		emit ActivePoolVSTDebtUpdated(_asset, VSTDebts[_asset]);
 	}
@@ -184,12 +184,10 @@ contract ActivePool is
 		_;
 	}
 
-	function receivedERC20(address _asset, uint256 _amount)
-		external
-		override
-		callerIsBorrowerOperationOrDefaultPool
-		onlyWstETH(_asset)
-	{
+	function receivedERC20(
+		address _asset,
+		uint256 _amount
+	) external override callerIsBorrowerOperationOrDefaultPool onlyWstETH(_asset) {
 		assetsBalance[_asset] = assetsBalance[_asset].add(_amount);
 		emit ActivePoolAssetBalanceUpdated(_asset, assetsBalance[_asset]);
 	}
