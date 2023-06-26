@@ -19,6 +19,7 @@ interface ICollSurplusPool is IDeposit {
 	function setAddresses(
 		address _borrowerOperationsAddress,
 		address _troveManagerAddress,
+		address _redemptionManagerAddress,
 		address _activePoolAddress
 	) external;
 
@@ -26,11 +27,7 @@ interface ICollSurplusPool is IDeposit {
 
 	function getCollateral(address _asset, address _account) external view returns (uint256);
 
-	function accountSurplus(
-		address _asset,
-		address _account,
-		uint256 _amount
-	) external;
+	function accountSurplus(address _asset, address _account, uint256 _amount) external;
 
 	function claimColl(address _asset, address _account) external;
 }

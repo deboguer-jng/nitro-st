@@ -24,15 +24,15 @@ contract TroveManagerScript is CheckContract {
 		uint256 _maxIterations,
 		uint256 _maxFee
 	) external {
-		troveManager.redeemCollateral(
-			_asset,
-			_VSTAmount,
-			_firstRedemptionHint,
-			_upperPartialRedemptionHint,
-			_lowerPartialRedemptionHint,
-			_partialRedemptionHintNICR,
-			_maxIterations,
-			_maxFee
-		);
+		// troveManager.redeemCollateral(
+		// 	_asset,
+		// 	_VSTAmount,
+		// 	_firstRedemptionHint,
+		// 	_upperPartialRedemptionHint,
+		// 	_lowerPartialRedemptionHint,
+		// 	_partialRedemptionHintNICR,
+		// 	_maxIterations,
+		// 	_maxFee
+		// );
 	}
 }

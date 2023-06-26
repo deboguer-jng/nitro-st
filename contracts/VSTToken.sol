@@ -11,6 +11,7 @@ contract VSTToken is CheckContract, IVSTToken, Ownable {
 	using SafeMath for uint256;
 
 	address public immutable troveManagerAddress;
+	address public immutable redemptionManagerAddress;
 	IStabilityPoolManager public immutable stabilityPoolManager;
 	address public immutable borrowerOperationsAddress;
 
@@ -20,15 +21,19 @@ contract VSTToken is CheckContract, IVSTToken, Ownable {
 
 	constructor(
 		address _troveManagerAddress,
+		address _redemptionManagerAddress,
 		address _stabilityPoolManagerAddress,
 		address _borrowerOperationsAddress
 	) ERC20("Vesta Stable", "VST") {
 		checkContract(_troveManagerAddress);
 		checkContract(_stabilityPoolManagerAddress);
 		checkContract(_borrowerOperationsAddress);
+		checkContract(_redemptionManagerAddress);
 
 		troveManagerAddress = _troveManagerAddress;
 		emit TroveManagerAddressChanged(_troveManagerAddress);
+
+		redemptionManagerAddress = _redemptionManagerAddress;
 
 		stabilityPoolManager = IStabilityPoolManager(_stabilityPoolManagerAddress);
 		emit StabilityPoolAddressChanged(_stabilityPoolManagerAddress);
@@ -45,11 +50,7 @@ contract VSTToken is CheckContract, IVSTToken, Ownable {
 		emit EmergencyStopMintingCollateral(_asset, status);
 	}
 
-	function mint(
-		address _asset,
-		address _account,
-		uint256 _amount
-	) external override {
+	function mint(address _asset, address _account, uint256 _amount) external override {
 		_requireCallerIsBorrowerOperations();
 		require(!emergencyStopMintingCollateral[_asset], "Mint is blocked on this collateral");
 
@@ -105,8 +106,9 @@ contract VSTToken is CheckContract, IVSTToken, Ownable {
 		require(
 			!stabilityPoolManager.isStabilityPool(_recipient) &&
 				_recipient != troveManagerAddress &&
+				_recipient != redemptionManagerAddress &&
 				_recipient != borrowerOperationsAddress,
-			"VST: Cannot transfer tokens directly to the StabilityPool, TroveManager or BorrowerOps"
+			"VST: Cannot transfer tokens directly to the StabilityPool, TroveManager, RedemptionManager or BorrowerOps"
 		);
 	}
 
@@ -120,9 +122,9 @@ contract VSTToken is CheckContract, IVSTToken, Ownable {
 	function _requireCallerIsBOorTroveMorSP() internal view {
 		require(
 			msg.sender == borrowerOperationsAddress ||
-				msg.sender == troveManagerAddress ||
+				msg.sender == redemptionManagerAddress ||
 				stabilityPoolManager.isStabilityPool(msg.sender),
-			"VST: Caller is neither BorrowerOperations nor TroveManager nor StabilityPool"
+			"VST: Caller is neither BorrowerOperations nor RedemptionManager nor StabilityPool"
 		);
 	}
 

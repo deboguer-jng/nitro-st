@@ -37,6 +37,7 @@ contract ActivePool is
 	address constant ETH_REF_ADDRESS = address(0);
 
 	address public borrowerOperationsAddress;
+	address public redemptionManagerAddress;
 	address public troveManagerAddress;
 	IDefaultPool public defaultPool;
 	ICollSurplusPool public collSurplusPool;
@@ -55,7 +56,8 @@ contract ActivePool is
 		address _troveManagerAddress,
 		address _stabilityManagerAddress,
 		address _defaultPoolAddress,
-		address _collSurplusPoolAddress
+		address _collSurplusPoolAddress,
+		address _redemptionAddress
 	) external initializer {
 		require(!isInitialized, "Already initialized");
 		checkContract(_borrowerOperationsAddress);
@@ -63,12 +65,14 @@ contract ActivePool is
 		checkContract(_stabilityManagerAddress);
 		checkContract(_defaultPoolAddress);
 		checkContract(_collSurplusPoolAddress);
+		checkContract(_redemptionAddress);
 		isInitialized = true;
 
 		__Ownable_init();
 		__ReentrancyGuard_init();
 
 		borrowerOperationsAddress = _borrowerOperationsAddress;
+		redemptionManagerAddress = _redemptionAddress;
 		troveManagerAddress = _troveManagerAddress;
 		stabilityPoolManager = IStabilityPoolManager(_stabilityManagerAddress);
 		defaultPool = IDefaultPool(_defaultPoolAddress);
@@ -169,8 +173,9 @@ contract ActivePool is
 		require(
 			msg.sender == borrowerOperationsAddress ||
 				msg.sender == troveManagerAddress ||
+				msg.sender == redemptionManagerAddress ||
 				stabilityPoolManager.isStabilityPool(msg.sender),
-			"ActivePool: Caller is neither BorrowerOperations nor TroveManager nor StabilityPool"
+			"ActivePool: Caller is neither BorrowerOperations nor TroveManager nor RedemptionManager nor StabilityPool"
 		);
 		_;
 	}

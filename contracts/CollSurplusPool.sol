@@ -11,7 +11,12 @@ import "./Dependencies/CheckContract.sol";
 import "./Dependencies/SafetyTransfer.sol";
 import "./Dependencies/ArbitroveBase.sol";
 
-contract CollSurplusPool is OwnableUpgradeable, CheckContract, ArbitroveBase, ICollSurplusPool {
+contract CollSurplusPool is
+	OwnableUpgradeable,
+	CheckContract,
+	ArbitroveBase,
+	ICollSurplusPool
+{
 	using SafeMathUpgradeable for uint256;
 	using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -20,6 +25,7 @@ contract CollSurplusPool is OwnableUpgradeable, CheckContract, ArbitroveBase, IC
 
 	address public borrowerOperationsAddress;
 	address public troveManagerAddress;
+	address public redemptionManagerAddress;
 	address public activePoolAddress;
 
 	bool public isInitialized;
@@ -34,17 +40,20 @@ contract CollSurplusPool is OwnableUpgradeable, CheckContract, ArbitroveBase, IC
 	function setAddresses(
 		address _borrowerOperationsAddress,
 		address _troveManagerAddress,
+		address _redemptionManagerAddress,
 		address _activePoolAddress
 	) external override initializer {
 		require(!isInitialized, "Already initialized");
 		checkContract(_borrowerOperationsAddress);
 		checkContract(_troveManagerAddress);
 		checkContract(_activePoolAddress);
+		checkContract(_redemptionManagerAddress);
 		isInitialized = true;
 
 		__Ownable_init();
 
 		borrowerOperationsAddress = _borrowerOperationsAddress;
+		redemptionManagerAddress = _redemptionManagerAddress;
 		troveManagerAddress = _troveManagerAddress;
 		activePoolAddress = _activePoolAddress;
 
@@ -57,17 +66,16 @@ contract CollSurplusPool is OwnableUpgradeable, CheckContract, ArbitroveBase, IC
 
 	/* Returns the Asset state variable at ActivePool address.
        Not necessarily equal to the raw ether balance - ether can be forcibly sent to contracts. */
-	function getAssetBalance(address _asset) external view override onlyWstETH(_asset) returns (uint256) {
+	function getAssetBalance(
+		address _asset
+	) external view override onlyWstETH(_asset) returns (uint256) {
 		return balances[_asset];
 	}
 
-	function getCollateral(address _asset, address _account)
-		external
-		view
-		override
-		onlyWstETH(_asset)
-		returns (uint256)
-	{
+	function getCollateral(
+		address _asset,
+		address _account
+	) external view override onlyWstETH(_asset) returns (uint256) {
 		return userBalances[_account][_asset];
 	}
 
@@ -114,7 +122,10 @@ contract CollSurplusPool is OwnableUpgradeable, CheckContract, ArbitroveBase, IC
 		}
 	}
 
-	function receivedERC20(address _asset, uint256 _amount) external override onlyWstETH(_asset) {
+	function receivedERC20(
+		address _asset,
+		uint256 _amount
+	) external override onlyWstETH(_asset) {
 		_requireCallerIsActivePool();
 		balances[_asset] = balances[_asset].add(_amount);
 	}
@@ -129,7 +140,10 @@ contract CollSurplusPool is OwnableUpgradeable, CheckContract, ArbitroveBase, IC
 	}
 
 	function _requireCallerIsTroveManager() internal view {
-		require(msg.sender == troveManagerAddress, "CollSurplusPool: Caller is not TroveManager");
+		require(
+			msg.sender == troveManagerAddress || msg.sender == redemptionManagerAddress,
+			"CollSurplusPool: Caller is not TroveManager nor RedemptionManager"
+		);
 	}
 
 	function _requireCallerIsActivePool() internal view {

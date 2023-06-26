@@ -6,9 +6,17 @@ import "../VSTToken.sol";
 contract VSTTokenTester is VSTToken {
 	constructor(
 		address _troveManagerAddress,
+		address _redemptionManagerAddress,
 		address _stabilityPoolAddress,
 		address _borrowerOperationsAddress
-	) VSTToken(_troveManagerAddress, _stabilityPoolAddress, _borrowerOperationsAddress) {
+	)
+		VSTToken(
+			_troveManagerAddress,
+			_redemptionManagerAddress,
+			_stabilityPoolAddress,
+			_borrowerOperationsAddress
+		)
+	{
 		_burn(msg.sender, balanceOf(msg.sender));
 	}
 
@@ -44,11 +52,7 @@ contract VSTTokenTester is VSTToken {
 		_transfer(_poolAddress, _receiver, _amount);
 	}
 
-	function callInternalApprove(
-		address owner,
-		address spender,
-		uint256 amount
-	) external {
+	function callInternalApprove(address owner, address spender, uint256 amount) external {
 		_approve(owner, spender, amount);
 	}
 

@@ -15,11 +15,10 @@ contract TroveManagerTester is TroveManager {
 		return VestaMath._computeCR(_coll, _debt, _price);
 	}
 
-	function getCollGasCompensation(address _asset, uint256 _coll)
-		external
-		view
-		returns (uint256)
-	{
+	function getCollGasCompensation(
+		address _asset,
+		uint256 _coll
+	) external view returns (uint256) {
 		return _getCollGasCompensation(_asset, _coll);
 	}
 
@@ -51,19 +50,17 @@ contract TroveManagerTester is TroveManager {
 		baseRate[_asset] = _baseRate;
 	}
 
-	function callGetRedemptionFee(address _asset, uint256 _ETHDrawn)
-		external
-		view
-		returns (uint256)
-	{
-		return _getRedemptionFee(_asset, _ETHDrawn);
-	}
+	// function callGetRedemptionFee(
+	// 	address _asset,
+	// 	uint256 _ETHDrawn
+	// ) external view returns (uint256) {
+	// 	// return _getRedemptionFee(_asset, _ETHDrawn);
+	// }
 
-	function getActualDebtFromComposite(address _asset, uint256 _debtVal)
-		external
-		view
-		returns (uint256)
-	{
+	function getActualDebtFromComposite(
+		address _asset,
+		uint256 _debtVal
+	) external view returns (uint256) {
 		return _getNetDebt(_asset, _debtVal);
 	}
 
