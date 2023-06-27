@@ -62,7 +62,7 @@ contract AdminContract is ProxyAdmin, ArbitroveBase {
 		address _asset,
 		address _stabilityPoolImplementation,
 		address _chainlinkOracle,
-		address _chainlinkIndex,
+		uint256 _tellorId,
 		uint256 assignedToken,
 		uint256 _tokenPerWeekDistributed,
 		uint256 redemptionLockInDay
@@ -76,7 +76,7 @@ contract AdminContract is ProxyAdmin, ArbitroveBase {
 			"Invalid Stability pool"
 		);
 
-		vestaParameters.priceFeed().addOracle(_asset, _chainlinkOracle, _chainlinkIndex);
+		vestaParameters.priceFeed().addOracle(_asset, _chainlinkOracle, _tellorId);
 		vestaParameters.setAsDefaultWithRemptionBlock(_asset, redemptionLockInDay);
 
 		address clonedStabilityPool = ClonesUpgradeable.clone(_stabilityPoolImplementation);
