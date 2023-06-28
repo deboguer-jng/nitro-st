@@ -77,19 +77,21 @@ contract SortedTroves is OwnableUpgradeable, CheckContract, ArbitroveBase, ISort
 
 	// --- Dependency setters ---
 
-	function setParams(address _troveManagerAddress, address _borrowerOperationsAddress)
-		external
-		override
-		initializer
-	{
+	function setParams(
+		address _troveManagerAddress,
+		address _borrowerOperationsAddress,
+		address _wstETHAddress
+	) external override initializer {
 		require(!isInitialized, "Already initialized");
 		checkContract(_troveManagerAddress);
 		checkContract(_borrowerOperationsAddress);
+		checkContract(_wstETHAddress);
 		isInitialized = true;
 
 		__Ownable_init();
 
 		data[ETH_REF_ADDRESS].maxSize = MAX_UINT256;
+		wstETH = _wstETHAddress;
 
 		troveManager = ITroveManager(_troveManagerAddress);
 		borrowerOperationsAddress = _borrowerOperationsAddress;
@@ -259,7 +261,10 @@ contract SortedTroves is OwnableUpgradeable, CheckContract, ArbitroveBase, ISort
 	/*
 	 * @dev Checks if the list contains a node
 	 */
-	function contains(address _asset, address _id) public view override onlyWstETH(_asset) returns (bool) {
+	function contains(
+		address _asset,
+		address _id
+	) public view override onlyWstETH(_asset) returns (bool) {
 		return data[_asset].nodes[_id].exists;
 	}
 
@@ -280,28 +285,36 @@ contract SortedTroves is OwnableUpgradeable, CheckContract, ArbitroveBase, ISort
 	/*
 	 * @dev Returns the current size of the list
 	 */
-	function getSize(address _asset) external view override onlyWstETH(_asset) returns (uint256) {
+	function getSize(
+		address _asset
+	) external view override onlyWstETH(_asset) returns (uint256) {
 		return data[_asset].size;
 	}
 
 	/*
 	 * @dev Returns the maximum size of the list
 	 */
-	function getMaxSize(address _asset) external view override onlyWstETH(_asset) returns (uint256) {
+	function getMaxSize(
+		address _asset
+	) external view override onlyWstETH(_asset) returns (uint256) {
 		return data[_asset].maxSize;
 	}
 
 	/*
 	 * @dev Returns the first node in the list (node with the largest NICR)
 	 */
-	function getFirst(address _asset) external view override onlyWstETH(_asset) returns (address) {
+	function getFirst(
+		address _asset
+	) external view override onlyWstETH(_asset) returns (address) {
 		return data[_asset].head;
 	}
 
 	/*
 	 * @dev Returns the last node in the list (node with the smallest NICR)
 	 */
-	function getLast(address _asset) external view override onlyWstETH(_asset) returns (address) {
+	function getLast(
+		address _asset
+	) external view override onlyWstETH(_asset) returns (address) {
 		return data[_asset].tail;
 	}
 
@@ -309,7 +322,10 @@ contract SortedTroves is OwnableUpgradeable, CheckContract, ArbitroveBase, ISort
 	 * @dev Returns the next node (with a smaller NICR) in the list for a given node
 	 * @param _id Node's id
 	 */
-	function getNext(address _asset, address _id) external view override onlyWstETH(_asset) returns (address) {
+	function getNext(
+		address _asset,
+		address _id
+	) external view override onlyWstETH(_asset) returns (address) {
 		return data[_asset].nodes[_id].nextId;
 	}
 
@@ -317,7 +333,10 @@ contract SortedTroves is OwnableUpgradeable, CheckContract, ArbitroveBase, ISort
 	 * @dev Returns the previous node (with a larger NICR) in the list for a given node
 	 * @param _id Node's id
 	 */
-	function getPrev(address _asset, address _id) external view override onlyWstETH(_asset) returns (address) {
+	function getPrev(
+		address _asset,
+		address _id
+	) external view override onlyWstETH(_asset) returns (address) {
 		return data[_asset].nodes[_id].prevId;
 	}
 

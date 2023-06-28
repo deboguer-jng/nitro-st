@@ -6,7 +6,12 @@ import "./Dependencies/CheckContract.sol";
 import "./Dependencies/ArbitroveBase.sol";
 import "./Interfaces/IStabilityPoolManager.sol";
 
-contract StabilityPoolManager is OwnableUpgradeable, CheckContract, ArbitroveBase, IStabilityPoolManager {
+contract StabilityPoolManager is
+	OwnableUpgradeable,
+	CheckContract,
+	ArbitroveBase,
+	IStabilityPoolManager
+{
 	mapping(address => address) stabilityPools;
 	mapping(address => bool) validStabilityPools;
 
@@ -20,13 +25,15 @@ contract StabilityPoolManager is OwnableUpgradeable, CheckContract, ArbitroveBas
 		_;
 	}
 
-	function setAddresses(address _adminContract) external initializer {
+	function setAddresses(address _adminContract, address _wstETHAddress) external initializer {
 		require(!isInitialized, "Already initialized");
 		checkContract(_adminContract);
+		checkContract(_wstETHAddress);
 		isInitialized = true;
 
 		__Ownable_init();
 
+		wstETH = _wstETHAddress;
 		adminContract = _adminContract;
 	}
 
@@ -39,11 +46,10 @@ contract StabilityPoolManager is OwnableUpgradeable, CheckContract, ArbitroveBas
 		return validStabilityPools[stabilityPool];
 	}
 
-	function addStabilityPool(address asset, address stabilityPool)
-		external
-		override
-		isController
-	{
+	function addStabilityPool(
+		address asset,
+		address stabilityPool
+	) external override isController {
 		CheckContract(asset);
 		CheckContract(stabilityPool);
 		require(!validStabilityPools[stabilityPool], "StabilityPool already created.");
@@ -61,24 +67,16 @@ contract StabilityPoolManager is OwnableUpgradeable, CheckContract, ArbitroveBas
 		delete stabilityPools[asset];
 	}
 
-	function getAssetStabilityPool(address asset)
-		external
-		view
-		override
-		onlyWstETH(asset)
-		returns (IStabilityPool)
-	{
+	function getAssetStabilityPool(
+		address asset
+	) external view override onlyWstETH(asset) returns (IStabilityPool) {
 		require(stabilityPools[asset] != address(0), "Invalid asset StabilityPool");
 		return IStabilityPool(stabilityPools[asset]);
 	}
 
-	function unsafeGetAssetStabilityPool(address _asset)
-		external
-		view
-		override
-		onlyWstETH(_asset)
-		returns (address)
-	{
+	function unsafeGetAssetStabilityPool(
+		address _asset
+	) external view override onlyWstETH(_asset) returns (address) {
 		return stabilityPools[_asset];
 	}
 }

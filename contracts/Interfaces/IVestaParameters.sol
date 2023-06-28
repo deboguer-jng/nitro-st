@@ -61,7 +61,8 @@ interface IVestaParameters {
 		address _activePool,
 		address _defaultPool,
 		address _priceFeed,
-		address _adminContract
+		address _adminContract,
+		address _wstETHAddress
 	) external;
 
 	function setPriceFeed(address _priceFeed) external;

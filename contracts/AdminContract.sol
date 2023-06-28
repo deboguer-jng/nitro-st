@@ -35,7 +35,8 @@ contract AdminContract is ProxyAdmin, ArbitroveBase {
 		address _troveManagerAddress,
 		address _vstTokenAddress,
 		address _sortedTrovesAddress,
-		address _communityIssuanceAddress
+		address _communityIssuanceAddress,
+		address _wstETHAddress
 	) external onlyOwner {
 		require(!isInitialized);
 		CheckContract(_paramaters);
@@ -45,6 +46,7 @@ contract AdminContract is ProxyAdmin, ArbitroveBase {
 		CheckContract(_vstTokenAddress);
 		CheckContract(_sortedTrovesAddress);
 		CheckContract(_communityIssuanceAddress);
+		CheckContract(_wstETHAddress);
 		isInitialized = true;
 
 		borrowerOperationsAddress = _borrowerOperationsAddress;
@@ -52,6 +54,7 @@ contract AdminContract is ProxyAdmin, ArbitroveBase {
 		vstTokenAddress = _vstTokenAddress;
 		sortedTrovesAddress = _sortedTrovesAddress;
 		communityIssuance = ICommunityIssuance(_communityIssuanceAddress);
+		wstETH = _wstETHAddress;
 
 		vestaParameters = IVestaParameters(_paramaters);
 		stabilityPoolManager = IStabilityPoolManager(_stabilityPoolManager);

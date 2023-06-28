@@ -140,6 +140,11 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		emit VSTAStakingAddressChanged(_vstaStakingAddress);
 	}
 
+	function setRedemptionManager(address _redemptionManagerAddress) external onlyOwner {
+		checkContract(_redemptionManagerAddress);
+		redemptionManagerAddress = _redemptionManagerAddress;
+	}
+
 	// --- Getters ---
 	function getTrove(address _borrower, address _asset) external view returns (Trove memory) {
 		_isWstETH(_asset);

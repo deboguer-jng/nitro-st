@@ -6,7 +6,12 @@ import "./Dependencies/CheckContract.sol";
 import "./Dependencies/ArbitroveBase.sol";
 import "./Interfaces/IVestaParameters.sol";
 
-contract VestaParameters is IVestaParameters, OwnableUpgradeable, CheckContract, ArbitroveBase {
+contract VestaParameters is
+	IVestaParameters,
+	OwnableUpgradeable,
+	CheckContract,
+	ArbitroveBase
+{
 	string public constant NAME = "VestaParameters";
 
 	uint256 public constant override DECIMAL_PRECISION = 1 ether;
@@ -56,13 +61,15 @@ contract VestaParameters is IVestaParameters, OwnableUpgradeable, CheckContract,
 		address _activePool,
 		address _defaultPool,
 		address _priceFeed,
-		address _adminContract
+		address _adminContract,
+		address _wstETHAddress
 	) external override initializer {
 		require(!isInitialized, "Already initalized");
 		checkContract(_activePool);
 		checkContract(_defaultPool);
 		checkContract(_priceFeed);
 		checkContract(_adminContract);
+		checkContract(_wstETHAddress);
 		isInitialized = true;
 
 		__Ownable_init();
@@ -71,6 +78,7 @@ contract VestaParameters is IVestaParameters, OwnableUpgradeable, CheckContract,
 		activePool = IActivePool(_activePool);
 		defaultPool = IDefaultPool(_defaultPool);
 		priceFeed = IPriceFeed(_priceFeed);
+		wstETH = _wstETHAddress;
 	}
 
 	function setAdminContract(address _admin) external onlyOwner {
@@ -95,11 +103,10 @@ contract VestaParameters is IVestaParameters, OwnableUpgradeable, CheckContract,
 		_setAsDefault(_asset);
 	}
 
-	function setAsDefaultWithRemptionBlock(address _asset, uint256 blockInDays)
-		external
-		onlyWstETH(_asset)
-		isController
-	{
+	function setAsDefaultWithRemptionBlock(
+		address _asset,
+		uint256 blockInDays
+	) external onlyWstETH(_asset) isController {
 		if (blockInDays > 14) {
 			blockInDays = REDEMPTION_BLOCK_DAY;
 		}
@@ -147,7 +154,10 @@ contract VestaParameters is IVestaParameters, OwnableUpgradeable, CheckContract,
 		setRedemptionFeeFloor(_asset, redemptionFeeFloor);
 	}
 
-	function setMCR(address _asset, uint256 newMCR)
+	function setMCR(
+		address _asset,
+		uint256 newMCR
+	)
 		public
 		override
 		onlyOwner
@@ -160,7 +170,10 @@ contract VestaParameters is IVestaParameters, OwnableUpgradeable, CheckContract,
 		emit MCRChanged(oldMCR, newMCR);
 	}
 
-	function setCCR(address _asset, uint256 newCCR)
+	function setCCR(
+		address _asset,
+		uint256 newCCR
+	)
 		public
 		override
 		onlyWstETH(_asset)
@@ -173,7 +186,10 @@ contract VestaParameters is IVestaParameters, OwnableUpgradeable, CheckContract,
 		emit CCRChanged(oldCCR, newCCR);
 	}
 
-	function setPercentDivisor(address _asset, uint256 precentDivisor)
+	function setPercentDivisor(
+		address _asset,
+		uint256 precentDivisor
+	)
 		public
 		override
 		onlyWstETH(_asset)
@@ -186,7 +202,10 @@ contract VestaParameters is IVestaParameters, OwnableUpgradeable, CheckContract,
 		emit PercentDivisorChanged(oldPercent, precentDivisor);
 	}
 
-	function setBorrowingFeeFloor(address _asset, uint256 borrowingFeeFloor)
+	function setBorrowingFeeFloor(
+		address _asset,
+		uint256 borrowingFeeFloor
+	)
 		public
 		override
 		onlyWstETH(_asset)
@@ -201,7 +220,10 @@ contract VestaParameters is IVestaParameters, OwnableUpgradeable, CheckContract,
 		emit BorrowingFeeFloorChanged(oldBorrowing, newBorrowingFee);
 	}
 
-	function setMaxBorrowingFee(address _asset, uint256 maxBorrowingFee)
+	function setMaxBorrowingFee(
+		address _asset,
+		uint256 maxBorrowingFee
+	)
 		public
 		override
 		onlyWstETH(_asset)
@@ -215,7 +237,10 @@ contract VestaParameters is IVestaParameters, OwnableUpgradeable, CheckContract,
 		emit MaxBorrowingFeeChanged(oldMaxBorrowingFee, newMaxBorrowingFee);
 	}
 
-	function setVSTGasCompensation(address _asset, uint256 gasCompensation)
+	function setVSTGasCompensation(
+		address _asset,
+		uint256 gasCompensation
+	)
 		public
 		override
 		onlyWstETH(_asset)
@@ -228,7 +253,10 @@ contract VestaParameters is IVestaParameters, OwnableUpgradeable, CheckContract,
 		emit GasCompensationChanged(oldGasComp, gasCompensation);
 	}
 
-	function setMinNetDebt(address _asset, uint256 minNetDebt)
+	function setMinNetDebt(
+		address _asset,
+		uint256 minNetDebt
+	)
 		public
 		override
 		onlyWstETH(_asset)
@@ -241,7 +269,10 @@ contract VestaParameters is IVestaParameters, OwnableUpgradeable, CheckContract,
 		emit MinNetDebtChanged(oldMinNet, minNetDebt);
 	}
 
-	function setRedemptionFeeFloor(address _asset, uint256 redemptionFeeFloor)
+	function setRedemptionFeeFloor(
+		address _asset,
+		uint256 redemptionFeeFloor
+	)
 		public
 		override
 		onlyWstETH(_asset)
@@ -255,7 +286,9 @@ contract VestaParameters is IVestaParameters, OwnableUpgradeable, CheckContract,
 		emit RedemptionFeeFloorChanged(oldRedemptionFeeFloor, newRedemptionFeeFloor);
 	}
 
-	function removeRedemptionBlock(address _asset) external override onlyWstETH(_asset) onlyOwner {
+	function removeRedemptionBlock(
+		address _asset
+	) external override onlyWstETH(_asset) onlyOwner {
 		redemptionBlock[_asset] = block.timestamp;
 
 		emit RedemptionBlockRemoved(_asset);

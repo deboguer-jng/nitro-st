@@ -57,7 +57,8 @@ contract ActivePool is
 		address _stabilityManagerAddress,
 		address _defaultPoolAddress,
 		address _collSurplusPoolAddress,
-		address _redemptionAddress
+		address _redemptionAddress,
+		address _wstETHAddress
 	) external initializer {
 		require(!isInitialized, "Already initialized");
 		checkContract(_borrowerOperationsAddress);
@@ -66,6 +67,7 @@ contract ActivePool is
 		checkContract(_defaultPoolAddress);
 		checkContract(_collSurplusPoolAddress);
 		checkContract(_redemptionAddress);
+		checkContract(_wstETHAddress);
 		isInitialized = true;
 
 		__Ownable_init();
@@ -77,6 +79,7 @@ contract ActivePool is
 		stabilityPoolManager = IStabilityPoolManager(_stabilityManagerAddress);
 		defaultPool = IDefaultPool(_defaultPoolAddress);
 		collSurplusPool = ICollSurplusPool(_collSurplusPoolAddress);
+		wstETH = _wstETHAddress;
 
 		emit BorrowerOperationsAddressChanged(_borrowerOperationsAddress);
 		emit TroveManagerAddressChanged(_troveManagerAddress);

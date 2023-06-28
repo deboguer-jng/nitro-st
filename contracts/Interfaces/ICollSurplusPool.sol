@@ -20,7 +20,8 @@ interface ICollSurplusPool is IDeposit {
 		address _borrowerOperationsAddress,
 		address _troveManagerAddress,
 		address _redemptionManagerAddress,
-		address _activePoolAddress
+		address _activePoolAddress,
+		address _wstETHAddress
 	) external;
 
 	function getAssetBalance(address _asset) external view returns (uint256);

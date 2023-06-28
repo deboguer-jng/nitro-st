@@ -41,13 +41,15 @@ contract CollSurplusPool is
 		address _borrowerOperationsAddress,
 		address _troveManagerAddress,
 		address _redemptionManagerAddress,
-		address _activePoolAddress
+		address _activePoolAddress,
+		address _wstETHAddress
 	) external override initializer {
 		require(!isInitialized, "Already initialized");
 		checkContract(_borrowerOperationsAddress);
 		checkContract(_troveManagerAddress);
 		checkContract(_activePoolAddress);
 		checkContract(_redemptionManagerAddress);
+		checkContract(_wstETHAddress);
 		isInitialized = true;
 
 		__Ownable_init();
@@ -56,6 +58,7 @@ contract CollSurplusPool is
 		redemptionManagerAddress = _redemptionManagerAddress;
 		troveManagerAddress = _troveManagerAddress;
 		activePoolAddress = _activePoolAddress;
+		wstETH = _wstETHAddress;
 
 		emit BorrowerOperationsAddressChanged(_borrowerOperationsAddress);
 		emit TroveManagerAddressChanged(_troveManagerAddress);

@@ -13,8 +13,11 @@ interface ISortedTroves {
 
 	// --- Functions ---
 
-	function setParams(address _TroveManagerAddress, address _borrowerOperationsAddress)
-		external;
+	function setParams(
+		address _TroveManagerAddress,
+		address _borrowerOperationsAddress,
+		address _wstETHAddress
+	) external;
 
 	function insert(
 		address _asset,

@@ -39,12 +39,14 @@ contract DefaultPool is OwnableUpgradeable, CheckContract, ArbitroveBase, IDefau
 	function setAddresses(
 		address _troveManagerAddress,
 		address _redemptionManagerAddress,
-		address _activePoolAddress
+		address _activePoolAddress,
+		address _wstETHAddress
 	) external initializer {
 		require(!isInitialized, "Already initialized");
 		checkContract(_troveManagerAddress);
 		checkContract(_activePoolAddress);
 		checkContract(_redemptionManagerAddress);
+		checkContract(_wstETHAddress);
 		isInitialized = true;
 
 		__Ownable_init();
@@ -52,6 +54,7 @@ contract DefaultPool is OwnableUpgradeable, CheckContract, ArbitroveBase, IDefau
 		troveManagerAddress = _troveManagerAddress;
 		redemptionManagerAddress = _redemptionManagerAddress;
 		activePoolAddress = _activePoolAddress;
+		wstETH = _wstETHAddress;
 
 		emit TroveManagerAddressChanged(_troveManagerAddress);
 		emit ActivePoolAddressChanged(_activePoolAddress);

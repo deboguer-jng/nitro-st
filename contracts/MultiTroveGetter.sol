@@ -22,9 +22,14 @@ contract MultiTroveGetter is ArbitroveBase {
 	TroveManager public troveManager; // XXX Troves missing from ITroveManager?
 	ISortedTroves public sortedTroves;
 
-	constructor(TroveManager _troveManager, ISortedTroves _sortedTroves) {
+	constructor(
+		TroveManager _troveManager,
+		ISortedTroves _sortedTroves,
+		address _wstETHAddress
+	) {
 		troveManager = _troveManager;
 		sortedTroves = _sortedTroves;
+		wstETH = _wstETHAddress;
 	}
 
 	function getMultipleSortedTroves(
