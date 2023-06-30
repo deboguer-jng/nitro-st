@@ -10,10 +10,10 @@ import "./Dependencies/BaseMath.sol";
 import "./Dependencies/VestaMath.sol";
 import "./Interfaces/ITellorCaller.sol";
 
-contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed {
+contract PriceFeedV2 is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed {
 	using SafeMathUpgradeable for uint256;
 
-	string public constant NAME = "PriceFeed";
+	string public constant NAME = "PriceFeedV2";
 	address public constant FLAG_ARBITRUM_SEQ_OFFLINE =
 		0xa438451D6458044c3c8CD2f6f31c91ac882A6d91;
 

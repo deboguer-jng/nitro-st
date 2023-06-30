@@ -18,6 +18,7 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed {
 		0xa438451D6458044c3c8CD2f6f31c91ac882A6d91;
 
 	FlagsInterface public chainlinkFlags;
+	AggregatorV3Interface public sequencerUptimeFeed;
 	ITellorCaller public tellorCaller;
 
 	// Use to convert a price answer to an 18-digit precision uint
@@ -25,6 +26,8 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed {
 	uint256 public constant TELLOR_DIGITS = 6;
 
 	uint256 public constant TIMEOUT = 4 hours;
+
+	uint256 private constant GRACE_PERIOD_TIME = 3600;
 
 	// Maximum deviation allowed between two consecutive Chainlink oracle prices. 18-digit precision.
 	uint256 public constant MAX_PRICE_DEVIATION_FROM_PREVIOUS_ROUND = 5e17; // 50%
@@ -44,12 +47,12 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed {
 	}
 
 	function setAddresses(
-		address _chainlinkFlag,
+		address _sequencerUptimeFeed,
 		address _adminContract,
 		address _tellorCaller
 	) external initializer {
 		require(!isInitialized);
-		checkContract(_chainlinkFlag);
+		checkContract(_sequencerUptimeFeed);
 		checkContract(_adminContract);
 		checkContract(_tellorCaller);
 		isInitialized = true;
@@ -57,7 +60,7 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed {
 		__Ownable_init();
 
 		adminContract = _adminContract;
-		chainlinkFlags = FlagsInterface(_chainlinkFlag);
+		sequencerUptimeFeed = AggregatorV3Interface(_sequencerUptimeFeed);
 		tellorCaller = ITellorCaller(_tellorCaller);
 		status = Status.chainlinkWorking;
 	}
@@ -557,10 +560,28 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed {
 	function _getCurrentChainlinkResponse(
 		AggregatorV3Interface _priceAggregator
 	) internal view returns (ChainlinkResponse memory chainlinkResponse) {
-		if (chainlinkFlags.getFlag(FLAG_ARBITRUM_SEQ_OFFLINE)) {
+		// prettier-ignore
+		(
+				/*uint80 roundID*/,
+				int256 answer,
+				uint256 startedAt,
+				/*uint256 updatedAt*/,
+				/*uint80 answeredInRound*/
+		) = sequencerUptimeFeed.latestRoundData();
+
+		// Answer == 0: Sequencer is up
+		// Answer == 1: Sequencer is down
+		bool isSequencerUp = answer == 0;
+		if (!isSequencerUp) {
 			return chainlinkResponse;
 		}
 
+		// Make sure the grace period has passed after the
+		// sequencer is back up.
+		uint256 timeSinceUp = block.timestamp - startedAt;
+		if (timeSinceUp <= GRACE_PERIOD_TIME) {
+			return chainlinkResponse;
+		}
 		try _priceAggregator.decimals() returns (uint8 decimals) {
 			chainlinkResponse.decimals = decimals;
 		} catch {
@@ -569,13 +590,13 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed {
 
 		try _priceAggregator.latestRoundData() returns (
 			uint80 roundId,
-			int256 answer,
+			int256 data,
 			uint256 /* startedAt */,
 			uint256 timestamp,
 			uint80 /* answeredInRound */
 		) {
 			chainlinkResponse.roundId = roundId;
-			chainlinkResponse.answer = answer;
+			chainlinkResponse.answer = data;
 			chainlinkResponse.timestamp = timestamp;
 			chainlinkResponse.success = true;
 			return chainlinkResponse;

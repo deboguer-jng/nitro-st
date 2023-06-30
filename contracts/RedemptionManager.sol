@@ -9,10 +9,13 @@ import "./Dependencies/CheckContract.sol";
 
 contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 	using SafeMathUpgradeable for uint256;
+	string public constant NAME = "RedemptionManager";
 
 	TroveManager public troveManager;
 
 	bool public isRedemptionWhitelisted;
+
+	bool public isInitialized;
 
 	mapping(address => bool) public redemptionWhitelist;
 
@@ -22,7 +25,12 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 	 */
 	uint256 public constant BETA = 2;
 
-	constructor(TroveManager _troveManager) {
+	function setAddresses(TroveManager _troveManager) external initializer {
+		require(!isInitialized, "!initialized");
+
+		checkContract(address(_troveManager));
+		isInitialized = true;
+
 		troveManager = _troveManager;
 	}
 
