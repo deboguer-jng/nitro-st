@@ -128,11 +128,12 @@ class MainnetDeploymentHelper {
 		return partialContracts
 	}
 
-	async deployLiquityCoreMainnet(deploymentState, multisig) {
+	async deployLiquityCoreMainnet(tellorMasterAddr, deploymentState, multisig) {
 		// Get contract factories
 		const priceFeedFactory = await this.getFactory("PriceFeed")
 		const sortedTrovesFactory = await this.getFactory("SortedTroves")
 		const troveManagerFactory = await this.getFactory("TroveManager")
+		const redemptionManagerFactory = await this.getFactory("RedemptionManager")
 		const activePoolFactory = await this.getFactory("ActivePool")
 		const stabilityPoolFactory = await this.getFactory("StabilityPool")
 		const StabilityPoolManagerFactory = await this.getFactory("StabilityPoolManager")
@@ -145,6 +146,7 @@ class MainnetDeploymentHelper {
 		const vaultParametersFactory = await this.getFactory("VestaParameters")
 		const lockedVstaFactory = await this.getFactory("LockedVSTA")
 		const adminContractFactory = await this.getFactory("AdminContract")
+		const tellorCallerFactory = await this.getFactory("TellorCaller")
 
 		// Deploy txs
 
@@ -164,6 +166,12 @@ class MainnetDeploymentHelper {
 		const troveManager = await this.loadOrDeploy(
 			troveManagerFactory,
 			"troveManager",
+			deploymentState,
+			true
+		)
+		const redemptionManager = await this.loadOrDeploy(
+			redemptionManagerFactory,
+			"redemptionManager",
 			deploymentState,
 			true
 		)
@@ -227,9 +235,17 @@ class MainnetDeploymentHelper {
 			"adminContract",
 			deploymentState
 		)
+		const tellorCaller = await this.loadOrDeploy(
+			tellorCallerFactory,
+			"tellorCaller",
+			deploymentState,
+			false,
+			[tellorMasterAddr]
+		)
 
 		const VSTTokenParams = [
 			troveManager?.address,
+			redemptionManager?.address,
 			stabilityPoolManager.address,
 			borrowerOperations.address,
 		]
@@ -247,6 +263,7 @@ class MainnetDeploymentHelper {
 			await this.verifyContract("priceFeed", deploymentState)
 			await this.verifyContract("sortedTroves", deploymentState)
 			await this.verifyContract("troveManager", deploymentState)
+			await this.verifyContract("redemptionManager", deploymentState)
 			await this.verifyContract("activePool", deploymentState)
 			await this.verifyContract("stabilityPoolV1", deploymentState)
 			await this.verifyContract("stabilityPoolManager", deploymentState)
@@ -259,6 +276,7 @@ class MainnetDeploymentHelper {
 			await this.verifyContract("vestaParameters", deploymentState)
 			await this.verifyContract("lockedVsta", deploymentState)
 			await this.verifyContract("adminContract", deploymentState)
+			await this.verifyContract("tellorCaller", deploymentState, [tellorMasterAddr])
 		}
 
 		const coreContracts = {
@@ -266,6 +284,7 @@ class MainnetDeploymentHelper {
 			vstToken,
 			sortedTroves,
 			troveManager,
+			redemptionManager,
 			activePool,
 			stabilityPoolManager,
 			stabilityPoolV1,
@@ -277,6 +296,7 @@ class MainnetDeploymentHelper {
 			hintHelpers,
 			vestaParameters,
 			lockedVsta,
+			tellorCaller,
 		}
 		return coreContracts
 	}
@@ -324,11 +344,12 @@ class MainnetDeploymentHelper {
 		return VSTAContracts
 	}
 
-	async deployMultiTroveGetterMainnet(liquityCore, deploymentState) {
+	async deployMultiTroveGetterMainnet(liquityCore, deploymentState, wstEthAddress) {
 		const multiTroveGetterFactory = await this.getFactory("MultiTroveGetter")
 		const multiTroveGetterParams = [
 			liquityCore.troveManager.address,
 			liquityCore.sortedTroves.address,
+			wstEthAddress,
 		]
 		const multiTroveGetter = await this.loadOrDeploy(
 			multiTroveGetterFactory,
@@ -354,7 +375,12 @@ class MainnetDeploymentHelper {
 		return isInitialized
 	}
 	// Connect contracts to their dependencies
-	async connectCoreContractsMainnet(contracts, VSTAContracts, chainlinkFlagAddress) {
+	async connectCoreContractsMainnet(
+		contracts,
+		VSTAContracts,
+		chainlinkFlagAddress,
+		wstEthAddress
+	) {
 		const gasPrice = this.configParams.GAS_PRICE
 
 		;(await this.isOwnershipRenounced(contracts.priceFeed)) ||
@@ -362,6 +388,7 @@ class MainnetDeploymentHelper {
 				contracts.priceFeed.setAddresses(
 					chainlinkFlagAddress,
 					contracts.adminContract.address,
+					contracts.tellorCaller.address,
 					{ gasPrice }
 				)
 			))
@@ -370,6 +397,7 @@ class MainnetDeploymentHelper {
 				contracts.sortedTroves.setParams(
 					contracts.troveManager.address,
 					contracts.borrowerOperations.address,
+					wstEthAddress,
 					{ gasPrice }
 				)
 			))
@@ -384,8 +412,13 @@ class MainnetDeploymentHelper {
 					contracts.defaultPool.address,
 					contracts.priceFeed.address,
 					contracts.adminContract.address,
+					wstEthAddress,
 					{ gasPrice }
 				)
+			))
+		;(await this.isOwnershipRenounced(contracts.redemptionManager)) ||
+			(await this.sendAndWaitForTransaction(
+				contracts.redemptionManager.setAddresses(contracts.troveManager.address, { gasPrice })
 			))
 		;(await this.isOwnershipRenounced(contracts.troveManager)) ||
 			(await this.sendAndWaitForTransaction(
@@ -400,6 +433,11 @@ class MainnetDeploymentHelper {
 					contracts.vestaParameters.address,
 					{ gasPrice }
 				)
+			)) ||
+			(await this.sendAndWaitForTransaction(
+				contracts.troveManager.setRedemptionManager(contracts.redemptionManager.address, {
+					gasPrice,
+				})
 			))
 		;(await this.isOwnershipRenounced(contracts.borrowerOperations)) ||
 			(await this.sendAndWaitForTransaction(
@@ -417,9 +455,13 @@ class MainnetDeploymentHelper {
 			))
 		;(await this.isOwnershipRenounced(contracts.stabilityPoolManager)) ||
 			(await this.sendAndWaitForTransaction(
-				contracts.stabilityPoolManager.setAddresses(contracts.adminContract.address, {
-					gasPrice,
-				})
+				contracts.stabilityPoolManager.setAddresses(
+					contracts.adminContract.address,
+					wstEthAddress,
+					{
+						gasPrice,
+					}
+				)
 			))
 		;(await this.isOwnershipRenounced(contracts.activePool)) ||
 			(await this.sendAndWaitForTransaction(
@@ -429,6 +471,8 @@ class MainnetDeploymentHelper {
 					contracts.stabilityPoolManager.address,
 					contracts.defaultPool.address,
 					contracts.collSurplusPool.address,
+					contracts.redemptionManager.address,
+					wstEthAddress,
 					{ gasPrice }
 				)
 			))
@@ -436,7 +480,9 @@ class MainnetDeploymentHelper {
 			(await this.sendAndWaitForTransaction(
 				contracts.defaultPool.setAddresses(
 					contracts.troveManager.address,
+					contracts.redemptionManager.address,
 					contracts.activePool.address,
+					wstEthAddress,
 					{ gasPrice }
 				)
 			))
@@ -445,7 +491,9 @@ class MainnetDeploymentHelper {
 				contracts.collSurplusPool.setAddresses(
 					contracts.borrowerOperations.address,
 					contracts.troveManager.address,
+					contracts.redemptionManager.address,
 					contracts.activePool.address,
+					wstEthAddress,
 					{ gasPrice }
 				)
 			))
@@ -459,6 +507,7 @@ class MainnetDeploymentHelper {
 					contracts.vstToken.address,
 					contracts.sortedTroves.address,
 					VSTAContracts.communityIssuance.address,
+					wstEthAddress,
 					{ gasPrice }
 				)
 			))

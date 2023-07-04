@@ -38,8 +38,6 @@ async function mainnetDeploy(configParams) {
 		`deployerETHBalance before: ${await ethers.provider.getBalance(deployerWallet.address)}`
 	)
 
-	console.log({ config })
-
 	if (config.VSTA_TOKEN_ONLY) {
 		console.log("INIT VSTA ONLY")
 		const partialContracts = await mdh.deployPartially(TREASURY_WALLET, deploymentState)
@@ -92,7 +90,11 @@ async function mainnetDeploy(configParams) {
 
 	console.log({ deploymentState })
 	// Deploy core logic contracts
-	vestaCore = await mdh.deployLiquityCoreMainnet(deploymentState, ADMIN_WALLET)
+	vestaCore = await mdh.deployLiquityCoreMainnet(
+		config.externalAddrs.TELLOR_MASTER,
+		deploymentState,
+		ADMIN_WALLET
+	)
 
 	await mdh.logContractObjects(vestaCore)
 
@@ -108,7 +110,8 @@ async function mainnetDeploy(configParams) {
 	await mdh.connectCoreContractsMainnet(
 		vestaCore,
 		VSTAContracts,
-		config.externalAddrs.CHAINLINK_FLAG_HEALTH
+		config.externalAddrs.CHAINLINK_SEQUENCER_UPTIME_FEED,
+		config.externalAddrs.WST_ETH
 	)
 
 	console.log("Connect VSTA Contract to Core")
@@ -125,16 +128,58 @@ async function mainnetDeploy(configParams) {
 			ethers.constants.MaxUint256
 		)
 
-	await addETHCollaterals()
-	await addBTCCollaterals()
-	await addGOHMCollaterals()
+	await addWstETHCollaterals(config.externalAddrs.WST_ETH)
+	// await addETHCollaterals()
+	// await addBTCCollaterals()
+	// await addGOHMCollaterals()
 
 	mdh.saveDeployment(deploymentState)
 
-	await mdh.deployMultiTroveGetterMainnet(vestaCore, deploymentState)
+	await mdh.deployMultiTroveGetterMainnet(
+		vestaCore,
+		deploymentState,
+		config.externalAddrs.WST_ETH
+	)
 	await mdh.logContractObjects(VSTAContracts)
 
 	await giveContractsOwnerships()
+}
+
+async function addWstETHCollaterals(wstEthAddress) {
+	if (
+		(await vestaCore.stabilityPoolManager.unsafeGetAssetStabilityPool(wstEthAddress)) ==
+		ZERO_ADDRESS
+	) {
+		console.log("Creating Collateral - WstETH")
+
+		const txReceiptProxyWstETH = await mdh.sendAndWaitForTransaction(
+			vestaCore.adminContract.addNewCollateral(
+				wstEthAddress,
+				vestaCore.stabilityPoolV1.address,
+				config.externalAddrs.CHAINLINK_ETHUSD_PROXY,
+				0, /// tellorId
+				dec(100_000, 18),
+				toBN(dec(100_000, 18)).div(toBN(4)),
+				config.REDEMPTION_SAFETY
+			),
+			{
+				gasPrice,
+			}
+		)
+
+		console.log({ txReceiptProxyWstETH })
+
+		console.log({
+			poolManagerPool: await vestaCore.stabilityPoolManager.unsafeGetAssetStabilityPool(
+				wstEthAddress
+			),
+		})
+
+		deploymentState["ProxyStabilityPoolWstETH"] = {
+			address: await vestaCore.stabilityPoolManager.getAssetStabilityPool(wstEthAddress),
+			txHash: txReceiptProxyWstETH.transactionHash,
+		}
+	}
 }
 
 async function addETHCollaterals() {
