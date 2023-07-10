@@ -9,7 +9,7 @@ import "./Interfaces/ITroveManager.sol";
 import "./Interfaces/IVSTToken.sol";
 import "./Interfaces/ICollSurplusPool.sol";
 import "./Interfaces/ISortedTroves.sol";
-import "./Interfaces/IVSTAStaking.sol";
+import "./Interfaces/IYOUStaking.sol";
 import "./Interfaces/IStabilityPoolManager.sol";
 import "./Dependencies/VestaBase.sol";
 import "./Dependencies/CheckContract.sol";
@@ -31,8 +31,8 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 
 	ICollSurplusPool collSurplusPool;
 
-	IVSTAStaking public VSTAStaking;
-	address public VSTAStakingAddress;
+	IYOUStaking public YOUStaking;
+	address public YOUStakingAddress;
 
 	IVSTToken public VSTToken;
 
@@ -105,7 +105,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		address _collSurplusPoolAddress,
 		address _sortedTrovesAddress,
 		address _vstTokenAddress,
-		address _VSTAStakingAddress,
+		address _YOUStakingAddress,
 		address _vestaParamsAddress
 	) external override initializer {
 		require(!isInitialized, "Already initialized");
@@ -115,7 +115,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		checkContract(_collSurplusPoolAddress);
 		checkContract(_sortedTrovesAddress);
 		checkContract(_vstTokenAddress);
-		checkContract(_VSTAStakingAddress);
+		checkContract(_YOUStakingAddress);
 		checkContract(_vestaParamsAddress);
 		isInitialized = true;
 
@@ -127,8 +127,8 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		collSurplusPool = ICollSurplusPool(_collSurplusPoolAddress);
 		sortedTroves = ISortedTroves(_sortedTrovesAddress);
 		VSTToken = IVSTToken(_vstTokenAddress);
-		VSTAStakingAddress = _VSTAStakingAddress;
-		VSTAStaking = IVSTAStaking(_VSTAStakingAddress);
+		YOUStakingAddress = _YOUStakingAddress;
+		YOUStaking = IYOUStaking(_YOUStakingAddress);
 
 		setVestaParameters(_vestaParamsAddress);
 
@@ -138,7 +138,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		emit CollSurplusPoolAddressChanged(_collSurplusPoolAddress);
 		emit SortedTrovesAddressChanged(_sortedTrovesAddress);
 		emit VSTTokenAddressChanged(_vstTokenAddress);
-		emit VSTAStakingAddressChanged(_VSTAStakingAddress);
+		emit YOUStakingAddressChanged(_YOUStakingAddress);
 	}
 
 	// --- Borrower Trove Operations ---
@@ -147,7 +147,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		address _asset,
 		uint256 _tokenAmount,
 		uint256 _maxFeePercentage,
-		uint256 _VSTAmount,
+		uint256 _YOUmount,
 		address _upperHint,
 		address _lowerHint
 	) external payable override onlyWstETH(_asset) {
@@ -169,14 +169,14 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		_requireTroveisNotActive(vars.asset, contractsCache.troveManager, msg.sender);
 
 		vars.VSTFee;
-		vars.netDebt = _VSTAmount;
+		vars.netDebt = _YOUmount;
 
 		if (!isRecoveryMode) {
 			vars.VSTFee = _triggerBorrowingFee(
 				vars.asset,
 				contractsCache.troveManager,
 				contractsCache.VSTToken,
-				_VSTAmount,
+				_YOUmount,
 				_maxFeePercentage
 			);
 			vars.netDebt = vars.netDebt.add(vars.VSTFee);
@@ -217,14 +217,14 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		vars.arrayIndex = contractsCache.troveManager.addTroveOwnerToArray(vars.asset, msg.sender);
 		emit TroveCreated(vars.asset, msg.sender, vars.arrayIndex);
 
-		// Move the ether to the Active Pool, and mint the VSTAmount to the borrower
+		// Move the ether to the Active Pool, and mint the YOUmount to the borrower
 		_activePoolAddColl(vars.asset, contractsCache.activePool, _tokenAmount);
 		_withdrawVST(
 			vars.asset,
 			contractsCache.activePool,
 			contractsCache.VSTToken,
 			msg.sender,
-			_VSTAmount,
+			_YOUmount,
 			vars.netDebt
 		);
 		// Move the VST gas compensation to the Gas Pool
@@ -304,7 +304,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 	function withdrawVST(
 		address _asset,
 		uint256 _maxFeePercentage,
-		uint256 _VSTAmount,
+		uint256 _YOUmount,
 		address _upperHint,
 		address _lowerHint
 	) external override onlyWstETH(_asset) {
@@ -313,7 +313,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 			0,
 			msg.sender,
 			0,
-			_VSTAmount,
+			_YOUmount,
 			true,
 			_upperHint,
 			_lowerHint,
@@ -324,11 +324,11 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 	// Repay VST tokens to a Trove: Burn the repaid VST tokens, and reduce the trove's debt accordingly
 	function repayVST(
 		address _asset,
-		uint256 _VSTAmount,
+		uint256 _YOUmount,
 		address _upperHint,
 		address _lowerHint
 	) external override onlyWstETH(_asset) {
-		_adjustTrove(_asset, 0, msg.sender, 0, _VSTAmount, false, _upperHint, _lowerHint, 0);
+		_adjustTrove(_asset, 0, msg.sender, 0, _YOUmount, false, _upperHint, _lowerHint, 0);
 	}
 
 	function adjustTrove(
@@ -531,7 +531,14 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 			vars.debt.sub(vestaParams.VST_GAS_COMPENSATION(_asset))
 		);
 
-		uint256 newTCR = _getNewTCRFromTroveChange(_asset, vars.coll, false, vars.debt, false, vars.price);
+		uint256 newTCR = _getNewTCRFromTroveChange(
+			_asset,
+			vars.coll,
+			false,
+			vars.debt,
+			false,
+			vars.price
+		);
 		_requireNewTCRisAboveCCR(_asset, newTCR);
 
 		troveManagerCached.removeStake(_asset, msg.sender);
@@ -573,17 +580,17 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		address _asset,
 		ITroveManager _troveManager,
 		IVSTToken _VSTToken,
-		uint256 _VSTAmount,
+		uint256 _YOUmount,
 		uint256 _maxFeePercentage
 	) internal returns (uint256) {
 		_troveManager.decayBaseRateFromBorrowing(_asset); // decay the baseRate state variable
-		uint256 VSTFee = _troveManager.getBorrowingFee(_asset, _VSTAmount);
+		uint256 VSTFee = _troveManager.getBorrowingFee(_asset, _YOUmount);
 
-		_requireUserAcceptsFee(VSTFee, _VSTAmount, _maxFeePercentage);
+		_requireUserAcceptsFee(VSTFee, _YOUmount, _maxFeePercentage);
 
-		// Send fee to VSTA staking contract
-		_VSTToken.mint(_asset, VSTAStakingAddress, VSTFee);
-		VSTAStaking.increaseF_VST(VSTFee);
+		// Send fee to YOU staking contract
+		_VSTToken.mint(_asset, YOUStakingAddress, VSTFee);
+		YOUStaking.increaseF_VST(VSTFee);
 
 		return VSTFee;
 	}
@@ -594,11 +601,10 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		return usdValue;
 	}
 
-	function _getCollChange(uint256 _collReceived, uint256 _requestedCollWithdrawal)
-		internal
-		pure
-		returns (uint256 collChange, bool isCollIncrease)
-	{
+	function _getCollChange(
+		uint256 _collReceived,
+		uint256 _requestedCollWithdrawal
+	) internal pure returns (uint256 collChange, bool isCollIncrease) {
 		if (_collReceived != 0) {
 			collChange = _collReceived;
 			isCollIncrease = true;
@@ -677,11 +683,11 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		IActivePool _activePool,
 		IVSTToken _VSTToken,
 		address _account,
-		uint256 _VSTAmount,
+		uint256 _YOUmount,
 		uint256 _netDebtIncrease
 	) internal {
 		_activePool.increaseVSTDebt(_asset, _netDebtIncrease);
-		_VSTToken.mint(_asset, _account, _VSTAmount);
+		_VSTToken.mint(_asset, _account, _YOUmount);
 	}
 
 	// Burn the specified amount of VST from _account and decreases the total active debt
@@ -698,10 +704,10 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 
 	// --- 'Require' wrapper functions ---
 
-	function _requireSingularCollChange(uint256 _collWithdrawal, uint256 _amountSent)
-		internal
-		view
-	{
+	function _requireSingularCollChange(
+		uint256 _collWithdrawal,
+		uint256 _amountSent
+	) internal view {
 		require(
 			_collWithdrawal == 0 || _amountSent == 0,
 			"BorrowerOperations: Cannot withdraw and add coll"
@@ -968,13 +974,10 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		return newTCR;
 	}
 
-	function getCompositeDebt(address _asset, uint256 _debt)
-		external
-		view
-		override
-		onlyWstETH(_asset)
-		returns (uint256)
-	{
+	function getCompositeDebt(
+		address _asset,
+		uint256 _debt
+	) external view override onlyWstETH(_asset) returns (uint256) {
 		return _getCompositeDebt(_asset, _debt);
 	}
 

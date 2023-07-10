@@ -88,16 +88,16 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 	mapping(uint128 => mapping(uint128 => uint256)) public epochToScaleToSum;
 
 	/*
-	 * Similarly, the sum 'G' is used to calculate VSTA gains. During it's lifetime, each deposit d_t earns a VSTA gain of
+	 * Similarly, the sum 'G' is used to calculate YOU gains. During it's lifetime, each deposit d_t earns a YOU gain of
 	 *  ( d_t * [G - G_t] )/P_t, where G_t is the depositor's snapshot of G taken at time t when  the deposit was made.
 	 *
-	 *  VSTA reward events occur are triggered by depositor operations (new deposit, topup, withdrawal), and liquidations.
-	 *  In each case, the VSTA reward is issued (i.e. G is updated), before other state changes are made.
+	 *  YOU reward events occur are triggered by depositor operations (new deposit, topup, withdrawal), and liquidations.
+	 *  In each case, the YOU reward is issued (i.e. G is updated), before other state changes are made.
 	 */
 	mapping(uint128 => mapping(uint128 => uint256)) public epochToScaleToG;
 
-	// Error tracker for the error correction in the VSTA issuance calculation
-	uint256 public lastVSTAError;
+	// Error tracker for the error correction in the YOU issuance calculation
+	uint256 public lastYOUError;
 	// Error trackers for the error correction in the offset calculation
 	uint256 public lastAssetError_Offset;
 	uint256 public lastVSTLossError_Offset;
@@ -169,8 +169,8 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 
 	/*  provideToSP():
 	 *
-	 * - Triggers a VSTA issuance, based on time passed since the last issuance. The VSTA issuance is shared between *all* depositors
-	 * - Sends depositor's accumulated gains (VSTA, ETH) to depositor
+	 * - Triggers a YOU issuance, based on time passed since the last issuance. The YOU issuance is shared between *all* depositors
+	 * - Sends depositor's accumulated gains (YOU, ETH) to depositor
 	 * - Increases deposit and system stake, and takes new snapshots for each.
 	 */
 	function provideToSP(uint256 _amount) external override {
@@ -179,7 +179,7 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		uint256 initialDeposit = deposits[msg.sender];
 
 		ICommunityIssuance communityIssuanceCached = communityIssuance;
-		_triggerVSTAIssuance(communityIssuanceCached);
+		_triggerYOUIssuance(communityIssuanceCached);
 
 		uint256 depositorAssetGain = getDepositorAssetGain(msg.sender);
 		uint256 depositorAssetGainEther = getDepositorAssetGain1e18(msg.sender);
@@ -187,8 +187,8 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		uint256 compoundedVSTDeposit = getCompoundedVSTDeposit(msg.sender);
 		uint256 VSTLoss = initialDeposit.sub(compoundedVSTDeposit); // Needed only for event log
 
-		// First pay out any VSTA gains
-		_payOutVSTAGains(communityIssuanceCached, msg.sender);
+		// First pay out any YOU gains
+		_payOutYOUGains(communityIssuanceCached, msg.sender);
 
 		// Update System stake
 		uint256 compoundedStake = getCompoundedTotalStake();
@@ -209,8 +209,8 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 
 	/*  withdrawFromSP():
 	 *
-	 * - Triggers a VSTA issuance, based on time passed since the last issuance. The VSTA issuance is shared between *all* depositors
-	 * - Sends all depositor's accumulated gains (VSTA, ETH) to depositor
+	 * - Triggers a YOU issuance, based on time passed since the last issuance. The YOU issuance is shared between *all* depositors
+	 * - Sends all depositor's accumulated gains (YOU, ETH) to depositor
 	 * - Decreases deposit and system stake, and takes new snapshots for each.
 	 *
 	 * If _amount > userDeposit, the user withdraws all of their compounded deposit.
@@ -224,7 +224,7 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 
 		ICommunityIssuance communityIssuanceCached = communityIssuance;
 
-		_triggerVSTAIssuance(communityIssuanceCached);
+		_triggerYOUIssuance(communityIssuanceCached);
 
 		uint256 depositorAssetGain = getDepositorAssetGain(msg.sender);
 		uint256 depositorAssetGainEther = getDepositorAssetGain1e18(msg.sender);
@@ -233,8 +233,8 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		uint256 VSTtoWithdraw = VestaMath._min(_amount, compoundedVSTDeposit);
 		uint256 VSTLoss = initialDeposit.sub(compoundedVSTDeposit); // Needed only for event log
 
-		// First pay out any VSTA gains
-		_payOutVSTAGains(communityIssuanceCached, msg.sender);
+		// First pay out any YOU gains
+		_payOutYOUGains(communityIssuanceCached, msg.sender);
 
 		// Update System stake
 		uint256 compoundedStake = getCompoundedTotalStake();
@@ -255,8 +255,8 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 	}
 
 	/* withdrawETHGainToTrove:
-	 * - Triggers a VSTA issuance, based on time passed since the last issuance. The VSTA issuance is shared between *all* depositors
-	 * - Sends all depositor's VSTA gain to  depositor
+	 * - Triggers a YOU issuance, based on time passed since the last issuance. The YOU issuance is shared between *all* depositors
+	 * - Sends all depositor's YOU gain to  depositor
 	 * - Transfers the depositor's entire ETH gain from the Stability Pool to the caller's trove
 	 * - Leaves their compounded deposit in the Stability Pool
 	 * - Updates snapshots for deposit and system stake */
@@ -268,15 +268,15 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 
 		ICommunityIssuance communityIssuanceCached = communityIssuance;
 
-		_triggerVSTAIssuance(communityIssuanceCached);
+		_triggerYOUIssuance(communityIssuanceCached);
 
 		uint256 depositorAssetGain = getDepositorAssetGain1e18(msg.sender);
 
 		uint256 compoundedVSTDeposit = getCompoundedVSTDeposit(msg.sender);
 		uint256 VSTLoss = initialDeposit.sub(compoundedVSTDeposit); // Needed only for event log
 
-		// First pay out any VSTA gains
-		_payOutVSTAGains(communityIssuanceCached, msg.sender);
+		// First pay out any YOU gains
+		_payOutYOUGains(communityIssuanceCached, msg.sender);
 
 		// Update System stake
 		uint256 compoundedSystemStake = getCompoundedTotalStake();
@@ -300,40 +300,40 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		}(assetAddress, depositorAssetGain, msg.sender, _upperHint, _lowerHint);
 	}
 
-	// --- VSTA issuance functions ---
+	// --- YOU issuance functions ---
 
-	function _triggerVSTAIssuance(ICommunityIssuance _communityIssuance) internal {
-		uint256 VSTAIssuance = _communityIssuance.issueVSTA();
-		_updateG(VSTAIssuance);
+	function _triggerYOUIssuance(ICommunityIssuance _communityIssuance) internal {
+		uint256 YOUIssuance = _communityIssuance.issueYOU();
+		_updateG(YOUIssuance);
 	}
 
-	function _updateG(uint256 _VSTAIssuance) internal {
+	function _updateG(uint256 _YOUIssuance) internal {
 		uint256 totalVST = totalVSTDeposits; // cached to save an SLOAD
 		/*
-		 * When total deposits is 0, G is not updated. In this case, the VSTA issued can not be obtained by later
+		 * When total deposits is 0, G is not updated. In this case, the YOU issued can not be obtained by later
 		 * depositors - it is missed out on, and remains in the balanceof the CommunityIssuance contract.
 		 *
 		 */
-		if (totalVST == 0 || _VSTAIssuance == 0) {
+		if (totalVST == 0 || _YOUIssuance == 0) {
 			return;
 		}
 
-		uint256 VSTAPerUnitStaked;
-		VSTAPerUnitStaked = _computeVSTAPerUnitStaked(_VSTAIssuance, totalVST);
+		uint256 YOUPerUnitStaked;
+		YOUPerUnitStaked = _computeYOUPerUnitStaked(_YOUIssuance, totalVST);
 
-		uint256 marginalVSTAGain = VSTAPerUnitStaked.mul(P);
+		uint256 marginalYOUGain = YOUPerUnitStaked.mul(P);
 		epochToScaleToG[currentEpoch][currentScale] = epochToScaleToG[currentEpoch][currentScale]
-			.add(marginalVSTAGain);
+			.add(marginalYOUGain);
 
 		emit G_Updated(epochToScaleToG[currentEpoch][currentScale], currentEpoch, currentScale);
 	}
 
-	function _computeVSTAPerUnitStaked(uint256 _VSTAIssuance, uint256 _totalVSTDeposits)
-		internal
-		returns (uint256)
-	{
+	function _computeYOUPerUnitStaked(
+		uint256 _YOUIssuance,
+		uint256 _totalVSTDeposits
+	) internal returns (uint256) {
 		/*
-		 * Calculate the VSTA-per-unit staked.  Division uses a "feedback" error correction, to keep the
+		 * Calculate the YOU-per-unit staked.  Division uses a "feedback" error correction, to keep the
 		 * cumulative error low in the running total G:
 		 *
 		 * 1) Form a numerator which compensates for the floor division error that occurred the last time this
@@ -343,12 +343,12 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		 * 4) Store this error for use in the next correction when this function is called.
 		 * 5) Note: static analysis tools complain about this "division before multiplication", however, it is intended.
 		 */
-		uint256 VSTANumerator = _VSTAIssuance.mul(DECIMAL_PRECISION).add(lastVSTAError);
+		uint256 YOUNumerator = _YOUIssuance.mul(DECIMAL_PRECISION).add(lastYOUError);
 
-		uint256 VSTAPerUnitStaked = VSTANumerator.div(_totalVSTDeposits);
-		lastVSTAError = VSTANumerator.sub(VSTAPerUnitStaked.mul(_totalVSTDeposits));
+		uint256 YOUPerUnitStaked = YOUNumerator.div(_totalVSTDeposits);
+		lastYOUError = YOUNumerator.sub(YOUPerUnitStaked.mul(_totalVSTDeposits));
 
-		return VSTAPerUnitStaked;
+		return YOUPerUnitStaked;
 	}
 
 	// --- Liquidation functions ---
@@ -365,7 +365,7 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 			return;
 		}
 
-		_triggerVSTAIssuance(communityIssuance);
+		_triggerYOUIssuance(communityIssuance);
 
 		(
 			uint256 AssetGainPerUnitStaked,
@@ -529,11 +529,10 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		return _getAssetGainFromSnapshots(initialDeposit, snapshots);
 	}
 
-	function _getAssetGainFromSnapshots(uint256 initialDeposit, Snapshots memory snapshots)
-		internal
-		view
-		returns (uint256)
-	{
+	function _getAssetGainFromSnapshots(
+		uint256 initialDeposit,
+		Snapshots memory snapshots
+	) internal view returns (uint256) {
 		/*
 		 * Grab the sum 'S' from the epoch at which the stake was made. The ETH gain may span up to one scale change.
 		 * If it does, the second portion of the ETH gain is scaled by 1e9.
@@ -558,29 +557,28 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 	}
 
 	/*
-	 * Calculate the VSTA gain earned by a deposit since its last snapshots were taken.
-	 * Given by the formula:  VSTA = d0 * (G - G(0))/P(0)
+	 * Calculate the YOU gain earned by a deposit since its last snapshots were taken.
+	 * Given by the formula:  YOU = d0 * (G - G(0))/P(0)
 	 * where G(0) and P(0) are the depositor's snapshots of the sum G and product P, respectively.
 	 * d0 is the last recorded deposit value.
 	 */
-	function getDepositorVSTAGain(address _depositor) public view override returns (uint256) {
+	function getDepositorYOUGain(address _depositor) public view override returns (uint256) {
 		uint256 initialDeposit = deposits[_depositor];
 		if (initialDeposit == 0) {
 			return 0;
 		}
 
 		Snapshots memory snapshots = depositSnapshots[_depositor];
-		return _getVSTAGainFromSnapshots(initialDeposit, snapshots);
+		return _getYOUGainFromSnapshots(initialDeposit, snapshots);
 	}
 
-	function _getVSTAGainFromSnapshots(uint256 initialStake, Snapshots memory snapshots)
-		internal
-		view
-		returns (uint256)
-	{
+	function _getYOUGainFromSnapshots(
+		uint256 initialStake,
+		Snapshots memory snapshots
+	) internal view returns (uint256) {
 		/*
-		 * Grab the sum 'G' from the epoch at which the stake was made. The VSTA gain may span up to one scale change.
-		 * If it does, the second portion of the VSTA gain is scaled by 1e9.
+		 * Grab the sum 'G' from the epoch at which the stake was made. The YOU gain may span up to one scale change.
+		 * If it does, the second portion of the YOU gain is scaled by 1e9.
 		 * If the gain spans no scale change, the second portion will be 0.
 		 */
 		uint128 epochSnapshot = snapshots.epoch;
@@ -593,11 +591,11 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 			SCALE_FACTOR
 		);
 
-		uint256 VSTAGain = initialStake.mul(firstPortion.add(secondPortion)).div(P_Snapshot).div(
+		uint256 YOUGain = initialStake.mul(firstPortion.add(secondPortion)).div(P_Snapshot).div(
 			DECIMAL_PRECISION
 		);
 
-		return VSTAGain;
+		return YOUGain;
 	}
 
 	// --- Compounded deposit and compounded System stake ---
@@ -631,11 +629,10 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 	}
 
 	// Internal function, used to calculcate compounded deposits and compounded stakes.
-	function _getCompoundedStakeFromSnapshots(uint256 initialStake, Snapshots memory snapshots)
-		internal
-		view
-		returns (uint256)
-	{
+	function _getCompoundedStakeFromSnapshots(
+		uint256 initialStake,
+		Snapshots memory snapshots
+	) internal view returns (uint256) {
 		uint256 snapshot_P = snapshots.P;
 		uint128 scaleSnapshot = snapshots.scale;
 		uint128 epochSnapshot = snapshots.epoch;
@@ -676,7 +673,7 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		return compoundedStake;
 	}
 
-	// --- Sender functions for VST deposit, ETH gains and VSTA gains ---
+	// --- Sender functions for VST deposit, ETH gains and YOU gains ---
 
 	// Transfer the VST tokens from the user to the Stability Pool's address, and update its recorded VST
 	function _sendVSTtoStabilityPool(address _address, uint256 _amount) internal {
@@ -764,13 +761,14 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		emit SystemSnapshotUpdated(currentP, currentG);
 	}
 
-	function _payOutVSTAGains(ICommunityIssuance _communityIssuance, address _depositor)
-		internal
-	{
-		// Pay out depositor's VSTA gain
-		uint256 depositorVSTAGain = getDepositorVSTAGain(_depositor);
-		_communityIssuance.sendVSTA(_depositor, depositorVSTAGain);
-		emit VSTAPaidToDepositor(_depositor, depositorVSTAGain);
+	function _payOutYOUGains(
+		ICommunityIssuance _communityIssuance,
+		address _depositor
+	) internal {
+		// Pay out depositor's YOU gain
+		uint256 depositorYOUGain = getDepositorYOUGain(_depositor);
+		_communityIssuance.sendYOU(_depositor, depositorYOUGain);
+		emit YOUPaidToDepositor(_depositor, depositorYOUGain);
 	}
 
 	// --- 'require' functions ---

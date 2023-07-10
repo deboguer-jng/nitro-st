@@ -4,7 +4,7 @@ pragma solidity ^0.8.10;
 import "./IVestaBase.sol";
 import "./IStabilityPool.sol";
 import "./IVSTToken.sol";
-import "./IVSTAStaking.sol";
+import "./IYOUStaking.sol";
 import "./ICollSurplusPool.sol";
 import "./ISortedTroves.sol";
 import "./IActivePool.sol";
@@ -96,7 +96,7 @@ interface IRedemptionManager is IVestaBase {
 		IActivePool activePool;
 		IDefaultPool defaultPool;
 		IVSTToken vstToken;
-		IVSTAStaking vstaStaking;
+		IYOUStaking vstaStaking;
 		ISortedTroves sortedTroves;
 		ICollSurplusPool collSurplusPool;
 		address gasPoolAddress;
@@ -128,7 +128,7 @@ interface IRedemptionManager is IVestaBase {
 	event GasPoolAddressChanged(address _gasPoolAddress);
 	event CollSurplusPoolAddressChanged(address _collSurplusPoolAddress);
 	event SortedTrovesAddressChanged(address _sortedTrovesAddress);
-	event VSTAStakingAddressChanged(address _VSTAStakingAddress);
+	event YOUStakingAddressChanged(address _YOUStakingAddress);
 
 	event Liquidation(
 		address indexed _asset,
@@ -139,8 +139,8 @@ interface IRedemptionManager is IVestaBase {
 	);
 	event Redemption(
 		address indexed _asset,
-		uint256 _attemptedVSTAmount,
-		uint256 _actualVSTAmount,
+		uint256 _attemptedYOUmount,
+		uint256 _actualYOUmount,
 		uint256 _AssetSent,
 		uint256 _AssetFee
 	);
@@ -198,7 +198,7 @@ interface IRedemptionManager is IVestaBase {
 
 	function redeemCollateral(
 		address _asset,
-		uint256 _VSTAmount,
+		uint256 _YOUmount,
 		address _firstRedemptionHint,
 		address _upperPartialRedemptionHint,
 		address _lowerPartialRedemptionHint,

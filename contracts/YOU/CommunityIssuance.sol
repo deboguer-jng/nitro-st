@@ -23,9 +23,9 @@ contract CommunityIssuance is ICommunityIssuance, OwnableUpgradeable, CheckContr
 	IERC20Upgradeable public vstaToken;
 	IStabilityPoolManager public stabilityPoolManager;
 
-	mapping(address => uint256) public totalVSTAIssued;
+	mapping(address => uint256) public totalYOUIssued;
 	mapping(address => uint256) public lastUpdateTime;
-	mapping(address => uint256) public VSTASupplyCaps;
+	mapping(address => uint256) public YOUSupplyCaps;
 	mapping(address => uint256) public vstaDistributionsByPool;
 
 	address public adminContract;
@@ -76,7 +76,7 @@ contract CommunityIssuance is ICommunityIssuance, OwnableUpgradeable, CheckContr
 		vstaToken = IERC20Upgradeable(_vstaTokenAddress);
 		stabilityPoolManager = IStabilityPoolManager(_stabilityPoolManagerAddress);
 
-		emit VSTATokenAddressSet(_vstaTokenAddress);
+		emit YOUTokenAddressSet(_vstaTokenAddress);
 		emit StabilityPoolAddressSet(_stabilityPoolManagerAddress);
 	}
 
@@ -85,28 +85,26 @@ contract CommunityIssuance is ICommunityIssuance, OwnableUpgradeable, CheckContr
 		adminContract = _admin;
 	}
 
-	function addFundToStabilityPool(address _pool, uint256 _assignedSupply)
-		external
-		override
-		isController
-	{
+	function addFundToStabilityPool(
+		address _pool,
+		uint256 _assignedSupply
+	) external override isController {
 		_addFundToStabilityPoolFrom(_pool, _assignedSupply, msg.sender);
 	}
 
-	function removeFundFromStabilityPool(address _pool, uint256 _fundToRemove)
-		external
-		onlyOwner
-		activeStabilityPoolOnly(_pool)
-	{
-		uint256 newCap = VSTASupplyCaps[_pool].sub(_fundToRemove);
+	function removeFundFromStabilityPool(
+		address _pool,
+		uint256 _fundToRemove
+	) external onlyOwner activeStabilityPoolOnly(_pool) {
+		uint256 newCap = YOUSupplyCaps[_pool].sub(_fundToRemove);
 		require(
-			totalVSTAIssued[_pool] <= newCap,
+			totalYOUIssued[_pool] <= newCap,
 			"CommunityIssuance: Stability Pool doesn't have enough supply."
 		);
 
-		VSTASupplyCaps[_pool] -= _fundToRemove;
+		YOUSupplyCaps[_pool] -= _fundToRemove;
 
-		if (totalVSTAIssued[_pool] == VSTASupplyCaps[_pool]) {
+		if (totalYOUIssued[_pool] == YOUSupplyCaps[_pool]) {
 			disableStabilityPool(_pool);
 		}
 
@@ -135,7 +133,7 @@ contract CommunityIssuance is ICommunityIssuance, OwnableUpgradeable, CheckContr
 			lastUpdateTime[_pool] = block.timestamp;
 		}
 
-		VSTASupplyCaps[_pool] += _assignedSupply;
+		YOUSupplyCaps[_pool] += _assignedSupply;
 		vstaToken.safeTransferFrom(_spender, address(this), _assignedSupply);
 	}
 
@@ -150,55 +148,53 @@ contract CommunityIssuance is ICommunityIssuance, OwnableUpgradeable, CheckContr
 		activeStabilityPoolOnly(_target)
 		activeStabilityPoolOnly(_receiver)
 	{
-		uint256 newCap = VSTASupplyCaps[_target].sub(_quantity);
+		uint256 newCap = YOUSupplyCaps[_target].sub(_quantity);
 		require(
-			totalVSTAIssued[_target] <= newCap,
+			totalYOUIssued[_target] <= newCap,
 			"CommunityIssuance: Stability Pool doesn't have enough supply."
 		);
 
-		VSTASupplyCaps[_target] -= _quantity;
-		VSTASupplyCaps[_receiver] += _quantity;
+		YOUSupplyCaps[_target] -= _quantity;
+		YOUSupplyCaps[_receiver] += _quantity;
 
-		if (totalVSTAIssued[_target] == VSTASupplyCaps[_target]) {
+		if (totalYOUIssued[_target] == YOUSupplyCaps[_target]) {
 			disableStabilityPool(_target);
 		}
 	}
 
 	function disableStabilityPool(address _pool) internal {
 		lastUpdateTime[_pool] = 0;
-		VSTASupplyCaps[_pool] = 0;
-		totalVSTAIssued[_pool] = 0;
+		YOUSupplyCaps[_pool] = 0;
+		totalYOUIssued[_pool] = 0;
 	}
 
-	function issueVSTA() external override onlyStabilityPool returns (uint256) {
-		return _issueVSTA(msg.sender);
+	function issueYOU() external override onlyStabilityPool returns (uint256) {
+		return _issueYOU(msg.sender);
 	}
 
-	function _issueVSTA(address _pool) internal isStabilityPool(_pool) returns (uint256) {
-		uint256 maxPoolSupply = VSTASupplyCaps[_pool];
+	function _issueYOU(address _pool) internal isStabilityPool(_pool) returns (uint256) {
+		uint256 maxPoolSupply = YOUSupplyCaps[_pool];
 
-		if (totalVSTAIssued[_pool] >= maxPoolSupply) return 0;
+		if (totalYOUIssued[_pool] >= maxPoolSupply) return 0;
 
 		uint256 issuance = _getLastUpdateTokenDistribution(_pool);
-		uint256 totalIssuance = issuance.add(totalVSTAIssued[_pool]);
+		uint256 totalIssuance = issuance.add(totalYOUIssued[_pool]);
 
 		if (totalIssuance > maxPoolSupply) {
-			issuance = maxPoolSupply.sub(totalVSTAIssued[_pool]);
+			issuance = maxPoolSupply.sub(totalYOUIssued[_pool]);
 			totalIssuance = maxPoolSupply;
 		}
 
 		lastUpdateTime[_pool] = block.timestamp;
-		totalVSTAIssued[_pool] = totalIssuance;
-		emit TotalVSTAIssuedUpdated(_pool, totalIssuance);
+		totalYOUIssued[_pool] = totalIssuance;
+		emit TotalYOUIssuedUpdated(_pool, totalIssuance);
 
 		return issuance;
 	}
 
-	function _getLastUpdateTokenDistribution(address stabilityPool)
-		internal
-		view
-		returns (uint256)
-	{
+	function _getLastUpdateTokenDistribution(
+		address stabilityPool
+	) internal view returns (uint256) {
 		require(lastUpdateTime[stabilityPool] != 0, "Stability pool hasn't been assigned");
 		uint256 timePassed = block.timestamp.sub(lastUpdateTime[stabilityPool]).div(
 			SECONDS_IN_ONE_MINUTE
@@ -210,13 +206,9 @@ contract CommunityIssuance is ICommunityIssuance, OwnableUpgradeable, CheckContr
 		return totalDistribuedSinceBeginning;
 	}
 
-	function sendVSTA(address _account, uint256 _VSTAamount)
-		external
-		override
-		onlyStabilityPool
-	{
-		uint256 balanceVSTA = vstaToken.balanceOf(address(this));
-		uint256 safeAmount = balanceVSTA >= _VSTAamount ? _VSTAamount : balanceVSTA;
+	function sendYOU(address _account, uint256 _YOUamount) external override onlyStabilityPool {
+		uint256 balanceYOU = vstaToken.balanceOf(address(this));
+		uint256 safeAmount = balanceYOU >= _YOUamount ? _YOUamount : balanceYOU;
 
 		if (safeAmount == 0) {
 			return;
@@ -225,11 +217,10 @@ contract CommunityIssuance is ICommunityIssuance, OwnableUpgradeable, CheckContr
 		vstaToken.transfer(_account, safeAmount);
 	}
 
-	function setWeeklyVstaDistribution(address _stabilityPool, uint256 _weeklyReward)
-		external
-		isController
-		isStabilityPool(_stabilityPool)
-	{
+	function setWeeklyVstaDistribution(
+		address _stabilityPool,
+		uint256 _weeklyReward
+	) external isController isStabilityPool(_stabilityPool) {
 		vstaDistributionsByPool[_stabilityPool] = _weeklyReward.div(DISTRIBUTION_DURATION);
 	}
 }

@@ -22,7 +22,7 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 
 	ICollSurplusPool public collSurplusPool;
 
-	IVSTAStaking public vstaStaking;
+	IYOUStaking public vstaStaking;
 
 	IVSTToken public override vstToken;
 
@@ -127,7 +127,7 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		collSurplusPool = ICollSurplusPool(_collSurplusPoolAddress);
 		vstToken = IVSTToken(_vstTokenAddress);
 		sortedTroves = ISortedTroves(_sortedTrovesAddress);
-		vstaStaking = IVSTAStaking(_vstaStakingAddress);
+		vstaStaking = IYOUStaking(_vstaStakingAddress);
 
 		setVestaParameters(_vestaParamsAddress);
 
@@ -137,7 +137,7 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		emit CollSurplusPoolAddressChanged(_collSurplusPoolAddress);
 		emit VSTTokenAddressChanged(_vstTokenAddress);
 		emit SortedTrovesAddressChanged(_sortedTrovesAddress);
-		emit VSTAStakingAddressChanged(_vstaStakingAddress);
+		emit YOUStakingAddressChanged(_vstaStakingAddress);
 	}
 
 	function setRedemptionManager(address _redemptionManagerAddress) external onlyOwner {
@@ -478,7 +478,7 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 			vestaParams.activePool(),
 			vestaParams.defaultPool(),
 			IVSTToken(address(0)),
-			IVSTAStaking(address(0)),
+			IYOUStaking(address(0)),
 			sortedTroves,
 			ICollSurplusPool(address(0)),
 			address(0)

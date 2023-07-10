@@ -28,7 +28,7 @@ interface IStabilityPool is IDeposit {
 	event StakeChanged(uint256 _newSystemStake, address _depositor);
 
 	event AssetGainWithdrawn(address indexed _depositor, uint256 _Asset, uint256 _VSTLoss);
-	event VSTAPaidToDepositor(address indexed _depositor, uint256 _VSTA);
+	event YOUPaidToDepositor(address indexed _depositor, uint256 _YOU);
 	event AssetSent(address _to, uint256 _amount);
 
 	// --- Functions ---
@@ -53,10 +53,10 @@ interface IStabilityPool is IDeposit {
 	 * - Sender is not a registered frontend
 	 * - _amount is not zero
 	 * ---
-	 * - Triggers a VSTA issuance, based on time passed since the last issuance. The VSTA issuance is shared between *all* depositors and front ends
+	 * - Triggers a YOU issuance, based on time passed since the last issuance. The YOU issuance is shared between *all* depositors and front ends
 	 * - Tags the deposit with the provided front end tag param, if it's a new deposit
-	 * - Sends depositor's accumulated gains (VSTA, ETH) to depositor
-	 * - Sends the tagged front end's accumulated VSTA gains to the tagged front end
+	 * - Sends depositor's accumulated gains (YOU, ETH) to depositor
+	 * - Sends the tagged front end's accumulated YOU gains to the tagged front end
 	 * - Increases deposit and tagged front end's stake, and takes new snapshots for each.
 	 */
 	function provideToSP(uint256 _amount) external;
@@ -66,10 +66,10 @@ interface IStabilityPool is IDeposit {
 	 * - _amount is zero or there are no under collateralized troves left in the system
 	 * - User has a non zero deposit
 	 * ---
-	 * - Triggers a VSTA issuance, based on time passed since the last issuance. The VSTA issuance is shared between *all* depositors and front ends
+	 * - Triggers a YOU issuance, based on time passed since the last issuance. The YOU issuance is shared between *all* depositors and front ends
 	 * - Removes the deposit's front end tag if it is a full withdrawal
-	 * - Sends all depositor's accumulated gains (VSTA, ETH) to depositor
-	 * - Sends the tagged front end's accumulated VSTA gains to the tagged front end
+	 * - Sends all depositor's accumulated gains (YOU, ETH) to depositor
+	 * - Sends the tagged front end's accumulated YOU gains to the tagged front end
 	 * - Decreases deposit and tagged front end's stake, and takes new snapshots for each.
 	 *
 	 * If _amount > userDeposit, the user withdraws all of their compounded deposit.
@@ -82,9 +82,9 @@ interface IStabilityPool is IDeposit {
 	 * - User has an open trove
 	 * - User has some ETH gain
 	 * ---
-	 * - Triggers a VSTA issuance, based on time passed since the last issuance. The VSTA issuance is shared between *all* depositors and front ends
-	 * - Sends all depositor's VSTA gain to  depositor
-	 * - Sends all tagged front end's VSTA gain to the tagged front end
+	 * - Triggers a YOU issuance, based on time passed since the last issuance. The YOU issuance is shared between *all* depositors and front ends
+	 * - Sends all depositor's YOU gain to  depositor
+	 * - Sends all tagged front end's YOU gain to the tagged front end
 	 * - Transfers the depositor's entire ETH gain from the Stability Pool to the caller's trove
 	 * - Leaves their compounded deposit in the Stability Pool
 	 * - Updates snapshots for deposit and tagged front end stake
@@ -118,12 +118,12 @@ interface IStabilityPool is IDeposit {
 	function getDepositorAssetGain(address _depositor) external view returns (uint256);
 
 	/*
-	 * Calculate the VSTA gain earned by a deposit since its last snapshots were taken.
+	 * Calculate the YOU gain earned by a deposit since its last snapshots were taken.
 	 * If not tagged with a front end, the depositor gets a 100% cut of what their deposit earned.
 	 * Otherwise, their cut of the deposit's earnings is equal to the kickbackRate, set by the front end through
 	 * which they made their deposit.
 	 */
-	function getDepositorVSTAGain(address _depositor) external view returns (uint256);
+	function getDepositorYOUGain(address _depositor) external view returns (uint256);
 
 	/*
 	 * Return the user's compounded deposit.

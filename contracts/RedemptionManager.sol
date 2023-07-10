@@ -403,7 +403,7 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 		// Calculate the ETH fee
 		totals.ETHFee = _getRedemptionFee(_asset, totals.totalAssetDrawn);
 		_requireUserAcceptsFee(totals.ETHFee, totals.totalAssetDrawn, _maxFeePercentage);
-		// Send the ETH fee to the VSTA staking contract
+		// Send the ETH fee to the YOU staking contract
 		contractsCache.activePool.sendAsset(
 			_asset,
 			address(contractsCache.vstaStaking),

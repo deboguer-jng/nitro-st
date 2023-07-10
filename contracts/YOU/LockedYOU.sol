@@ -9,7 +9,7 @@ import "../Dependencies/CheckContract.sol";
 /*
 This contract is reserved for Linear Vesting to the Team members and the Advisors team.
 */
-contract LockedVSTA is Ownable, CheckContract {
+contract LockedYOU is Ownable, CheckContract {
 	using SafeERC20 for IERC20;
 	using SafeMath for uint256;
 
@@ -21,14 +21,14 @@ contract LockedVSTA is Ownable, CheckContract {
 		uint256 claimed;
 	}
 
-	string public constant NAME = "LockedVSTA";
+	string public constant NAME = "LockedYOU";
 	uint256 public constant SIX_MONTHS = 26 weeks;
 	uint256 public constant TWO_YEARS = 730 days;
 
 	bool public isInitialized;
 
 	IERC20 private vstaToken;
-	uint256 private assignedVSTATokens;
+	uint256 private assignedYOUTokens;
 
 	mapping(address => Rule) public entitiesVesting;
 
@@ -50,7 +50,7 @@ contract LockedVSTA is Ownable, CheckContract {
 
 		require(entitiesVesting[_entity].createdDate == 0, "Entity already has a Vesting Rule");
 
-		assignedVSTATokens += _totalSupply;
+		assignedYOUTokens += _totalSupply;
 
 		entitiesVesting[_entity] = Rule(
 			block.timestamp,
@@ -63,12 +63,11 @@ contract LockedVSTA is Ownable, CheckContract {
 		vstaToken.safeTransferFrom(msg.sender, address(this), _totalSupply);
 	}
 
-	function lowerEntityVesting(address _entity, uint256 newTotalSupply)
-		public
-		onlyOwner
-		entityRuleExists(_entity)
-	{
-		sendVSTATokenToEntity(_entity);
+	function lowerEntityVesting(
+		address _entity,
+		uint256 newTotalSupply
+	) public onlyOwner entityRuleExists(_entity) {
+		sendYOUTokenToEntity(_entity);
 		Rule storage vestingRule = entitiesVesting[_entity];
 
 		require(
@@ -80,40 +79,40 @@ contract LockedVSTA is Ownable, CheckContract {
 	}
 
 	function removeEntityVesting(address _entity) public onlyOwner entityRuleExists(_entity) {
-		sendVSTATokenToEntity(_entity);
+		sendYOUTokenToEntity(_entity);
 		Rule memory vestingRule = entitiesVesting[_entity];
 
-		assignedVSTATokens = assignedVSTATokens.sub(
+		assignedYOUTokens = assignedYOUTokens.sub(
 			vestingRule.totalSupply.sub(vestingRule.claimed)
 		);
 
 		delete entitiesVesting[_entity];
 	}
 
-	function claimVSTAToken() public entityRuleExists(msg.sender) {
-		sendVSTATokenToEntity(msg.sender);
+	function claimYOUToken() public entityRuleExists(msg.sender) {
+		sendYOUTokenToEntity(msg.sender);
 	}
 
-	function sendVSTATokenToEntity(address _entity) private {
-		uint256 unclaimedAmount = getClaimableVSTA(_entity);
+	function sendYOUTokenToEntity(address _entity) private {
+		uint256 unclaimedAmount = getClaimableYOU(_entity);
 		if (unclaimedAmount == 0) return;
 
 		Rule storage entityRule = entitiesVesting[_entity];
 		entityRule.claimed += unclaimedAmount;
 
-		assignedVSTATokens = assignedVSTATokens.sub(unclaimedAmount);
+		assignedYOUTokens = assignedYOUTokens.sub(unclaimedAmount);
 		vstaToken.safeTransfer(_entity, unclaimedAmount);
 	}
 
-	function transferUnassignedVSTA() external onlyOwner {
-		uint256 unassignedTokens = getUnassignVSTATokensAmount();
+	function transferUnassignedYOU() external onlyOwner {
+		uint256 unassignedTokens = getUnassignYOUTokensAmount();
 
 		if (unassignedTokens == 0) return;
 
 		vstaToken.safeTransfer(msg.sender, unassignedTokens);
 	}
 
-	function getClaimableVSTA(address _entity) public view returns (uint256 claimable) {
+	function getClaimableYOU(address _entity) public view returns (uint256 claimable) {
 		Rule memory entityRule = entitiesVesting[_entity];
 		claimable = 0;
 
@@ -132,8 +131,8 @@ contract LockedVSTA is Ownable, CheckContract {
 		return claimable;
 	}
 
-	function getUnassignVSTATokensAmount() public view returns (uint256) {
-		return vstaToken.balanceOf(address(this)).sub(assignedVSTATokens);
+	function getUnassignYOUTokensAmount() public view returns (uint256) {
+		return vstaToken.balanceOf(address(this)).sub(assignedYOUTokens);
 	}
 
 	function isEntityExits(address _entity) public view returns (bool) {

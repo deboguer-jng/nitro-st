@@ -12,7 +12,7 @@ interface IBorrowerOperations {
 	event CollSurplusPoolAddressChanged(address _collSurplusPoolAddress);
 	event SortedTrovesAddressChanged(address _sortedTrovesAddress);
 	event VSTTokenAddressChanged(address _vstTokenAddress);
-	event VSTAStakingAddressChanged(address _VSTAStakingAddress);
+	event YOUStakingAddressChanged(address _YOUStakingAddress);
 
 	event TroveCreated(address indexed _asset, address indexed _borrower, uint256 arrayIndex);
 	event TroveUpdated(
@@ -38,7 +38,7 @@ interface IBorrowerOperations {
 		address _collSurplusPoolAddress,
 		address _sortedTrovesAddress,
 		address _vstTokenAddress,
-		address _VSTAStakingAddress,
+		address _YOUStakingAddress,
 		address _vestaParamsAddress
 	) external;
 
@@ -46,7 +46,7 @@ interface IBorrowerOperations {
 		address _asset,
 		uint256 _tokenAmount,
 		uint256 _maxFee,
-		uint256 _VSTAmount,
+		uint256 _YOUmount,
 		address _upperHint,
 		address _lowerHint
 	) external payable;

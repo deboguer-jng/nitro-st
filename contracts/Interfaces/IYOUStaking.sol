@@ -4,12 +4,12 @@ pragma solidity ^0.8.10;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-interface IVSTAStaking {
+interface IYOUStaking {
 	// --- Events --
 
 	event TreasuryAddressChanged(address _treausury);
 	event SentToTreasury(address indexed _asset, uint256 _amount);
-	event VSTATokenAddressSet(address _VSTATokenAddress);
+	event YOUTokenAddressSet(address _YOUTokenAddress);
 	event VSTTokenAddressSet(address _vstTokenAddress);
 	event TroveManagerAddressSet(address _troveManager);
 	event BorrowerOperationsAddressSet(address _borrowerOperationsAddress);
@@ -24,7 +24,7 @@ interface IVSTAStaking {
 	event StakingGainsVSTWithdrawn(address indexed staker, uint256 VSTGain);
 	event F_AssetUpdated(address indexed _asset, uint256 _F_ASSET);
 	event F_VSTUpdated(uint256 _F_VST);
-	event TotalVSTAStakedUpdated(uint256 _totalVSTAStaked);
+	event TotalYOUStakedUpdated(uint256 _totalYOUStaked);
 	event AssetSent(address indexed _asset, address indexed _account, uint256 _amount);
 	event StakerSnapshotsUpdated(address _staker, uint256 _F_Asset, uint256 _F_VST);
 
@@ -33,7 +33,7 @@ interface IVSTAStaking {
 	// --- Functions ---
 
 	function setAddresses(
-		address _VSTATokenAddress,
+		address _YOUTokenAddress,
 		address _vstTokenAddress,
 		address _troveManagerAddress,
 		address _borrowerOperationsAddress,
@@ -41,13 +41,13 @@ interface IVSTAStaking {
 		address _treasury
 	) external;
 
-	function stake(uint256 _VSTAamount) external;
+	function stake(uint256 _YOUamount) external;
 
-	function unstake(uint256 _VSTAamount) external;
+	function unstake(uint256 _YOUamount) external;
 
 	function increaseF_Asset(address _asset, uint256 _AssetFee) external;
 
-	function increaseF_VST(uint256 _VSTAFee) external;
+	function increaseF_VST(uint256 _YOUFee) external;
 
 	function getPendingAssetGain(address _asset, address _user) external view returns (uint256);
 

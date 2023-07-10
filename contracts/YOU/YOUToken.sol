@@ -5,7 +5,7 @@ import "../Dependencies/CheckContract.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../Dependencies/ERC20Permit.sol";
 
-contract VSTAToken is CheckContract, ERC20Permit {
+contract YOUToken is CheckContract, ERC20Permit {
 	using SafeMath for uint256;
 
 	// uint for use with SafeMath
@@ -13,7 +13,7 @@ contract VSTAToken is CheckContract, ERC20Permit {
 
 	address public immutable treasury;
 
-	constructor(address _treasurySig) ERC20("Vesta", "VSTA") {
+	constructor(address _treasurySig) ERC20("Vesta", "YOU") {
 		require(_treasurySig != address(0), "Invalid Treasury Sig");
 		treasury = _treasurySig;
 
