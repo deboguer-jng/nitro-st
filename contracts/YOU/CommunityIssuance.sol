@@ -217,7 +217,7 @@ contract CommunityIssuance is ICommunityIssuance, OwnableUpgradeable, CheckContr
 		vstaToken.transfer(_account, safeAmount);
 	}
 
-	function setWeeklyVstaDistribution(
+	function setWeeklyYouDistribution(
 		address _stabilityPool,
 		uint256 _weeklyReward
 	) external isController isStabilityPool(_stabilityPool) {

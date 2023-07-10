@@ -103,6 +103,6 @@ contract AdminContract is ProxyAdmin, ArbitroveBase {
 		address proxyAddress = address(proxy);
 		stabilityPoolManager.addStabilityPool(_asset, proxyAddress);
 		communityIssuance.addFundToStabilityPoolFrom(proxyAddress, assignedToken, msg.sender);
-		communityIssuance.setWeeklyVstaDistribution(proxyAddress, _tokenPerWeekDistributed);
+		communityIssuance.setWeeklyYouDistribution(proxyAddress, _tokenPerWeekDistributed);
 	}
 }

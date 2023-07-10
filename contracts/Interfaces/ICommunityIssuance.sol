@@ -35,5 +35,5 @@ interface ICommunityIssuance {
 		uint256 _quantity
 	) external;
 
-	function setWeeklyVstaDistribution(address _stabilityPool, uint256 _weeklyReward) external;
+	function setWeeklyYouDistribution(address _stabilityPool, uint256 _weeklyReward) external;
 }
