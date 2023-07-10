@@ -22,7 +22,7 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 
 	ICollSurplusPool public collSurplusPool;
 
-	IYOUStaking public vstaStaking;
+	IYOUStaking public youStaking;
 
 	IVSTToken public override vstToken;
 
@@ -104,7 +104,7 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		address _collSurplusPoolAddress,
 		address _vstTokenAddress,
 		address _sortedTrovesAddress,
-		address _vstaStakingAddress,
+		address _youStakingAddress,
 		address _vestaParamsAddress
 	) external override initializer {
 		require(!isInitialized, "!initialized");
@@ -115,7 +115,7 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		checkContract(_collSurplusPoolAddress);
 		checkContract(_vstTokenAddress);
 		checkContract(_sortedTrovesAddress);
-		checkContract(_vstaStakingAddress);
+		checkContract(_youStakingAddress);
 		checkContract(_vestaParamsAddress);
 		isInitialized = true;
 
@@ -127,7 +127,7 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		collSurplusPool = ICollSurplusPool(_collSurplusPoolAddress);
 		vstToken = IVSTToken(_vstTokenAddress);
 		sortedTroves = ISortedTroves(_sortedTrovesAddress);
-		vstaStaking = IYOUStaking(_vstaStakingAddress);
+		youStaking = IYOUStaking(_youStakingAddress);
 
 		setVestaParameters(_vestaParamsAddress);
 
@@ -137,7 +137,7 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		emit CollSurplusPoolAddressChanged(_collSurplusPoolAddress);
 		emit VSTTokenAddressChanged(_vstTokenAddress);
 		emit SortedTrovesAddressChanged(_sortedTrovesAddress);
-		emit YOUStakingAddressChanged(_vstaStakingAddress);
+		emit YOUStakingAddressChanged(_youStakingAddress);
 	}
 
 	function setRedemptionManager(address _redemptionManagerAddress) external onlyOwner {

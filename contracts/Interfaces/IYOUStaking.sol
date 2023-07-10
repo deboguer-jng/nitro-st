@@ -28,7 +28,7 @@ interface IYOUStaking {
 	event AssetSent(address indexed _asset, address indexed _account, uint256 _amount);
 	event StakerSnapshotsUpdated(address _staker, uint256 _F_Asset, uint256 _F_VST);
 
-	function vstaToken() external view returns (IERC20Upgradeable);
+	function youToken() external view returns (IERC20Upgradeable);
 
 	// --- Functions ---
 

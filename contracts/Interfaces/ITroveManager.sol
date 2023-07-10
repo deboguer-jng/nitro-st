@@ -96,7 +96,7 @@ interface ITroveManager is IVestaBase {
 		IActivePool activePool;
 		IDefaultPool defaultPool;
 		IVSTToken vstToken;
-		IYOUStaking vstaStaking;
+		IYOUStaking youStaking;
 		ISortedTroves sortedTroves;
 		ICollSurplusPool collSurplusPool;
 		address gasPoolAddress;
@@ -211,7 +211,7 @@ interface ITroveManager is IVestaBase {
 
 	function vstToken() external view returns (IVSTToken);
 
-	function vstaStaking() external view returns (IYOUStaking);
+	function youStaking() external view returns (IYOUStaking);
 
 	function getTroveOwnersCount(address _asset) external view returns (uint256);
 

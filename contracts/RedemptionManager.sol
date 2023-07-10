@@ -323,7 +323,7 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 			vestaParams.activePool(),
 			vestaParams.defaultPool(),
 			troveManager.vstToken(),
-			troveManager.vstaStaking(),
+			troveManager.youStaking(),
 			troveManager.sortedTroves(),
 			troveManager.collSurplusPool(),
 			troveManager.gasPoolAddress()
@@ -406,10 +406,10 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 		// Send the ETH fee to the YOU staking contract
 		contractsCache.activePool.sendAsset(
 			_asset,
-			address(contractsCache.vstaStaking),
+			address(contractsCache.youStaking),
 			totals.ETHFee
 		);
-		contractsCache.vstaStaking.increaseF_Asset(_asset, totals.ETHFee);
+		contractsCache.youStaking.increaseF_Asset(_asset, totals.ETHFee);
 		totals.ETHToSendToRedeemer = totals.totalAssetDrawn.sub(totals.ETHFee);
 		emit Redemption(
 			_asset,

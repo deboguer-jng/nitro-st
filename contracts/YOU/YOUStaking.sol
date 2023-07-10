@@ -49,7 +49,7 @@ contract YOUStaking is
 	mapping(address => bool) isAssetTracked;
 	mapping(address => uint256) public sentToTreasuryTracker;
 
-	IERC20Upgradeable public override vstaToken;
+	IERC20Upgradeable public override youToken;
 	IERC20Upgradeable public vstToken;
 
 	address public troveManagerAddress;
@@ -59,7 +59,7 @@ contract YOUStaking is
 
 	// --- Functions ---
 	function setAddresses(
-		address _vstaTokenAddress,
+		address _youTokenAddress,
 		address _vstTokenAddress,
 		address _troveManagerAddress,
 		address _borrowerOperationsAddress,
@@ -68,7 +68,7 @@ contract YOUStaking is
 	) external override initializer {
 		require(!isInitialized, "Already Initialized");
 		require(_treasury != address(0), "Invalid Treausry Address");
-		checkContract(_vstaTokenAddress);
+		checkContract(_youTokenAddress);
 		checkContract(_vstTokenAddress);
 		checkContract(_troveManagerAddress);
 		checkContract(_borrowerOperationsAddress);
@@ -80,7 +80,7 @@ contract YOUStaking is
 		__Ownable_init();
 		_pause();
 
-		vstaToken = IERC20Upgradeable(_vstaTokenAddress);
+		youToken = IERC20Upgradeable(_youTokenAddress);
 		vstToken = IERC20Upgradeable(_vstTokenAddress);
 		troveManagerAddress = _troveManagerAddress;
 		borrowerOperationsAddress = _borrowerOperationsAddress;
@@ -90,7 +90,7 @@ contract YOUStaking is
 		isAssetTracked[ETH_REF_ADDRESS] = true;
 		ASSET_TYPE.push(ETH_REF_ADDRESS);
 
-		emit YOUTokenAddressSet(_vstaTokenAddress);
+		emit YOUTokenAddressSet(_youTokenAddress);
 		emit YOUTokenAddressSet(_vstTokenAddress);
 		emit TroveManagerAddressSet(_troveManagerAddress);
 		emit BorrowerOperationsAddressSet(_borrowerOperationsAddress);
@@ -135,7 +135,7 @@ contract YOUStaking is
 		emit TotalYOUStakedUpdated(totalYOUStaked);
 
 		// Transfer YOU from caller to this contract
-		vstaToken.transferFrom(msg.sender, address(this), _YOUamount);
+		youToken.transferFrom(msg.sender, address(this), _YOUamount);
 
 		emit StakeChanged(msg.sender, newStake);
 	}
@@ -179,7 +179,7 @@ contract YOUStaking is
 			emit TotalYOUStakedUpdated(totalYOUStaked);
 
 			// Transfer unstaked YOU to user
-			vstaToken.transfer(msg.sender, YOUToWithdraw);
+			youToken.transfer(msg.sender, YOUToWithdraw);
 
 			emit StakeChanged(msg.sender, newStake);
 		}

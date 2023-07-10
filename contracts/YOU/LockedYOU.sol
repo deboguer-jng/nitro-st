@@ -27,7 +27,7 @@ contract LockedYOU is Ownable, CheckContract {
 
 	bool public isInitialized;
 
-	IERC20 private vstaToken;
+	IERC20 private youToken;
 	uint256 private assignedYOUTokens;
 
 	mapping(address => Rule) public entitiesVesting;
@@ -37,12 +37,12 @@ contract LockedYOU is Ownable, CheckContract {
 		_;
 	}
 
-	function setAddresses(address _vstaAddress) public onlyOwner {
+	function setAddresses(address _youAddress) public onlyOwner {
 		require(!isInitialized, "Already Initialized");
-		checkContract(_vstaAddress);
+		checkContract(_youAddress);
 		isInitialized = true;
 
-		vstaToken = IERC20(_vstaAddress);
+		youToken = IERC20(_youAddress);
 	}
 
 	function addEntityVesting(address _entity, uint256 _totalSupply) public onlyOwner {
@@ -60,7 +60,7 @@ contract LockedYOU is Ownable, CheckContract {
 			0
 		);
 
-		vstaToken.safeTransferFrom(msg.sender, address(this), _totalSupply);
+		youToken.safeTransferFrom(msg.sender, address(this), _totalSupply);
 	}
 
 	function lowerEntityVesting(
@@ -101,7 +101,7 @@ contract LockedYOU is Ownable, CheckContract {
 		entityRule.claimed += unclaimedAmount;
 
 		assignedYOUTokens = assignedYOUTokens.sub(unclaimedAmount);
-		vstaToken.safeTransfer(_entity, unclaimedAmount);
+		youToken.safeTransfer(_entity, unclaimedAmount);
 	}
 
 	function transferUnassignedYOU() external onlyOwner {
@@ -109,7 +109,7 @@ contract LockedYOU is Ownable, CheckContract {
 
 		if (unassignedTokens == 0) return;
 
-		vstaToken.safeTransfer(msg.sender, unassignedTokens);
+		youToken.safeTransfer(msg.sender, unassignedTokens);
 	}
 
 	function getClaimableYOU(address _entity) public view returns (uint256 claimable) {
@@ -132,7 +132,7 @@ contract LockedYOU is Ownable, CheckContract {
 	}
 
 	function getUnassignYOUTokensAmount() public view returns (uint256) {
-		return vstaToken.balanceOf(address(this)).sub(assignedYOUTokens);
+		return youToken.balanceOf(address(this)).sub(assignedYOUTokens);
 	}
 
 	function isEntityExits(address _entity) public view returns (bool) {

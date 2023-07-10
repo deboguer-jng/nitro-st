@@ -7,7 +7,7 @@ contract CommunityIssuanceTester is CommunityIssuance {
 	using SafeMathUpgradeable for uint256;
 
 	function obtainYOU(uint256 _amount) external {
-		vstaToken.transfer(msg.sender, _amount);
+		youToken.transfer(msg.sender, _amount);
 	}
 
 	function getLastUpdateTokenDistribution(

@@ -20,13 +20,13 @@ contract CommunityIssuance is ICommunityIssuance, OwnableUpgradeable, CheckContr
 	uint256 public constant DISTRIBUTION_DURATION = 7 days / 60;
 	uint256 public constant SECONDS_IN_ONE_MINUTE = 60;
 
-	IERC20Upgradeable public vstaToken;
+	IERC20Upgradeable public youToken;
 	IStabilityPoolManager public stabilityPoolManager;
 
 	mapping(address => uint256) public totalYOUIssued;
 	mapping(address => uint256) public lastUpdateTime;
 	mapping(address => uint256) public YOUSupplyCaps;
-	mapping(address => uint256) public vstaDistributionsByPool;
+	mapping(address => uint256) public youDistributionsByPool;
 
 	address public adminContract;
 
@@ -60,12 +60,12 @@ contract CommunityIssuance is ICommunityIssuance, OwnableUpgradeable, CheckContr
 
 	// --- Functions ---
 	function setAddresses(
-		address _vstaTokenAddress,
+		address _youTokenAddress,
 		address _stabilityPoolManagerAddress,
 		address _adminContract
 	) external override initializer {
 		require(!isInitialized, "Already initialized");
-		checkContract(_vstaTokenAddress);
+		checkContract(_youTokenAddress);
 		checkContract(_stabilityPoolManagerAddress);
 		checkContract(_adminContract);
 		isInitialized = true;
@@ -73,10 +73,10 @@ contract CommunityIssuance is ICommunityIssuance, OwnableUpgradeable, CheckContr
 
 		adminContract = _adminContract;
 
-		vstaToken = IERC20Upgradeable(_vstaTokenAddress);
+		youToken = IERC20Upgradeable(_youTokenAddress);
 		stabilityPoolManager = IStabilityPoolManager(_stabilityPoolManagerAddress);
 
-		emit YOUTokenAddressSet(_vstaTokenAddress);
+		emit YOUTokenAddressSet(_youTokenAddress);
 		emit StabilityPoolAddressSet(_stabilityPoolManagerAddress);
 	}
 
@@ -108,7 +108,7 @@ contract CommunityIssuance is ICommunityIssuance, OwnableUpgradeable, CheckContr
 			disableStabilityPool(_pool);
 		}
 
-		vstaToken.safeTransfer(msg.sender, _fundToRemove);
+		youToken.safeTransfer(msg.sender, _fundToRemove);
 	}
 
 	function addFundToStabilityPoolFrom(
@@ -134,7 +134,7 @@ contract CommunityIssuance is ICommunityIssuance, OwnableUpgradeable, CheckContr
 		}
 
 		YOUSupplyCaps[_pool] += _assignedSupply;
-		vstaToken.safeTransferFrom(_spender, address(this), _assignedSupply);
+		youToken.safeTransferFrom(_spender, address(this), _assignedSupply);
 	}
 
 	function transferFundToAnotherStabilityPool(
@@ -199,7 +199,7 @@ contract CommunityIssuance is ICommunityIssuance, OwnableUpgradeable, CheckContr
 		uint256 timePassed = block.timestamp.sub(lastUpdateTime[stabilityPool]).div(
 			SECONDS_IN_ONE_MINUTE
 		);
-		uint256 totalDistribuedSinceBeginning = vstaDistributionsByPool[stabilityPool].mul(
+		uint256 totalDistribuedSinceBeginning = youDistributionsByPool[stabilityPool].mul(
 			timePassed
 		);
 
@@ -207,20 +207,20 @@ contract CommunityIssuance is ICommunityIssuance, OwnableUpgradeable, CheckContr
 	}
 
 	function sendYOU(address _account, uint256 _YOUamount) external override onlyStabilityPool {
-		uint256 balanceYOU = vstaToken.balanceOf(address(this));
+		uint256 balanceYOU = youToken.balanceOf(address(this));
 		uint256 safeAmount = balanceYOU >= _YOUamount ? _YOUamount : balanceYOU;
 
 		if (safeAmount == 0) {
 			return;
 		}
 
-		vstaToken.transfer(_account, safeAmount);
+		youToken.transfer(_account, safeAmount);
 	}
 
 	function setWeeklyYouDistribution(
 		address _stabilityPool,
 		uint256 _weeklyReward
 	) external isController isStabilityPool(_stabilityPool) {
-		vstaDistributionsByPool[_stabilityPool] = _weeklyReward.div(DISTRIBUTION_DURATION);
+		youDistributionsByPool[_stabilityPool] = _weeklyReward.div(DISTRIBUTION_DURATION);
 	}
 }

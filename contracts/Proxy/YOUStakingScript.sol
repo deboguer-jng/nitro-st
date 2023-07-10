@@ -5,14 +5,14 @@ import "../Dependencies/CheckContract.sol";
 import "../Interfaces/IYOUStaking.sol";
 
 contract YOUStakingScript is CheckContract {
-	IYOUStaking immutable vstaStaking;
+	IYOUStaking immutable youStaking;
 
 	constructor(address _YOUStakingAddress) {
 		checkContract(_YOUStakingAddress);
-		vstaStaking = IYOUStaking(_YOUStakingAddress);
+		youStaking = IYOUStaking(_YOUStakingAddress);
 	}
 
 	function stake(uint256 _YOUamount) external {
-		vstaStaking.stake(_YOUamount);
+		youStaking.stake(_YOUamount);
 	}
 }

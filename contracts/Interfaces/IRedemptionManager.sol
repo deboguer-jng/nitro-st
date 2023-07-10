@@ -96,7 +96,7 @@ interface IRedemptionManager is IVestaBase {
 		IActivePool activePool;
 		IDefaultPool defaultPool;
 		IVSTToken vstToken;
-		IYOUStaking vstaStaking;
+		IYOUStaking youStaking;
 		ISortedTroves sortedTroves;
 		ICollSurplusPool collSurplusPool;
 		address gasPoolAddress;

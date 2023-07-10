@@ -34,7 +34,7 @@ contract BorrowerWrappersScript is
 	IStabilityPoolManager immutable stabilityPoolManager;
 	IPriceFeed immutable priceFeed;
 	IERC20 immutable vstToken;
-	IERC20 immutable vstaToken;
+	IERC20 immutable youToken;
 
 	constructor(
 		address _borrowerOperationsAddress,
@@ -60,13 +60,13 @@ contract BorrowerWrappersScript is
 		checkContract(vstTokenCached);
 		vstToken = IERC20(vstTokenCached);
 
-		address vstaTokenCached = address(IYOUStaking(_YOUStakingAddress).vstaToken());
-		checkContract(vstaTokenCached);
-		vstaToken = IERC20(vstaTokenCached);
+		address youTokenCached = address(IYOUStaking(_YOUStakingAddress).youToken());
+		checkContract(youTokenCached);
+		youToken = IERC20(youTokenCached);
 
-		IYOUStaking vstaStakingCached = troveManagerCached.vstaStaking();
+		IYOUStaking youStakingCached = troveManagerCached.youStaking();
 		require(
-			_YOUStakingAddress == address(vstaStakingCached),
+			_YOUStakingAddress == address(youStakingCached),
 			"BorrowerWrappersScript: Wrong YOUStaking address"
 		);
 	}
@@ -109,13 +109,13 @@ contract BorrowerWrappersScript is
 	) external {
 		Local_var memory vars = Local_var(_asset, _maxFee, _upperHint, _lowerHint, 0);
 		uint256 collBalanceBefore = address(this).balance;
-		uint256 YOUBalanceBefore = vstaToken.balanceOf(address(this));
+		uint256 YOUBalanceBefore = youToken.balanceOf(address(this));
 
 		// Claim rewards
 		stabilityPoolManager.getAssetStabilityPool(vars._asset).withdrawFromSP(0);
 
 		uint256 collBalanceAfter = address(this).balance;
-		uint256 YOUBalanceAfter = vstaToken.balanceOf(address(this));
+		uint256 YOUBalanceAfter = youToken.balanceOf(address(this));
 		uint256 claimedCollateral = collBalanceAfter.sub(collBalanceBefore);
 
 		// Add claimed ETH to trove, get more VST and stake it into the Stability Pool
@@ -143,7 +143,7 @@ contract BorrowerWrappersScript is
 		// Stake claimed YOU
 		uint256 claimedYOU = YOUBalanceAfter.sub(YOUBalanceBefore);
 		if (claimedYOU > 0) {
-			vstaStaking.stake(claimedYOU);
+			youStaking.stake(claimedYOU);
 		}
 	}
 
@@ -157,10 +157,10 @@ contract BorrowerWrappersScript is
 
 		uint256 collBalanceBefore = address(this).balance;
 		uint256 VSTBalanceBefore = vstToken.balanceOf(address(this));
-		uint256 YOUBalanceBefore = vstaToken.balanceOf(address(this));
+		uint256 YOUBalanceBefore = youToken.balanceOf(address(this));
 
 		// Claim gains
-		vstaStaking.unstake(0);
+		youStaking.unstake(0);
 
 		uint256 gainedCollateral = address(this).balance.sub(collBalanceBefore); // stack too deep issues :'(
 		uint256 gainedVST = vstToken.balanceOf(address(this)).sub(VSTBalanceBefore);
@@ -188,10 +188,10 @@ contract BorrowerWrappersScript is
 			stabilityPoolManager.getAssetStabilityPool(_asset).provideToSP(totalVST);
 
 			// Providing to Stability Pool also triggers YOU claim, so stake it if any
-			uint256 YOUBalanceAfter = vstaToken.balanceOf(address(this));
+			uint256 YOUBalanceAfter = youToken.balanceOf(address(this));
 			uint256 claimedYOU = YOUBalanceAfter.sub(YOUBalanceBefore);
 			if (claimedYOU > 0) {
-				vstaStaking.stake(claimedYOU);
+				youStaking.stake(claimedYOU);
 			}
 		}
 	}
