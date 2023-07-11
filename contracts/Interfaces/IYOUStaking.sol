@@ -10,7 +10,7 @@ interface IYOUStaking {
 	event TreasuryAddressChanged(address _treausury);
 	event SentToTreasury(address indexed _asset, uint256 _amount);
 	event YOUTokenAddressSet(address _YOUTokenAddress);
-	event VSTTokenAddressSet(address _vstTokenAddress);
+	event UTokenAddressSet(address _uTokenAddress);
 	event TroveManagerAddressSet(address _troveManager);
 	event BorrowerOperationsAddressSet(address _borrowerOperationsAddress);
 	event ActivePoolAddressSet(address _activePoolAddress);
@@ -21,12 +21,12 @@ interface IYOUStaking {
 		address indexed asset,
 		uint256 AssetGain
 	);
-	event StakingGainsVSTWithdrawn(address indexed staker, uint256 VSTGain);
+	event StakingGainsUWithdrawn(address indexed staker, uint256 UGain);
 	event F_AssetUpdated(address indexed _asset, uint256 _F_ASSET);
-	event F_VSTUpdated(uint256 _F_VST);
+	event F_UUpdated(uint256 _F_U);
 	event TotalYOUStakedUpdated(uint256 _totalYOUStaked);
 	event AssetSent(address indexed _asset, address indexed _account, uint256 _amount);
-	event StakerSnapshotsUpdated(address _staker, uint256 _F_Asset, uint256 _F_VST);
+	event StakerSnapshotsUpdated(address _staker, uint256 _F_Asset, uint256 _F_U);
 
 	function youToken() external view returns (IERC20Upgradeable);
 
@@ -34,7 +34,7 @@ interface IYOUStaking {
 
 	function setAddresses(
 		address _YOUTokenAddress,
-		address _vstTokenAddress,
+		address _uTokenAddress,
 		address _troveManagerAddress,
 		address _borrowerOperationsAddress,
 		address _activePoolAddress,
@@ -47,9 +47,9 @@ interface IYOUStaking {
 
 	function increaseF_Asset(address _asset, uint256 _AssetFee) external;
 
-	function increaseF_VST(uint256 _YOUFee) external;
+	function increaseF_U(uint256 _YOUFee) external;
 
 	function getPendingAssetGain(address _asset, address _user) external view returns (uint256);
 
-	function getPendingVSTGain(address _user) external view returns (uint256);
+	function getPendingUGain(address _user) external view returns (uint256);
 }

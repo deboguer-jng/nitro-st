@@ -3,7 +3,7 @@
 pragma solidity ^0.8.10;
 import "./IVestaBase.sol";
 import "./IStabilityPool.sol";
-import "./IVSTToken.sol";
+import "./IUToken.sol";
 import "./IYOUStaking.sol";
 import "./ICollSurplusPool.sol";
 import "./ISortedTroves.sol";
@@ -40,7 +40,7 @@ interface ITroveManager is IVestaBase {
 
 	struct LocalVariables_OuterLiquidationFunction {
 		uint256 price;
-		uint256 VSTInStabPool;
+		uint256 UInStabPool;
 		bool recoveryModeAtStart;
 		uint256 liquidatedDebt;
 		uint256 liquidatedColl;
@@ -53,7 +53,7 @@ interface ITroveManager is IVestaBase {
 	}
 
 	struct LocalVariables_LiquidationSequence {
-		uint256 remainingVSTInStabPool;
+		uint256 remainingUInStabPool;
 		uint256 i;
 		uint256 ICR;
 		address user;
@@ -72,7 +72,7 @@ interface ITroveManager is IVestaBase {
 		uint256 entireTroveDebt;
 		uint256 entireTroveColl;
 		uint256 collGasCompensation;
-		uint256 VSTGasCompensation;
+		uint256 UGasCompensation;
 		uint256 debtToOffset;
 		uint256 collToSendToSP;
 		uint256 debtToRedistribute;
@@ -84,7 +84,7 @@ interface ITroveManager is IVestaBase {
 		uint256 totalCollInSequence;
 		uint256 totalDebtInSequence;
 		uint256 totalCollGasCompensation;
-		uint256 totalVSTGasCompensation;
+		uint256 totalUGasCompensation;
 		uint256 totalDebtToOffset;
 		uint256 totalCollToSendToSP;
 		uint256 totalDebtToRedistribute;
@@ -95,7 +95,7 @@ interface ITroveManager is IVestaBase {
 	struct ContractsCache {
 		IActivePool activePool;
 		IDefaultPool defaultPool;
-		IVSTToken vstToken;
+		IUToken uToken;
 		IYOUStaking youStaking;
 		ISortedTroves sortedTroves;
 		ICollSurplusPool collSurplusPool;
@@ -104,18 +104,18 @@ interface ITroveManager is IVestaBase {
 	// --- Variable container structs for redemptions ---
 
 	struct RedemptionTotals {
-		uint256 remainingVST;
-		uint256 totalVSTToRedeem;
+		uint256 remainingU;
+		uint256 totalUToRedeem;
 		uint256 totalAssetDrawn;
 		uint256 ETHFee;
 		uint256 ETHToSendToRedeemer;
 		uint256 decayedBaseRate;
 		uint256 price;
-		uint256 totalVSTSupplyAtStart;
+		uint256 totalUSupplyAtStart;
 	}
 
 	struct SingleRedemptionValues {
-		uint256 VSTLot;
+		uint256 ULot;
 		uint256 ETHLot;
 		bool cancelledPartial;
 	}
@@ -123,7 +123,7 @@ interface ITroveManager is IVestaBase {
 	// --- Events ---
 
 	event BorrowerOperationsAddressChanged(address _newBorrowerOperationsAddress);
-	event VSTTokenAddressChanged(address _newVSTTokenAddress);
+	event UTokenAddressChanged(address _newUTokenAddress);
 	event StabilityPoolAddressChanged(address _stabilityPoolAddress);
 	event GasPoolAddressChanged(address _gasPoolAddress);
 	event CollSurplusPoolAddressChanged(address _collSurplusPoolAddress);
@@ -135,7 +135,7 @@ interface ITroveManager is IVestaBase {
 		uint256 _liquidatedDebt,
 		uint256 _liquidatedColl,
 		uint256 _collGasCompensation,
-		uint256 _VSTGasCompensation
+		uint256 _UGasCompensation
 	);
 	event Redemption(
 		address indexed _asset,
@@ -167,8 +167,8 @@ interface ITroveManager is IVestaBase {
 		uint256 _totalStakesSnapshot,
 		uint256 _totalCollateralSnapshot
 	);
-	event LTermsUpdated(address indexed _asset, uint256 _L_ETH, uint256 _L_VSTDebt);
-	event TroveSnapshotsUpdated(address indexed _asset, uint256 _L_ETH, uint256 _L_VSTDebt);
+	event LTermsUpdated(address indexed _asset, uint256 _L_ETH, uint256 _L_UDebt);
+	event TroveSnapshotsUpdated(address indexed _asset, uint256 _L_ETH, uint256 _L_UDebt);
 	event TroveIndexUpdated(address indexed _asset, address _borrower, uint256 _newIndex);
 
 	event TroveUpdated(
@@ -201,7 +201,7 @@ interface ITroveManager is IVestaBase {
 		address _stabilityPoolAddress,
 		address _gasPoolAddress,
 		address _collSurplusPoolAddress,
-		address _vstTokenAddress,
+		address _uTokenAddress,
 		address _sortedTrovesAddress,
 		address _YOUStakingAddress,
 		address _vestaParamsAddress
@@ -209,7 +209,7 @@ interface ITroveManager is IVestaBase {
 
 	function stabilityPoolManager() external view returns (IStabilityPoolManager);
 
-	function vstToken() external view returns (IVSTToken);
+	function uToken() external view returns (IUToken);
 
 	function youStaking() external view returns (IYOUStaking);
 
@@ -253,7 +253,7 @@ interface ITroveManager is IVestaBase {
 		address _borrower
 	) external view returns (uint256);
 
-	function getPendingVSTDebtReward(
+	function getPendingUDebtReward(
 		address _asset,
 		address _borrower
 	) external view returns (uint256);
@@ -269,7 +269,7 @@ interface ITroveManager is IVestaBase {
 		returns (
 			uint256 debt,
 			uint256 coll,
-			uint256 pendingVSTDebtReward,
+			uint256 pendingUDebtReward,
 			uint256 pendingAssetReward
 		);
 
@@ -281,11 +281,11 @@ interface ITroveManager is IVestaBase {
 
 	function getBorrowingRateWithDecay(address _asset) external view returns (uint256);
 
-	function getBorrowingFee(address _asset, uint256 VSTDebt) external view returns (uint256);
+	function getBorrowingFee(address _asset, uint256 UDebt) external view returns (uint256);
 
 	function getBorrowingFeeWithDecay(
 		address _asset,
-		uint256 _VSTDebt
+		uint256 _UDebt
 	) external view returns (uint256);
 
 	function decayBaseRateFromBorrowing(address _asset) external;

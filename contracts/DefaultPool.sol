@@ -11,10 +11,10 @@ import "./Dependencies/SafetyTransfer.sol";
 import "./Dependencies/ArbitroveBase.sol";
 
 /*
- * The Default Pool holds the ETH and VST debt (but not VST tokens) from liquidations that have been redistributed
+ * The Default Pool holds the ETH and U debt (but not U tokens) from liquidations that have been redistributed
  * to active troves but not yet "applied", i.e. not yet recorded on a recipient active trove's struct.
  *
- * When a trove makes an operation that applies its pending ETH and VST debt, its pending ETH and VST debt is moved
+ * When a trove makes an operation that applies its pending ETH and U debt, its pending ETH and U debt is moved
  * from the Default Pool to the Active Pool.
  */
 contract DefaultPool is OwnableUpgradeable, CheckContract, ArbitroveBase, IDefaultPool {
@@ -32,7 +32,7 @@ contract DefaultPool is OwnableUpgradeable, CheckContract, ArbitroveBase, IDefau
 	bool public isInitialized;
 
 	mapping(address => uint256) internal assetsBalance;
-	mapping(address => uint256) internal VSTDebts; // debt
+	mapping(address => uint256) internal UDebts; // debt
 
 	// --- Dependency setters ---
 
@@ -75,10 +75,10 @@ contract DefaultPool is OwnableUpgradeable, CheckContract, ArbitroveBase, IDefau
 		return assetsBalance[_asset];
 	}
 
-	function getVSTDebt(
+	function getUDebt(
 		address _asset
 	) external view override onlyWstETH(_asset) returns (uint256) {
-		return VSTDebts[_asset];
+		return UDebts[_asset];
 	}
 
 	// --- Pool functionality ---
@@ -106,20 +106,20 @@ contract DefaultPool is OwnableUpgradeable, CheckContract, ArbitroveBase, IDefau
 		emit AssetSent(activePool, _asset, safetyTransferAmount);
 	}
 
-	function increaseVSTDebt(
+	function increaseUDebt(
 		address _asset,
 		uint256 _amount
 	) external override onlyWstETH(_asset) callerIsTroveManager {
-		VSTDebts[_asset] = VSTDebts[_asset].add(_amount);
-		emit DefaultPoolVSTDebtUpdated(_asset, VSTDebts[_asset]);
+		UDebts[_asset] = UDebts[_asset].add(_amount);
+		emit DefaultPoolUDebtUpdated(_asset, UDebts[_asset]);
 	}
 
-	function decreaseVSTDebt(
+	function decreaseUDebt(
 		address _asset,
 		uint256 _amount
 	) external override onlyWstETH(_asset) callerIsTroveManager {
-		VSTDebts[_asset] = VSTDebts[_asset].sub(_amount);
-		emit DefaultPoolVSTDebtUpdated(_asset, VSTDebts[_asset]);
+		UDebts[_asset] = UDebts[_asset].sub(_amount);
+		emit DefaultPoolUDebtUpdated(_asset, UDebts[_asset]);
 	}
 
 	// --- 'require' functions ---

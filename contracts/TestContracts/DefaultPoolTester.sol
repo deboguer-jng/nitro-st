@@ -6,8 +6,8 @@ import "../DefaultPool.sol";
 contract DefaultPoolTester is DefaultPool {
 	using SafeMathUpgradeable for uint256;
 
-	function unprotectedIncreaseVSTDebt(address _asset, uint256 _amount) external {
-		VSTDebts[_asset] = VSTDebts[_asset].add(_amount);
+	function unprotectedIncreaseUDebt(address _asset, uint256 _amount) external {
+		UDebts[_asset] = UDebts[_asset].add(_amount);
 	}
 
 	function unprotectedPayable(address _asset, uint256 amount) external payable {

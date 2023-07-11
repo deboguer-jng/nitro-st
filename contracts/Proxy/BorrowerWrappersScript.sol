@@ -33,7 +33,7 @@ contract BorrowerWrappersScript is
 	ITroveManager immutable troveManager;
 	IStabilityPoolManager immutable stabilityPoolManager;
 	IPriceFeed immutable priceFeed;
-	IERC20 immutable vstToken;
+	IERC20 immutable uToken;
 	IERC20 immutable youToken;
 
 	constructor(
@@ -56,9 +56,9 @@ contract BorrowerWrappersScript is
 		checkContract(address(priceFeedCached));
 		priceFeed = priceFeedCached;
 
-		address vstTokenCached = address(troveManagerCached.vstToken());
-		checkContract(vstTokenCached);
-		vstToken = IERC20(vstTokenCached);
+		address uTokenCached = address(troveManagerCached.uToken());
+		checkContract(uTokenCached);
+		uToken = IERC20(uTokenCached);
 
 		address youTokenCached = address(IYOUStaking(_YOUStakingAddress).youToken());
 		checkContract(youTokenCached);
@@ -118,7 +118,7 @@ contract BorrowerWrappersScript is
 		uint256 YOUBalanceAfter = youToken.balanceOf(address(this));
 		uint256 claimedCollateral = collBalanceAfter.sub(collBalanceBefore);
 
-		// Add claimed ETH to trove, get more VST and stake it into the Stability Pool
+		// Add claimed ETH to trove, get more U and stake it into the Stability Pool
 		if (claimedCollateral > 0) {
 			_requireUserHasTrove(vars._asset, address(this));
 			vars.netYOUmount = _getNetYOUmount(vars._asset, claimedCollateral);
@@ -134,7 +134,7 @@ contract BorrowerWrappersScript is
 				vars._upperHint,
 				vars._lowerHint
 			);
-			// Provide withdrawn VST to Stability Pool
+			// Provide withdrawn U to Stability Pool
 			if (vars.netYOUmount > 0) {
 				stabilityPoolManager.getAssetStabilityPool(_asset).provideToSP(vars.netYOUmount);
 			}
@@ -156,16 +156,16 @@ contract BorrowerWrappersScript is
 		Local_var memory vars = Local_var(_asset, _maxFee, _upperHint, _lowerHint, 0);
 
 		uint256 collBalanceBefore = address(this).balance;
-		uint256 VSTBalanceBefore = vstToken.balanceOf(address(this));
+		uint256 UBalanceBefore = uToken.balanceOf(address(this));
 		uint256 YOUBalanceBefore = youToken.balanceOf(address(this));
 
 		// Claim gains
 		youStaking.unstake(0);
 
 		uint256 gainedCollateral = address(this).balance.sub(collBalanceBefore); // stack too deep issues :'(
-		uint256 gainedVST = vstToken.balanceOf(address(this)).sub(VSTBalanceBefore);
+		uint256 gainedU = uToken.balanceOf(address(this)).sub(UBalanceBefore);
 
-		// Top up trove and get more VST, keeping ICR constant
+		// Top up trove and get more U, keeping ICR constant
 		if (gainedCollateral > 0) {
 			_requireUserHasTrove(vars._asset, address(this));
 			vars.netYOUmount = _getNetYOUmount(vars._asset, gainedCollateral);
@@ -183,9 +183,9 @@ contract BorrowerWrappersScript is
 			);
 		}
 
-		uint256 totalVST = gainedVST.add(vars.netYOUmount);
-		if (totalVST > 0) {
-			stabilityPoolManager.getAssetStabilityPool(_asset).provideToSP(totalVST);
+		uint256 totalU = gainedU.add(vars.netYOUmount);
+		if (totalU > 0) {
+			stabilityPoolManager.getAssetStabilityPool(_asset).provideToSP(totalU);
 
 			// Providing to Stability Pool also triggers YOU claim, so stake it if any
 			uint256 YOUBalanceAfter = youToken.balanceOf(address(this));

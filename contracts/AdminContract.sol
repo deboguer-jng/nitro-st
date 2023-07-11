@@ -25,7 +25,7 @@ contract AdminContract is ProxyAdmin, ArbitroveBase {
 
 	address borrowerOperationsAddress;
 	address troveManagerAddress;
-	address vstTokenAddress;
+	address uTokenAddress;
 	address sortedTrovesAddress;
 
 	function setAddresses(
@@ -33,7 +33,7 @@ contract AdminContract is ProxyAdmin, ArbitroveBase {
 		address _stabilityPoolManager,
 		address _borrowerOperationsAddress,
 		address _troveManagerAddress,
-		address _vstTokenAddress,
+		address _uTokenAddress,
 		address _sortedTrovesAddress,
 		address _communityIssuanceAddress,
 		address _wstETHAddress
@@ -43,7 +43,7 @@ contract AdminContract is ProxyAdmin, ArbitroveBase {
 		CheckContract(_stabilityPoolManager);
 		CheckContract(_borrowerOperationsAddress);
 		CheckContract(_troveManagerAddress);
-		CheckContract(_vstTokenAddress);
+		CheckContract(_uTokenAddress);
 		CheckContract(_sortedTrovesAddress);
 		CheckContract(_communityIssuanceAddress);
 		CheckContract(_wstETHAddress);
@@ -51,7 +51,7 @@ contract AdminContract is ProxyAdmin, ArbitroveBase {
 
 		borrowerOperationsAddress = _borrowerOperationsAddress;
 		troveManagerAddress = _troveManagerAddress;
-		vstTokenAddress = _vstTokenAddress;
+		uTokenAddress = _uTokenAddress;
 		sortedTrovesAddress = _sortedTrovesAddress;
 		communityIssuance = ICommunityIssuance(_communityIssuanceAddress);
 		wstETH = _wstETHAddress;
@@ -93,7 +93,7 @@ contract AdminContract is ProxyAdmin, ArbitroveBase {
 				_asset,
 				borrowerOperationsAddress,
 				troveManagerAddress,
-				vstTokenAddress,
+				uTokenAddress,
 				sortedTrovesAddress,
 				address(communityIssuance),
 				address(vestaParameters)

@@ -7,12 +7,12 @@ import "./IDeposit.sol";
 interface IStabilityPool is IDeposit {
 	// --- Events ---
 	event StabilityPoolAssetBalanceUpdated(uint256 _newBalance);
-	event StabilityPoolVSTBalanceUpdated(uint256 _newBalance);
+	event StabilityPoolUBalanceUpdated(uint256 _newBalance);
 
 	event BorrowerOperationsAddressChanged(address _newBorrowerOperationsAddress);
 	event TroveManagerAddressChanged(address _newTroveManagerAddress);
 	event DefaultPoolAddressChanged(address _newDefaultPoolAddress);
-	event VSTTokenAddressChanged(address _newVSTTokenAddress);
+	event UTokenAddressChanged(address _newUTokenAddress);
 	event SortedTrovesAddressChanged(address _newSortedTrovesAddress);
 	event CommunityIssuanceAddressChanged(address _newCommunityIssuanceAddress);
 
@@ -27,7 +27,7 @@ interface IStabilityPool is IDeposit {
 	event UserDepositChanged(address indexed _depositor, uint256 _newDeposit);
 	event StakeChanged(uint256 _newSystemStake, address _depositor);
 
-	event AssetGainWithdrawn(address indexed _depositor, uint256 _Asset, uint256 _VSTLoss);
+	event AssetGainWithdrawn(address indexed _depositor, uint256 _Asset, uint256 _ULoss);
 	event YOUPaidToDepositor(address indexed _depositor, uint256 _YOU);
 	event AssetSent(address _to, uint256 _amount);
 
@@ -41,7 +41,7 @@ interface IStabilityPool is IDeposit {
 		address _assetAddress,
 		address _borrowerOperationsAddress,
 		address _troveManagerAddress,
-		address _vstTokenAddress,
+		address _uTokenAddress,
 		address _sortedTrovesAddress,
 		address _communityIssuanceAddress,
 		address _vestaParamsAddress
@@ -95,7 +95,7 @@ interface IStabilityPool is IDeposit {
 	 * Initial checks:
 	 * - Caller is TroveManager
 	 * ---
-	 * Cancels out the specified debt against the VST contained in the Stability Pool (as far as possible)
+	 * Cancels out the specified debt against the U contained in the Stability Pool (as far as possible)
 	 * and transfers the Trove's ETH collateral from ActivePool to StabilityPool.
 	 * Only called by liquidation functions in the TroveManager.
 	 */
@@ -108,9 +108,9 @@ interface IStabilityPool is IDeposit {
 	function getAssetBalance() external view returns (uint256);
 
 	/*
-	 * Returns VST held in the pool. Changes when users deposit/withdraw, and when Trove debt is offset.
+	 * Returns U held in the pool. Changes when users deposit/withdraw, and when Trove debt is offset.
 	 */
-	function getTotalVSTDeposits() external view returns (uint256);
+	function getTotalUDeposits() external view returns (uint256);
 
 	/*
 	 * Calculates the ETH gain earned by the deposit since its last snapshots were taken.
@@ -128,7 +128,7 @@ interface IStabilityPool is IDeposit {
 	/*
 	 * Return the user's compounded deposit.
 	 */
-	function getCompoundedVSTDeposit(address _depositor) external view returns (uint256);
+	function getCompoundedUDeposit(address _depositor) external view returns (uint256);
 
 	/*
 	 * Return the front end's compounded stake.

@@ -5,9 +5,9 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./Dependencies/CheckContract.sol";
-import "./Interfaces/IVSTToken.sol";
+import "./Interfaces/IUToken.sol";
 
-contract VSTToken is CheckContract, IVSTToken, Ownable {
+contract UToken is CheckContract, Ownable, IUToken {
 	using SafeMath for uint256;
 
 	address public immutable troveManagerAddress;
@@ -24,7 +24,7 @@ contract VSTToken is CheckContract, IVSTToken, Ownable {
 		address _redemptionManagerAddress,
 		address _stabilityPoolManagerAddress,
 		address _borrowerOperationsAddress
-	) ERC20("Vesta Stable", "VST") {
+	) UERC20Permit("Vesta Stable", "U", 6, address(0)) {
 		checkContract(_troveManagerAddress);
 		checkContract(_stabilityPoolManagerAddress);
 		checkContract(_borrowerOperationsAddress);
@@ -101,21 +101,21 @@ contract VSTToken is CheckContract, IVSTToken, Ownable {
 	function _requireValidRecipient(address _recipient) internal view {
 		require(
 			_recipient != address(0) && _recipient != address(this),
-			"VST: Cannot transfer tokens directly to the VST token contract or the zero address"
+			"U: Cannot transfer tokens directly to the U token contract or the zero address"
 		);
 		require(
 			!stabilityPoolManager.isStabilityPool(_recipient) &&
 				_recipient != troveManagerAddress &&
 				_recipient != redemptionManagerAddress &&
 				_recipient != borrowerOperationsAddress,
-			"VST: Cannot transfer tokens directly to the StabilityPool, TroveManager, RedemptionManager or BorrowerOps"
+			"U: Cannot transfer tokens directly to the StabilityPool, TroveManager, RedemptionManager or BorrowerOps"
 		);
 	}
 
 	function _requireCallerIsBorrowerOperations() internal view {
 		require(
 			msg.sender == borrowerOperationsAddress,
-			"VSTToken: Caller is not BorrowerOperations"
+			"UToken: Caller is not BorrowerOperations"
 		);
 	}
 
@@ -124,21 +124,21 @@ contract VSTToken is CheckContract, IVSTToken, Ownable {
 			msg.sender == borrowerOperationsAddress ||
 				msg.sender == redemptionManagerAddress ||
 				stabilityPoolManager.isStabilityPool(msg.sender),
-			"VST: Caller is neither BorrowerOperations nor RedemptionManager nor StabilityPool"
+			"U: Caller is neither BorrowerOperations nor RedemptionManager nor StabilityPool"
 		);
 	}
 
 	function _requireCallerIsStabilityPool() internal view {
 		require(
 			stabilityPoolManager.isStabilityPool(msg.sender),
-			"VST: Caller is not the StabilityPool"
+			"U: Caller is not the StabilityPool"
 		);
 	}
 
 	function _requireCallerIsTroveMorSP() internal view {
 		require(
 			msg.sender == troveManagerAddress || stabilityPoolManager.isStabilityPool(msg.sender),
-			"VST: Caller is neither TroveManager nor StabilityPool"
+			"U: Caller is neither TroveManager nor StabilityPool"
 		);
 	}
 }

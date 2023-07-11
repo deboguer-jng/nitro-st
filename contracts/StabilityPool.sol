@@ -10,7 +10,7 @@ import "./Interfaces/IBorrowerOperations.sol";
 import "./Interfaces/IStabilityPool.sol";
 import "./Interfaces/IBorrowerOperations.sol";
 import "./Interfaces/ITroveManager.sol";
-import "./Interfaces/IVSTToken.sol";
+import "./Interfaces/IUToken.sol";
 import "./Interfaces/ISortedTroves.sol";
 import "./Interfaces/ICommunityIssuance.sol";
 import "./Dependencies/VestaBase.sol";
@@ -31,7 +31,7 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 
 	ITroveManager public troveManager;
 
-	IVSTToken public vstToken;
+	IUToken public uToken;
 
 	// Needed to check if there are pending liquidations
 	ISortedTroves public sortedTroves;
@@ -42,8 +42,8 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 
 	uint256 internal assetBalance; // deposited ether tracker
 
-	// Tracker for VST held in the pool. Changes when users deposit/withdraw, and when Trove debt is offset.
-	uint256 internal totalVSTDeposits;
+	// Tracker for U held in the pool. Changes when users deposit/withdraw, and when Trove debt is offset.
+	uint256 internal totalUDeposits;
 
 	// --- Data structures ---
 
@@ -62,7 +62,7 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 	Snapshots public systemSnapshots;
 
 	/*  Product 'P': Running product by which to multiply an initial deposit, in order to find the current compounded deposit,
-	 * after a series of liquidations have occurred, each of which cancel some VST debt with the deposit.
+	 * after a series of liquidations have occurred, each of which cancel some U debt with the deposit.
 	 *
 	 * During its lifetime, a deposit's value evolves from d_t to d_t * P / P_t , where P_t
 	 * is the snapshot of P taken at the instant the deposit was made. 18-digit decimal.
@@ -100,7 +100,7 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 	uint256 public lastYOUError;
 	// Error trackers for the error correction in the offset calculation
 	uint256 public lastAssetError_Offset;
-	uint256 public lastVSTLossError_Offset;
+	uint256 public lastULossError_Offset;
 
 	bool public isInitialized;
 
@@ -118,7 +118,7 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		address _assetAddress,
 		address _borrowerOperationsAddress,
 		address _troveManagerAddress,
-		address _vstTokenAddress,
+		address _uTokenAddress,
 		address _sortedTrovesAddress,
 		address _communityIssuanceAddress,
 		address _vestaParamsAddress
@@ -126,7 +126,7 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		require(!isInitialized, "Already initialized");
 		checkContract(_borrowerOperationsAddress);
 		checkContract(_troveManagerAddress);
-		checkContract(_vstTokenAddress);
+		checkContract(_uTokenAddress);
 		checkContract(_sortedTrovesAddress);
 		checkContract(_communityIssuanceAddress);
 		checkContract(_vestaParamsAddress);
@@ -141,7 +141,7 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		assetAddress = _assetAddress;
 		borrowerOperations = IBorrowerOperations(_borrowerOperationsAddress);
 		troveManager = ITroveManager(_troveManagerAddress);
-		vstToken = IVSTToken(_vstTokenAddress);
+		uToken = IUToken(_uTokenAddress);
 		sortedTroves = ISortedTroves(_sortedTrovesAddress);
 		communityIssuance = ICommunityIssuance(_communityIssuanceAddress);
 		setVestaParameters(_vestaParamsAddress);
@@ -150,7 +150,7 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 
 		emit BorrowerOperationsAddressChanged(_borrowerOperationsAddress);
 		emit TroveManagerAddressChanged(_troveManagerAddress);
-		emit VSTTokenAddressChanged(_vstTokenAddress);
+		emit UTokenAddressChanged(_uTokenAddress);
 		emit SortedTrovesAddressChanged(_sortedTrovesAddress);
 		emit CommunityIssuanceAddressChanged(_communityIssuanceAddress);
 	}
@@ -161,8 +161,8 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		return assetBalance;
 	}
 
-	function getTotalVSTDeposits() external view override returns (uint256) {
-		return totalVSTDeposits;
+	function getTotalUDeposits() external view override returns (uint256) {
+		return totalUDeposits;
 	}
 
 	// --- External Depositor Functions ---
@@ -184,8 +184,8 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		uint256 depositorAssetGain = getDepositorAssetGain(msg.sender);
 		uint256 depositorAssetGainEther = getDepositorAssetGain1e18(msg.sender);
 
-		uint256 compoundedVSTDeposit = getCompoundedVSTDeposit(msg.sender);
-		uint256 VSTLoss = initialDeposit.sub(compoundedVSTDeposit); // Needed only for event log
+		uint256 compoundedUDeposit = getCompoundedUDeposit(msg.sender);
+		uint256 ULoss = initialDeposit.sub(compoundedUDeposit); // Needed only for event log
 
 		// First pay out any YOU gains
 		_payOutYOUGains(communityIssuanceCached, msg.sender);
@@ -196,13 +196,13 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		_updateStakeAndSnapshots(newStake);
 		emit StakeChanged(newStake, msg.sender);
 
-		_sendVSTtoStabilityPool(msg.sender, _amount);
+		_sendUtoStabilityPool(msg.sender, _amount);
 
-		uint256 newDeposit = compoundedVSTDeposit.add(_amount);
+		uint256 newDeposit = compoundedUDeposit.add(_amount);
 		_updateDepositAndSnapshots(msg.sender, newDeposit);
 
 		emit UserDepositChanged(msg.sender, newDeposit);
-		emit AssetGainWithdrawn(msg.sender, depositorAssetGain, VSTLoss); // VST Loss required for event log
+		emit AssetGainWithdrawn(msg.sender, depositorAssetGain, ULoss); // U Loss required for event log
 
 		_sendAssetGainToDepositor(depositorAssetGain, depositorAssetGainEther);
 	}
@@ -229,27 +229,27 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		uint256 depositorAssetGain = getDepositorAssetGain(msg.sender);
 		uint256 depositorAssetGainEther = getDepositorAssetGain1e18(msg.sender);
 
-		uint256 compoundedVSTDeposit = getCompoundedVSTDeposit(msg.sender);
-		uint256 VSTtoWithdraw = VestaMath._min(_amount, compoundedVSTDeposit);
-		uint256 VSTLoss = initialDeposit.sub(compoundedVSTDeposit); // Needed only for event log
+		uint256 compoundedUDeposit = getCompoundedUDeposit(msg.sender);
+		uint256 UtoWithdraw = VestaMath._min(_amount, compoundedUDeposit);
+		uint256 ULoss = initialDeposit.sub(compoundedUDeposit); // Needed only for event log
 
 		// First pay out any YOU gains
 		_payOutYOUGains(communityIssuanceCached, msg.sender);
 
 		// Update System stake
 		uint256 compoundedStake = getCompoundedTotalStake();
-		uint256 newStake = compoundedStake.sub(VSTtoWithdraw);
+		uint256 newStake = compoundedStake.sub(UtoWithdraw);
 		_updateStakeAndSnapshots(newStake);
 		emit StakeChanged(newStake, msg.sender);
 
-		_sendVSTToDepositor(msg.sender, VSTtoWithdraw);
+		_sendUToDepositor(msg.sender, UtoWithdraw);
 
 		// Update deposit
-		uint256 newDeposit = compoundedVSTDeposit.sub(VSTtoWithdraw);
+		uint256 newDeposit = compoundedUDeposit.sub(UtoWithdraw);
 		_updateDepositAndSnapshots(msg.sender, newDeposit);
 		emit UserDepositChanged(msg.sender, newDeposit);
 
-		emit AssetGainWithdrawn(msg.sender, depositorAssetGain, VSTLoss); // VST Loss required for event log
+		emit AssetGainWithdrawn(msg.sender, depositorAssetGain, ULoss); // U Loss required for event log
 
 		_sendAssetGainToDepositor(depositorAssetGain, depositorAssetGainEther);
 	}
@@ -272,8 +272,8 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 
 		uint256 depositorAssetGain = getDepositorAssetGain1e18(msg.sender);
 
-		uint256 compoundedVSTDeposit = getCompoundedVSTDeposit(msg.sender);
-		uint256 VSTLoss = initialDeposit.sub(compoundedVSTDeposit); // Needed only for event log
+		uint256 compoundedUDeposit = getCompoundedUDeposit(msg.sender);
+		uint256 ULoss = initialDeposit.sub(compoundedUDeposit); // Needed only for event log
 
 		// First pay out any YOU gains
 		_payOutYOUGains(communityIssuanceCached, msg.sender);
@@ -283,13 +283,13 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		_updateStakeAndSnapshots(compoundedSystemStake);
 		emit StakeChanged(compoundedSystemStake, msg.sender);
 
-		_updateDepositAndSnapshots(msg.sender, compoundedVSTDeposit);
+		_updateDepositAndSnapshots(msg.sender, compoundedUDeposit);
 
 		/* Emit events before transferring ETH gain to Trove.
          This lets the event log make more sense (i.e. so it appears that first the ETH gain is withdrawn
         and then it is deposited into the Trove, not the other way around). */
-		emit AssetGainWithdrawn(msg.sender, depositorAssetGain, VSTLoss);
-		emit UserDepositChanged(msg.sender, compoundedVSTDeposit);
+		emit AssetGainWithdrawn(msg.sender, depositorAssetGain, ULoss);
+		emit UserDepositChanged(msg.sender, compoundedUDeposit);
 
 		assetBalance = assetBalance.sub(depositorAssetGain);
 		emit StabilityPoolAssetBalanceUpdated(assetBalance);
@@ -308,18 +308,18 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 	}
 
 	function _updateG(uint256 _YOUIssuance) internal {
-		uint256 totalVST = totalVSTDeposits; // cached to save an SLOAD
+		uint256 totalU = totalUDeposits; // cached to save an SLOAD
 		/*
 		 * When total deposits is 0, G is not updated. In this case, the YOU issued can not be obtained by later
 		 * depositors - it is missed out on, and remains in the balanceof the CommunityIssuance contract.
 		 *
 		 */
-		if (totalVST == 0 || _YOUIssuance == 0) {
+		if (totalU == 0 || _YOUIssuance == 0) {
 			return;
 		}
 
 		uint256 YOUPerUnitStaked;
-		YOUPerUnitStaked = _computeYOUPerUnitStaked(_YOUIssuance, totalVST);
+		YOUPerUnitStaked = _computeYOUPerUnitStaked(_YOUIssuance, totalU);
 
 		uint256 marginalYOUGain = YOUPerUnitStaked.mul(P);
 		epochToScaleToG[currentEpoch][currentScale] = epochToScaleToG[currentEpoch][currentScale]
@@ -330,7 +330,7 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 
 	function _computeYOUPerUnitStaked(
 		uint256 _YOUIssuance,
-		uint256 _totalVSTDeposits
+		uint256 _totalUDeposits
 	) internal returns (uint256) {
 		/*
 		 * Calculate the YOU-per-unit staked.  Division uses a "feedback" error correction, to keep the
@@ -345,8 +345,8 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		 */
 		uint256 YOUNumerator = _YOUIssuance.mul(DECIMAL_PRECISION).add(lastYOUError);
 
-		uint256 YOUPerUnitStaked = YOUNumerator.div(_totalVSTDeposits);
-		lastYOUError = YOUNumerator.sub(YOUPerUnitStaked.mul(_totalVSTDeposits));
+		uint256 YOUPerUnitStaked = YOUNumerator.div(_totalUDeposits);
+		lastYOUError = YOUNumerator.sub(YOUPerUnitStaked.mul(_totalUDeposits));
 
 		return YOUPerUnitStaked;
 	}
@@ -354,14 +354,14 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 	// --- Liquidation functions ---
 
 	/*
-	 * Cancels out the specified debt against the VST contained in the Stability Pool (as far as possible)
+	 * Cancels out the specified debt against the U contained in the Stability Pool (as far as possible)
 	 * and transfers the Trove's ETH collateral from ActivePool to StabilityPool.
 	 * Only called by liquidation functions in the TroveManager.
 	 */
 	function offset(uint256 _debtToOffset, uint256 _collToAdd) external override {
 		_requireCallerIsTroveManager();
-		uint256 totalVST = totalVSTDeposits; // cached to save an SLOAD
-		if (totalVST == 0 || _debtToOffset == 0) {
+		uint256 totalU = totalUDeposits; // cached to save an SLOAD
+		if (totalU == 0 || _debtToOffset == 0) {
 			return;
 		}
 
@@ -369,10 +369,10 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 
 		(
 			uint256 AssetGainPerUnitStaked,
-			uint256 VSTLossPerUnitStaked
-		) = _computeRewardsPerUnitStaked(_collToAdd, _debtToOffset, totalVST);
+			uint256 ULossPerUnitStaked
+		) = _computeRewardsPerUnitStaked(_collToAdd, _debtToOffset, totalU);
 
-		_updateRewardSumAndProduct(AssetGainPerUnitStaked, VSTLossPerUnitStaked); // updates S and P
+		_updateRewardSumAndProduct(AssetGainPerUnitStaked, ULossPerUnitStaked); // updates S and P
 
 		_moveOffsetCollAndDebt(_collToAdd, _debtToOffset);
 	}
@@ -382,10 +382,10 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 	function _computeRewardsPerUnitStaked(
 		uint256 _collToAdd,
 		uint256 _debtToOffset,
-		uint256 _totalVSTDeposits
-	) internal returns (uint256 AssetGainPerUnitStaked, uint256 VSTLossPerUnitStaked) {
+		uint256 _totalUDeposits
+	) internal returns (uint256 AssetGainPerUnitStaked, uint256 ULossPerUnitStaked) {
 		/*
-		 * Compute the VST and ETH rewards. Uses a "feedback" error correction, to keep
+		 * Compute the U and ETH rewards. Uses a "feedback" error correction, to keep
 		 * the cumulative error in the P and S state variables low:
 		 *
 		 * 1) Form numerators which compensate for the floor division errors that occurred the last time this
@@ -397,44 +397,40 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		 */
 		uint256 AssetNumerator = _collToAdd.mul(DECIMAL_PRECISION).add(lastAssetError_Offset);
 
-		assert(_debtToOffset <= _totalVSTDeposits);
-		if (_debtToOffset == _totalVSTDeposits) {
-			VSTLossPerUnitStaked = DECIMAL_PRECISION; // When the Pool depletes to 0, so does each deposit
-			lastVSTLossError_Offset = 0;
+		assert(_debtToOffset <= _totalUDeposits);
+		if (_debtToOffset == _totalUDeposits) {
+			ULossPerUnitStaked = DECIMAL_PRECISION; // When the Pool depletes to 0, so does each deposit
+			lastULossError_Offset = 0;
 		} else {
-			uint256 VSTLossNumerator = _debtToOffset.mul(DECIMAL_PRECISION).sub(
-				lastVSTLossError_Offset
-			);
+			uint256 ULossNumerator = _debtToOffset.mul(DECIMAL_PRECISION).sub(lastULossError_Offset);
 			/*
-			 * Add 1 to make error in quotient positive. We want "slightly too much" VST loss,
-			 * which ensures the error in any given compoundedVSTDeposit favors the Stability Pool.
+			 * Add 1 to make error in quotient positive. We want "slightly too much" U loss,
+			 * which ensures the error in any given compoundedUDeposit favors the Stability Pool.
 			 */
-			VSTLossPerUnitStaked = (VSTLossNumerator.div(_totalVSTDeposits)).add(1);
-			lastVSTLossError_Offset = (VSTLossPerUnitStaked.mul(_totalVSTDeposits)).sub(
-				VSTLossNumerator
-			);
+			ULossPerUnitStaked = (ULossNumerator.div(_totalUDeposits)).add(1);
+			lastULossError_Offset = (ULossPerUnitStaked.mul(_totalUDeposits)).sub(ULossNumerator);
 		}
 
-		AssetGainPerUnitStaked = AssetNumerator.div(_totalVSTDeposits);
-		lastAssetError_Offset = AssetNumerator.sub(AssetGainPerUnitStaked.mul(_totalVSTDeposits));
+		AssetGainPerUnitStaked = AssetNumerator.div(_totalUDeposits);
+		lastAssetError_Offset = AssetNumerator.sub(AssetGainPerUnitStaked.mul(_totalUDeposits));
 
-		return (AssetGainPerUnitStaked, VSTLossPerUnitStaked);
+		return (AssetGainPerUnitStaked, ULossPerUnitStaked);
 	}
 
 	// Update the Stability Pool reward sum S and product P
 	function _updateRewardSumAndProduct(
 		uint256 _AssetGainPerUnitStaked,
-		uint256 _VSTLossPerUnitStaked
+		uint256 _ULossPerUnitStaked
 	) internal {
 		uint256 currentP = P;
 		uint256 newP;
 
-		assert(_VSTLossPerUnitStaked <= DECIMAL_PRECISION);
+		assert(_ULossPerUnitStaked <= DECIMAL_PRECISION);
 		/*
-		 * The newProductFactor is the factor by which to change all deposits, due to the depletion of Stability Pool VST in the liquidation.
-		 * We make the product factor 0 if there was a pool-emptying. Otherwise, it is (1 - VSTLossPerUnitStaked)
+		 * The newProductFactor is the factor by which to change all deposits, due to the depletion of Stability Pool U in the liquidation.
+		 * We make the product factor 0 if there was a pool-emptying. Otherwise, it is (1 - ULossPerUnitStaked)
 		 */
-		uint256 newProductFactor = uint256(DECIMAL_PRECISION).sub(_VSTLossPerUnitStaked);
+		uint256 newProductFactor = uint256(DECIMAL_PRECISION).sub(_ULossPerUnitStaked);
 
 		uint128 currentScaleCached = currentScale;
 		uint128 currentEpochCached = currentEpoch;
@@ -478,20 +474,20 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 	function _moveOffsetCollAndDebt(uint256 _collToAdd, uint256 _debtToOffset) internal {
 		IActivePool activePoolCached = vestaParams.activePool();
 
-		// Cancel the liquidated VST debt with the VST in the stability pool
-		activePoolCached.decreaseVSTDebt(assetAddress, _debtToOffset);
-		_decreaseVST(_debtToOffset);
+		// Cancel the liquidated U debt with the U in the stability pool
+		activePoolCached.decreaseUDebt(assetAddress, _debtToOffset);
+		_decreaseU(_debtToOffset);
 
 		// Burn the debt that was successfully offset
-		vstToken.burn(address(this), _debtToOffset);
+		uToken.burn(address(this), _debtToOffset);
 
 		activePoolCached.sendAsset(assetAddress, address(this), _collToAdd);
 	}
 
-	function _decreaseVST(uint256 _amount) internal {
-		uint256 newTotalVSTDeposits = totalVSTDeposits.sub(_amount);
-		totalVSTDeposits = newTotalVSTDeposits;
-		emit StabilityPoolVSTBalanceUpdated(newTotalVSTDeposits);
+	function _decreaseU(uint256 _amount) internal {
+		uint256 newTotalUDeposits = totalUDeposits.sub(_amount);
+		totalUDeposits = newTotalUDeposits;
+		emit StabilityPoolUBalanceUpdated(newTotalUDeposits);
 	}
 
 	// --- Reward calculator functions for depositor ---
@@ -604,7 +600,7 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 	 * Return the user's compounded deposit. Given by the formula:  d = d0 * P/P(0)
 	 * where P(0) is the depositor's snapshot of the product P, taken when they last updated their deposit.
 	 */
-	function getCompoundedVSTDeposit(address _depositor) public view override returns (uint256) {
+	function getCompoundedUDeposit(address _depositor) public view override returns (uint256) {
 		uint256 initialDeposit = deposits[_depositor];
 		if (initialDeposit == 0) {
 			return 0;
@@ -673,14 +669,14 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		return compoundedStake;
 	}
 
-	// --- Sender functions for VST deposit, ETH gains and YOU gains ---
+	// --- Sender functions for U deposit, ETH gains and YOU gains ---
 
-	// Transfer the VST tokens from the user to the Stability Pool's address, and update its recorded VST
-	function _sendVSTtoStabilityPool(address _address, uint256 _amount) internal {
-		vstToken.sendToPool(_address, address(this), _amount);
-		uint256 newTotalVSTDeposits = totalVSTDeposits.add(_amount);
-		totalVSTDeposits = newTotalVSTDeposits;
-		emit StabilityPoolVSTBalanceUpdated(newTotalVSTDeposits);
+	// Transfer the U tokens from the user to the Stability Pool's address, and update its recorded U
+	function _sendUtoStabilityPool(address _address, uint256 _amount) internal {
+		uToken.sendToPool(_address, address(this), _amount);
+		uint256 newTotalUDeposits = totalUDeposits.add(_amount);
+		totalUDeposits = newTotalUDeposits;
+		emit StabilityPoolUBalanceUpdated(newTotalUDeposits);
 	}
 
 	function _sendAssetGainToDepositor(uint256 _amount, uint256 _amountEther) internal {
@@ -701,14 +697,14 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		emit AssetSent(msg.sender, _amount);
 	}
 
-	// Send VST to user and decrease VST in Pool
-	function _sendVSTToDepositor(address _depositor, uint256 VSTWithdrawal) internal {
-		if (VSTWithdrawal == 0) {
+	// Send U to user and decrease U in Pool
+	function _sendUToDepositor(address _depositor, uint256 UWithdrawal) internal {
+		if (UWithdrawal == 0) {
 			return;
 		}
 
-		vstToken.returnFromPool(address(this), _depositor, VSTWithdrawal);
-		_decreaseVST(VSTWithdrawal);
+		uToken.returnFromPool(address(this), _depositor, UWithdrawal);
+		_decreaseU(UWithdrawal);
 	}
 
 	// --- Stability Pool Deposit Functionality ---

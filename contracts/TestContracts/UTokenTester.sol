@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.10;
-import "../VSTToken.sol";
+import "../UToken.sol";
 
-contract VSTTokenTester is VSTToken {
+contract UTokenTester is UToken {
 	constructor(
 		address _troveManagerAddress,
 		address _redemptionManagerAddress,
 		address _stabilityPoolAddress,
 		address _borrowerOperationsAddress
 	)
-		VSTToken(
+		UToken(
 			_troveManagerAddress,
 			_redemptionManagerAddress,
 			_stabilityPoolAddress,

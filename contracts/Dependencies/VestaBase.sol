@@ -30,11 +30,11 @@ contract VestaBase is ArbitroveBase, BaseMath, IVestaBase, OwnableUpgradeable {
 
 	// Returns the composite debt (drawn debt + gas compensation) of a trove, for the purpose of ICR calculation
 	function _getCompositeDebt(address _asset, uint256 _debt) internal view returns (uint256) {
-		return _debt.add(vestaParams.VST_GAS_COMPENSATION(_asset));
+		return _debt.add(vestaParams.U_GAS_COMPENSATION(_asset));
 	}
 
 	function _getNetDebt(address _asset, uint256 _debt) internal view returns (uint256) {
-		return _debt.sub(vestaParams.VST_GAS_COMPENSATION(_asset));
+		return _debt.sub(vestaParams.U_GAS_COMPENSATION(_asset));
 	}
 
 	// Return the amount of ETH to be drawn from a trove's collateral and sent as gas compensation.
@@ -53,8 +53,8 @@ contract VestaBase is ArbitroveBase, BaseMath, IVestaBase, OwnableUpgradeable {
 	}
 
 	function getEntireSystemDebt(address _asset) public view returns (uint256 entireSystemDebt) {
-		uint256 activeDebt = vestaParams.activePool().getVSTDebt(_asset);
-		uint256 closedDebt = vestaParams.defaultPool().getVSTDebt(_asset);
+		uint256 activeDebt = vestaParams.activePool().getUDebt(_asset);
+		uint256 closedDebt = vestaParams.defaultPool().getUDebt(_asset);
 
 		return activeDebt.add(closedDebt);
 	}

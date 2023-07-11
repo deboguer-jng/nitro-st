@@ -16,7 +16,7 @@ contract MultiTroveGetter is ArbitroveBase {
 		uint256 coll;
 		uint256 stake;
 		uint256 snapshotAsset;
-		uint256 snapshotVSTDebt;
+		uint256 snapshotUDebt;
 	}
 
 	TroveManager public troveManager; // XXX Troves missing from ITroveManager?
@@ -92,8 +92,10 @@ contract MultiTroveGetter is ArbitroveBase {
 				,
 
 			) = troveManager.Troves(_asset, currentTroveowner);
-			(_troves[idx].snapshotAsset, _troves[idx].snapshotVSTDebt) = troveManager
-				.rewardSnapshots(_asset, currentTroveowner);
+			(_troves[idx].snapshotAsset, _troves[idx].snapshotUDebt) = troveManager.rewardSnapshots(
+				_asset,
+				currentTroveowner
+			);
 
 			currentTroveowner = sortedTroves.getNext(_asset, currentTroveowner);
 		}
@@ -124,8 +126,10 @@ contract MultiTroveGetter is ArbitroveBase {
 				,
 
 			) = troveManager.Troves(_asset, currentTroveowner);
-			(_troves[idx].snapshotAsset, _troves[idx].snapshotVSTDebt) = troveManager
-				.rewardSnapshots(_asset, currentTroveowner);
+			(_troves[idx].snapshotAsset, _troves[idx].snapshotUDebt) = troveManager.rewardSnapshots(
+				_asset,
+				currentTroveowner
+			);
 
 			currentTroveowner = sortedTroves.getPrev(_asset, currentTroveowner);
 		}

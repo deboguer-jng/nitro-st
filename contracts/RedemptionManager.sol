@@ -35,12 +35,12 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 	}
 
 	// --- Redemption functions ---
-	// Redeem as much collateral as possible from _borrower's Trove in exchange for VST up to _maxVSTamount
+	// Redeem as much collateral as possible from _borrower's Trove in exchange for U up to _maxUamount
 	function _redeemCollateralFromTrove(
 		address _asset,
 		ContractsCache memory _contractsCache,
 		address _borrower,
-		uint256 _maxVSTamount,
+		uint256 _maxUamount,
 		uint256 _price,
 		address _upperPartialRedemptionHint,
 		address _lowerPartialRedemptionHint,
@@ -53,16 +53,16 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 		);
 		TroveManager.Trove memory trove = troveManager.getTrove(vars._borrower, vars._asset);
 		// Determine the remaining amount (lot) to be redeemed, capped by the entire debt of the Trove minus the liquidation reserve
-		singleRedemption.VSTLot = VestaMath._min(
-			_maxVSTamount,
-			trove.debt.sub(vestaParams.VST_GAS_COMPENSATION(_asset))
+		singleRedemption.ULot = VestaMath._min(
+			_maxUamount,
+			trove.debt.sub(vestaParams.U_GAS_COMPENSATION(_asset))
 		);
 		// Get the ETHLot of equivalent value in USD
-		singleRedemption.ETHLot = singleRedemption.VSTLot.mul(DECIMAL_PRECISION).div(_price);
-		// Decrease the debt and collateral of the current Trove according to the VST lot and corresponding ETH to send
-		uint256 newDebt = trove.debt.sub(singleRedemption.VSTLot);
+		singleRedemption.ETHLot = singleRedemption.ULot.mul(DECIMAL_PRECISION).div(_price);
+		// Decrease the debt and collateral of the current Trove according to the U lot and corresponding ETH to send
+		uint256 newDebt = trove.debt.sub(singleRedemption.ULot);
 		uint256 newColl = trove.coll.sub(singleRedemption.ETHLot);
-		if (newDebt == vestaParams.VST_GAS_COMPENSATION(_asset)) {
+		if (newDebt == vestaParams.U_GAS_COMPENSATION(_asset)) {
 			// No debt left in the Trove (except for the liquidation reserve), therefore the trove gets closed
 			troveManager.removeStake(vars._asset, vars._borrower);
 			troveManager.closeTroveByRedemption(vars._asset, vars._borrower);
@@ -70,7 +70,7 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 				vars._asset,
 				_contractsCache,
 				vars._borrower,
-				vestaParams.VST_GAS_COMPENSATION(vars._asset),
+				vestaParams.U_GAS_COMPENSATION(vars._asset),
 				newColl
 			);
 			emit TroveUpdated(
@@ -124,8 +124,8 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 
 	/*
 	 * Called when a full redemption occurs, and closes the trove.
-	 * The redeemer swaps (debt - liquidation reserve) VST for (debt - liquidation reserve) worth of ETH, so the VST liquidation reserve left corresponds to the remaining debt.
-	 * In order to close the trove, the VST liquidation reserve is burned, and the corresponding debt is removed from the active pool.
+	 * The redeemer swaps (debt - liquidation reserve) U for (debt - liquidation reserve) worth of ETH, so the U liquidation reserve left corresponds to the remaining debt.
+	 * In order to close the trove, the U liquidation reserve is burned, and the corresponding debt is removed from the active pool.
 	 * The debt recorded on the trove's struct is zero'd elswhere, in _closeTrove.
 	 * Any surplus ETH left in the trove, is sent to the Coll surplus pool, and can be later claimed by the borrower.
 	 */
@@ -133,12 +133,12 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 		address _asset,
 		ContractsCache memory _contractsCache,
 		address _borrower,
-		uint256 _VST,
+		uint256 _U,
 		uint256 _ETH
 	) internal {
-		_contractsCache.vstToken.burn(troveManager.gasPoolAddress(), _VST);
-		// Update Active Pool VST, and send ETH to account
-		_contractsCache.activePool.decreaseVSTDebt(_asset, _VST);
+		_contractsCache.uToken.burn(troveManager.gasPoolAddress(), _U);
+		// Update Active Pool U, and send ETH to account
+		_contractsCache.activePool.decreaseUDebt(_asset, _U);
 		// send ETH from Active Pool to CollSurplus Pool
 		_contractsCache.collSurplusPool.accountSurplus(_asset, _borrower, _ETH);
 		_contractsCache.activePool.sendAsset(
@@ -187,13 +187,13 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 		require(_amount > 0, "TroveManager: !_amount");
 	}
 
-	function _requireVSTBalanceCoversRedemption(
-		IVSTToken _vstToken,
+	function _requireUBalanceCoversRedemption(
+		IUToken _uToken,
 		address _redeemer,
 		uint256 _amount
 	) internal view {
 		require(
-			_vstToken.balanceOf(_redeemer) >= _amount,
+			_uToken.balanceOf(_redeemer) >= _amount,
 			"TroveManager: Too much redemption amount"
 		);
 	}
@@ -264,13 +264,13 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 		address _asset,
 		uint256 _ETHDrawn,
 		uint256 _price,
-		uint256 _totalVSTSupply
+		uint256 _totalUSupply
 	) internal returns (uint256) {
 		uint256 decayedBaseRate = troveManager.calcDecayedBaseRate(_asset);
 
-		uint256 redeemedVSTFraction = _ETHDrawn.mul(_price).div(_totalVSTSupply);
+		uint256 redeemedUFraction = _ETHDrawn.mul(_price).div(_totalUSupply);
 
-		uint256 newBaseRate = decayedBaseRate.add(redeemedVSTFraction.div(BETA));
+		uint256 newBaseRate = decayedBaseRate.add(redeemedUFraction.div(BETA));
 		newBaseRate = VestaMath._min(newBaseRate, DECIMAL_PRECISION);
 		assert(newBaseRate > 0);
 
@@ -279,7 +279,7 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 		return newBaseRate;
 	}
 
-	/* Send _VSTamount VST to the system and redeem the corresponding amount of collateral from as many Troves as are needed to fill the redemption
+	/* Send _Uamount U to the system and redeem the corresponding amount of collateral from as many Troves as are needed to fill the redemption
 	 * request.  Applies pending rewards to a Trove before reducing its debt and coll.
 	 *
 	 * Note that if _amount is very large, this function can run out of gas, specially if traversed troves are small. This can be easily avoided by
@@ -297,12 +297,12 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 	 *
 	 * If another transaction modifies the list between calling getRedemptionHints() and passing the hints to redeemCollateral(), it
 	 * is very likely that the last (partially) redeemed Trove would end up with a different ICR than what the hint is for. In this case the
-	 * redemption will stop after the last completely redeemed Trove and the sender will keep the remaining VST amount, which they can attempt
+	 * redemption will stop after the last completely redeemed Trove and the sender will keep the remaining U amount, which they can attempt
 	 * to redeem later.
 	 */
 	function redeemCollateral(
 		address _asset,
-		uint256 _VSTamount,
+		uint256 _Uamount,
 		address _firstRedemptionHint,
 		address _upperPartialRedemptionHint,
 		address _lowerPartialRedemptionHint,
@@ -322,7 +322,7 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 		ContractsCache memory contractsCache = ContractsCache(
 			vestaParams.activePool(),
 			vestaParams.defaultPool(),
-			troveManager.vstToken(),
+			troveManager.uToken(),
 			troveManager.youStaking(),
 			troveManager.sortedTroves(),
 			troveManager.collSurplusPool(),
@@ -332,10 +332,10 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 		_requireValidMaxFeePercentage(_asset, _maxFeePercentage);
 		totals.price = vestaParams.priceFeed().fetchPrice(_asset);
 		_requireTCRoverMCR(_asset, totals.price);
-		_requireAmountGreaterThanZero(_VSTamount);
-		_requireVSTBalanceCoversRedemption(contractsCache.vstToken, msg.sender, _VSTamount);
-		totals.totalVSTSupplyAtStart = getEntireSystemDebt(_asset);
-		totals.remainingVST = _VSTamount;
+		_requireAmountGreaterThanZero(_Uamount);
+		_requireUBalanceCoversRedemption(contractsCache.uToken, msg.sender, _Uamount);
+		totals.totalUSupplyAtStart = getEntireSystemDebt(_asset);
+		totals.remainingU = _Uamount;
 		if (
 			_isValidFirstRedemptionHint(
 				_asset,
@@ -359,13 +359,11 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 				);
 			}
 		}
-		// Loop through the Troves starting from the one with lowest collateral ratio until _amount of VST is exchanged for collateral
+		// Loop through the Troves starting from the one with lowest collateral ratio until _amount of U is exchanged for collateral
 		if (_maxIterations == 0) {
 			_maxIterations = type(uint256).max;
 		}
-		while (
-			vars.currentBorrower != address(0) && totals.remainingVST > 0 && _maxIterations > 0
-		) {
+		while (vars.currentBorrower != address(0) && totals.remainingU > 0 && _maxIterations > 0) {
 			_maxIterations--;
 			// Save the address of the Trove preceding the current one, before potentially modifying the list
 			vars.nextUserToCheck = contractsCache.sortedTroves.getPrev(_asset, vars.currentBorrower);
@@ -379,26 +377,26 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 				_asset,
 				contractsCache,
 				vars.currentBorrower,
-				totals.remainingVST,
+				totals.remainingU,
 				totals.price,
 				_upperPartialRedemptionHint,
 				_lowerPartialRedemptionHint,
 				_partialRedemptionHintNICR
 			);
 			if (singleRedemption.cancelledPartial) break; // Partial redemption was cancelled (out-of-date hint, or new net debt < minimum), therefore we could not redeem from the last Trove
-			totals.totalVSTToRedeem = totals.totalVSTToRedeem.add(singleRedemption.VSTLot);
+			totals.totalUToRedeem = totals.totalUToRedeem.add(singleRedemption.ULot);
 			totals.totalAssetDrawn = totals.totalAssetDrawn.add(singleRedemption.ETHLot);
-			totals.remainingVST = totals.remainingVST.sub(singleRedemption.VSTLot);
+			totals.remainingU = totals.remainingU.sub(singleRedemption.ULot);
 			vars.currentBorrower = vars.nextUserToCheck;
 		}
 		require(totals.totalAssetDrawn > 0, "TroveManager: Unable to redeem");
 		// Decay the baseRate due to time passed, and then increase it according to the size of this redemption.
-		// Use the saved total VST supply value, from before it was reduced by the redemption.
+		// Use the saved total U supply value, from before it was reduced by the redemption.
 		_updateBaseRateFromRedemption(
 			_asset,
 			totals.totalAssetDrawn,
 			totals.price,
-			totals.totalVSTSupplyAtStart
+			totals.totalUSupplyAtStart
 		);
 		// Calculate the ETH fee
 		totals.ETHFee = _getRedemptionFee(_asset, totals.totalAssetDrawn);
@@ -413,15 +411,15 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 		totals.ETHToSendToRedeemer = totals.totalAssetDrawn.sub(totals.ETHFee);
 		emit Redemption(
 			_asset,
-			_VSTamount,
-			totals.totalVSTToRedeem,
+			_Uamount,
+			totals.totalUToRedeem,
 			totals.totalAssetDrawn,
 			totals.ETHFee
 		);
-		// Burn the total VST that is cancelled with debt, and send the redeemed ETH to msg.sender
-		contractsCache.vstToken.burn(msg.sender, totals.totalVSTToRedeem);
-		// Update Active Pool VST, and send ETH to account
-		contractsCache.activePool.decreaseVSTDebt(_asset, totals.totalVSTToRedeem);
+		// Burn the total U that is cancelled with debt, and send the redeemed ETH to msg.sender
+		contractsCache.uToken.burn(msg.sender, totals.totalUToRedeem);
+		// Update Active Pool U, and send ETH to account
+		contractsCache.activePool.decreaseUDebt(_asset, totals.totalUToRedeem);
 		contractsCache.activePool.sendAsset(_asset, msg.sender, totals.ETHToSendToRedeemer);
 	}
 }

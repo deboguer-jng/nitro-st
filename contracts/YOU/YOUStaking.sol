@@ -35,14 +35,14 @@ contract YOUStaking is
 	uint256 public totalYOUStaked;
 
 	mapping(address => uint256) public F_ASSETS; // Running sum of ETH fees per-YOU-staked
-	uint256 public F_VST; // Running sum of YOU fees per-YOU-staked
+	uint256 public F_U; // Running sum of YOU fees per-YOU-staked
 
-	// User snapshots of F_ETH and F_VST, taken at the point at which their latest deposit was made
+	// User snapshots of F_ETH and F_U, taken at the point at which their latest deposit was made
 	mapping(address => Snapshot) public snapshots;
 
 	struct Snapshot {
 		mapping(address => uint256) F_ASSET_Snapshot;
-		uint256 F_VST_Snapshot;
+		uint256 F_U_Snapshot;
 	}
 
 	address[] ASSET_TYPE;
@@ -50,7 +50,7 @@ contract YOUStaking is
 	mapping(address => uint256) public sentToTreasuryTracker;
 
 	IERC20Upgradeable public override youToken;
-	IERC20Upgradeable public vstToken;
+	IERC20Upgradeable public uToken;
 
 	address public troveManagerAddress;
 	address public borrowerOperationsAddress;
@@ -60,7 +60,7 @@ contract YOUStaking is
 	// --- Functions ---
 	function setAddresses(
 		address _youTokenAddress,
-		address _vstTokenAddress,
+		address _uTokenAddress,
 		address _troveManagerAddress,
 		address _borrowerOperationsAddress,
 		address _activePoolAddress,
@@ -69,7 +69,7 @@ contract YOUStaking is
 		require(!isInitialized, "Already Initialized");
 		require(_treasury != address(0), "Invalid Treausry Address");
 		checkContract(_youTokenAddress);
-		checkContract(_vstTokenAddress);
+		checkContract(_uTokenAddress);
 		checkContract(_troveManagerAddress);
 		checkContract(_borrowerOperationsAddress);
 		checkContract(_activePoolAddress);
@@ -81,7 +81,7 @@ contract YOUStaking is
 		_pause();
 
 		youToken = IERC20Upgradeable(_youTokenAddress);
-		vstToken = IERC20Upgradeable(_vstTokenAddress);
+		uToken = IERC20Upgradeable(_uTokenAddress);
 		troveManagerAddress = _troveManagerAddress;
 		borrowerOperationsAddress = _borrowerOperationsAddress;
 		activePoolAddress = _activePoolAddress;
@@ -91,13 +91,13 @@ contract YOUStaking is
 		ASSET_TYPE.push(ETH_REF_ADDRESS);
 
 		emit YOUTokenAddressSet(_youTokenAddress);
-		emit YOUTokenAddressSet(_vstTokenAddress);
+		emit YOUTokenAddressSet(_uTokenAddress);
 		emit TroveManagerAddressSet(_troveManagerAddress);
 		emit BorrowerOperationsAddressSet(_borrowerOperationsAddress);
 		emit ActivePoolAddressSet(_activePoolAddress);
 	}
 
-	// If caller has a pre-existing stake, send any accumulated ETH and VST gains to them.
+	// If caller has a pre-existing stake, send any accumulated ETH and U gains to them.
 	function stake(uint256 _YOUamount) external override nonReentrant whenNotPaused {
 		require(_YOUamount > 0);
 
@@ -114,10 +114,10 @@ contract YOUStaking is
 				AssetGain = _getPendingAssetGain(asset, msg.sender);
 
 				if (i == 0) {
-					uint256 VSTGain = _getPendingVSTGain(msg.sender);
-					vstToken.transfer(msg.sender, VSTGain);
+					uint256 UGain = _getPendingUGain(msg.sender);
+					uToken.transfer(msg.sender, UGain);
 
-					emit StakingGainsVSTWithdrawn(msg.sender, VSTGain);
+					emit StakingGainsUWithdrawn(msg.sender, UGain);
 				}
 
 				_sendAssetGainToUser(asset, AssetGain);
@@ -140,7 +140,7 @@ contract YOUStaking is
 		emit StakeChanged(msg.sender, newStake);
 	}
 
-	// Unstake the YOU and send the it back to the caller, along with their accumulated VST & ETH gains.
+	// Unstake the YOU and send the it back to the caller, along with their accumulated U & ETH gains.
 	// If requested amount > stake, send their entire stake.
 	function unstake(uint256 _YOUamount) external override nonReentrant {
 		uint256 currentStake = stakes[msg.sender];
@@ -153,13 +153,13 @@ contract YOUStaking is
 		for (uint256 i = 0; i < assetLength; i++) {
 			asset = ASSET_TYPE[i];
 
-			// Grab any accumulated ETH and VST gains from the current stake
+			// Grab any accumulated ETH and U gains from the current stake
 			AssetGain = _getPendingAssetGain(asset, msg.sender);
 
 			if (i == 0) {
-				uint256 VSTGain = _getPendingVSTGain(msg.sender);
-				vstToken.transfer(msg.sender, VSTGain);
-				emit StakingGainsVSTWithdrawn(msg.sender, VSTGain);
+				uint256 UGain = _getPendingUGain(msg.sender);
+				uToken.transfer(msg.sender, UGain);
+				emit StakingGainsUWithdrawn(msg.sender, UGain);
 			}
 
 			_updateUserSnapshots(asset, msg.sender);
@@ -224,20 +224,20 @@ contract YOUStaking is
 		emit F_AssetUpdated(_asset, F_ASSETS[_asset]);
 	}
 
-	function increaseF_VST(uint256 _VSTFee) external override callerIsBorrowerOperations {
+	function increaseF_U(uint256 _UFee) external override callerIsBorrowerOperations {
 		if (paused()) {
-			sendToTreasury(address(vstToken), _VSTFee);
+			sendToTreasury(address(uToken), _UFee);
 			return;
 		}
 
-		uint256 VSTFeePerYOUStaked;
+		uint256 UFeePerYOUStaked;
 
 		if (totalYOUStaked > 0) {
-			VSTFeePerYOUStaked = _VSTFee.mul(DECIMAL_PRECISION).div(totalYOUStaked);
+			UFeePerYOUStaked = _UFee.mul(DECIMAL_PRECISION).div(totalYOUStaked);
 		}
 
-		F_VST = F_VST.add(VSTFeePerYOUStaked);
-		emit F_VSTUpdated(F_VST);
+		F_U = F_U.add(UFeePerYOUStaked);
+		emit F_UUpdated(F_U);
 	}
 
 	function sendToTreasury(address _asset, uint256 _amount) internal {
@@ -267,22 +267,22 @@ contract YOUStaking is
 		return AssetGain;
 	}
 
-	function getPendingVSTGain(address _user) external view override returns (uint256) {
-		return _getPendingVSTGain(_user);
+	function getPendingUGain(address _user) external view override returns (uint256) {
+		return _getPendingUGain(_user);
 	}
 
-	function _getPendingVSTGain(address _user) internal view returns (uint256) {
-		uint256 F_VST_Snapshot = snapshots[_user].F_VST_Snapshot;
-		uint256 VSTGain = stakes[_user].mul(F_VST.sub(F_VST_Snapshot)).div(DECIMAL_PRECISION);
-		return VSTGain;
+	function _getPendingUGain(address _user) internal view returns (uint256) {
+		uint256 F_U_Snapshot = snapshots[_user].F_U_Snapshot;
+		uint256 UGain = stakes[_user].mul(F_U.sub(F_U_Snapshot)).div(DECIMAL_PRECISION);
+		return UGain;
 	}
 
 	// --- Internal helper functions ---
 
 	function _updateUserSnapshots(address _asset, address _user) internal {
 		snapshots[_user].F_ASSET_Snapshot[_asset] = F_ASSETS[_asset];
-		snapshots[_user].F_VST_Snapshot = F_VST;
-		emit StakerSnapshotsUpdated(_user, F_ASSETS[_asset], F_VST);
+		snapshots[_user].F_U_Snapshot = F_U;
+		emit StakerSnapshotsUpdated(_user, F_ASSETS[_asset], F_U);
 	}
 
 	function _sendAssetGainToUser(address _asset, uint256 _assetGain) internal {

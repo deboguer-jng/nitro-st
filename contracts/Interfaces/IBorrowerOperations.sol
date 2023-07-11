@@ -11,7 +11,7 @@ interface IBorrowerOperations {
 	event GasPoolAddressChanged(address _gasPoolAddress);
 	event CollSurplusPoolAddressChanged(address _collSurplusPoolAddress);
 	event SortedTrovesAddressChanged(address _sortedTrovesAddress);
-	event VSTTokenAddressChanged(address _vstTokenAddress);
+	event UTokenAddressChanged(address _uTokenAddress);
 	event YOUStakingAddressChanged(address _YOUStakingAddress);
 
 	event TroveCreated(address indexed _asset, address indexed _borrower, uint256 arrayIndex);
@@ -23,11 +23,7 @@ interface IBorrowerOperations {
 		uint256 stake,
 		uint8 operation
 	);
-	event VSTBorrowingFeePaid(
-		address indexed _asset,
-		address indexed _borrower,
-		uint256 _VSTFee
-	);
+	event UBorrowingFeePaid(address indexed _asset, address indexed _borrower, uint256 _UFee);
 
 	// --- Functions ---
 
@@ -37,7 +33,7 @@ interface IBorrowerOperations {
 		address _gasPoolAddress,
 		address _collSurplusPoolAddress,
 		address _sortedTrovesAddress,
-		address _vstTokenAddress,
+		address _uTokenAddress,
 		address _YOUStakingAddress,
 		address _vestaParamsAddress
 	) external;
@@ -73,7 +69,7 @@ interface IBorrowerOperations {
 		address _lowerHint
 	) external;
 
-	function withdrawVST(
+	function withdrawU(
 		address _asset,
 		uint256 _maxFee,
 		uint256 _amount,
@@ -81,7 +77,7 @@ interface IBorrowerOperations {
 		address _lowerHint
 	) external;
 
-	function repayVST(
+	function repayU(
 		address _asset,
 		uint256 _amount,
 		address _upperHint,

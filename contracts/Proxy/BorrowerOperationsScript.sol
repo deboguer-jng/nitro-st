@@ -53,23 +53,23 @@ contract BorrowerOperationsScript is CheckContract {
 		borrowerOperations.withdrawColl(_asset, _amount, _upperHint, _lowerHint);
 	}
 
-	function withdrawVST(
+	function withdrawU(
 		address _asset,
 		uint256 _maxFee,
 		uint256 _amount,
 		address _upperHint,
 		address _lowerHint
 	) external {
-		borrowerOperations.withdrawVST(_asset, _maxFee, _amount, _upperHint, _lowerHint);
+		borrowerOperations.withdrawU(_asset, _maxFee, _amount, _upperHint, _lowerHint);
 	}
 
-	function repayVST(
+	function repayU(
 		address _asset,
 		uint256 _amount,
 		address _upperHint,
 		address _lowerHint
 	) external {
-		borrowerOperations.repayVST(_asset, _amount, _upperHint, _lowerHint);
+		borrowerOperations.repayU(_asset, _amount, _upperHint, _lowerHint);
 	}
 
 	function closeTrove(address _asset) external {

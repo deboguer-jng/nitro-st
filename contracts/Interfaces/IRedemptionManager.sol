@@ -3,7 +3,7 @@
 pragma solidity ^0.8.10;
 import "./IVestaBase.sol";
 import "./IStabilityPool.sol";
-import "./IVSTToken.sol";
+import "./IUToken.sol";
 import "./IYOUStaking.sol";
 import "./ICollSurplusPool.sol";
 import "./ISortedTroves.sol";
@@ -40,7 +40,7 @@ interface IRedemptionManager is IVestaBase {
 
 	struct LocalVariables_OuterLiquidationFunction {
 		uint256 price;
-		uint256 VSTInStabPool;
+		uint256 UInStabPool;
 		bool recoveryModeAtStart;
 		uint256 liquidatedDebt;
 		uint256 liquidatedColl;
@@ -53,7 +53,7 @@ interface IRedemptionManager is IVestaBase {
 	}
 
 	struct LocalVariables_LiquidationSequence {
-		uint256 remainingVSTInStabPool;
+		uint256 remainingUInStabPool;
 		uint256 i;
 		uint256 ICR;
 		address user;
@@ -72,7 +72,7 @@ interface IRedemptionManager is IVestaBase {
 		uint256 entireTroveDebt;
 		uint256 entireTroveColl;
 		uint256 collGasCompensation;
-		uint256 VSTGasCompensation;
+		uint256 UGasCompensation;
 		uint256 debtToOffset;
 		uint256 collToSendToSP;
 		uint256 debtToRedistribute;
@@ -84,7 +84,7 @@ interface IRedemptionManager is IVestaBase {
 		uint256 totalCollInSequence;
 		uint256 totalDebtInSequence;
 		uint256 totalCollGasCompensation;
-		uint256 totalVSTGasCompensation;
+		uint256 totalUGasCompensation;
 		uint256 totalDebtToOffset;
 		uint256 totalCollToSendToSP;
 		uint256 totalDebtToRedistribute;
@@ -95,7 +95,7 @@ interface IRedemptionManager is IVestaBase {
 	struct ContractsCache {
 		IActivePool activePool;
 		IDefaultPool defaultPool;
-		IVSTToken vstToken;
+		IUToken uToken;
 		IYOUStaking youStaking;
 		ISortedTroves sortedTroves;
 		ICollSurplusPool collSurplusPool;
@@ -104,18 +104,18 @@ interface IRedemptionManager is IVestaBase {
 	// --- Variable container structs for redemptions ---
 
 	struct RedemptionTotals {
-		uint256 remainingVST;
-		uint256 totalVSTToRedeem;
+		uint256 remainingU;
+		uint256 totalUToRedeem;
 		uint256 totalAssetDrawn;
 		uint256 ETHFee;
 		uint256 ETHToSendToRedeemer;
 		uint256 decayedBaseRate;
 		uint256 price;
-		uint256 totalVSTSupplyAtStart;
+		uint256 totalUSupplyAtStart;
 	}
 
 	struct SingleRedemptionValues {
-		uint256 VSTLot;
+		uint256 ULot;
 		uint256 ETHLot;
 		bool cancelledPartial;
 	}
@@ -123,7 +123,7 @@ interface IRedemptionManager is IVestaBase {
 	// --- Events ---
 
 	event BorrowerOperationsAddressChanged(address _newBorrowerOperationsAddress);
-	event VSTTokenAddressChanged(address _newVSTTokenAddress);
+	event UTokenAddressChanged(address _newUTokenAddress);
 	event StabilityPoolAddressChanged(address _stabilityPoolAddress);
 	event GasPoolAddressChanged(address _gasPoolAddress);
 	event CollSurplusPoolAddressChanged(address _collSurplusPoolAddress);
@@ -135,7 +135,7 @@ interface IRedemptionManager is IVestaBase {
 		uint256 _liquidatedDebt,
 		uint256 _liquidatedColl,
 		uint256 _collGasCompensation,
-		uint256 _VSTGasCompensation
+		uint256 _UGasCompensation
 	);
 	event Redemption(
 		address indexed _asset,
@@ -167,8 +167,8 @@ interface IRedemptionManager is IVestaBase {
 		uint256 _totalStakesSnapshot,
 		uint256 _totalCollateralSnapshot
 	);
-	event LTermsUpdated(address indexed _asset, uint256 _L_ETH, uint256 _L_VSTDebt);
-	event TroveSnapshotsUpdated(address indexed _asset, uint256 _L_ETH, uint256 _L_VSTDebt);
+	event LTermsUpdated(address indexed _asset, uint256 _L_ETH, uint256 _L_UDebt);
+	event TroveSnapshotsUpdated(address indexed _asset, uint256 _L_ETH, uint256 _L_UDebt);
 	event TroveIndexUpdated(address indexed _asset, address _borrower, uint256 _newIndex);
 
 	event TroveUpdated(
