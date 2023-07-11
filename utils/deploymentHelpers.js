@@ -1,7 +1,7 @@
 const SortedTroves = artifacts.require("./SortedTroves.sol")
 const TroveManager = artifacts.require("./TroveManager.sol")
 const PriceFeedTestnet = artifacts.require("./PriceFeedTestnet.sol")
-const VSTToken = artifacts.require("./VSTToken.sol")
+const UToken = artifacts.require("./UToken.sol")
 const ActivePool = artifacts.require("./ActivePool.sol")
 const DefaultPool = artifacts.require("./DefaultPool.sol")
 const StabilityPool = artifacts.require("./StabilityPool.sol")
@@ -13,12 +13,12 @@ const FunctionCaller = artifacts.require("./TestContracts/FunctionCaller.sol")
 const BorrowerOperations = artifacts.require("./BorrowerOperations.sol")
 const HintHelpers = artifacts.require("./HintHelpers.sol")
 const VestaParameters = artifacts.require("./VestaParameters.sol")
-const LockedVSTA = artifacts.require("./LockedVSTA.sol")
+const LockedYOU = artifacts.require("./LockedYOU.sol")
 
-const VSTAStaking = artifacts.require("./VSTAStaking.sol")
+const YOUStaking = artifacts.require("./YOUStaking.sol")
 const CommunityIssuance = artifacts.require("./CommunityIssuance.sol")
 
-const VSTATokenTester = artifacts.require("./VSTATokenTester.sol")
+const YOUTokenTester = artifacts.require("./YOUTokenTester.sol")
 const CommunityIssuanceTester = artifacts.require("./CommunityIssuanceTester.sol")
 const StabilityPoolTester = artifacts.require("./StabilityPoolTester.sol")
 const ActivePoolTester = artifacts.require("./ActivePoolTester.sol")
@@ -26,7 +26,7 @@ const DefaultPoolTester = artifacts.require("./DefaultPoolTester.sol")
 const VestaMathTester = artifacts.require("./VestaMathTester.sol")
 const BorrowerOperationsTester = artifacts.require("./BorrowerOperationsTester.sol")
 const TroveManagerTester = artifacts.require("./TroveManagerTester.sol")
-const VSTTokenTester = artifacts.require("./VSTTokenTester.sol")
+const UTokenTester = artifacts.require("./UTokenTester.sol")
 const ERC20Test = artifacts.require("./ERC20Test.sol")
 
 // Proxy scripts
@@ -35,7 +35,7 @@ const BorrowerWrappersScript = artifacts.require("BorrowerWrappersScript")
 const TroveManagerScript = artifacts.require("TroveManagerScript")
 const StabilityPoolScript = artifacts.require("StabilityPoolScript")
 const TokenScript = artifacts.require("TokenScript")
-const VSTAStakingScript = artifacts.require("VSTAStakingScript")
+const YOUStakingScript = artifacts.require("YOUStakingScript")
 const { messagePrefix } = require("@ethersproject/hash")
 const {
 	buildUserProxies,
@@ -45,16 +45,16 @@ const {
 	StabilityPoolProxy,
 	SortedTrovesProxy,
 	TokenProxy,
-	VSTAStakingProxy,
+	YOUStakingProxy,
 } = require("../utils/proxyHelpers.js")
 
 /* "Liquity core" consists of all contracts in the core Liquity system.
 
-VSTA contracts consist of only those contracts related to the VSTA Token:
+YOU contracts consist of only those contracts related to the YOU Token:
 
--the VSTA token
+-the YOU token
 -the Lockup factory and lockup contracts
--the VSTAStaking contract
+-the YOUStaking contract
 -the CommunityIssuance contract 
 */
 
@@ -88,7 +88,7 @@ class DeploymentHelper {
 		const functionCaller = await FunctionCaller.new()
 		const borrowerOperations = await BorrowerOperations.new()
 		const hintHelpers = await HintHelpers.new()
-		const vstToken = await VSTToken.new(
+		const uToken = await UToken.new(
 			troveManager.address,
 			stabilityPoolManager.address,
 			borrowerOperations.address
@@ -96,7 +96,7 @@ class DeploymentHelper {
 		erc20 = erc20 ? erc20 : await ERC20Test.new()
 		const adminContract = await AdminContract.new()
 
-		VSTToken.setAsDeployed(vstToken)
+		UToken.setAsDeployed(uToken)
 		DefaultPool.setAsDeployed(defaultPool)
 		PriceFeedTestnet.setAsDeployed(priceFeedTestnet)
 		SortedTroves.setAsDeployed(sortedTroves)
@@ -129,7 +129,7 @@ class DeploymentHelper {
 
 		const coreContracts = {
 			priceFeedTestnet,
-			vstToken,
+			uToken,
 			sortedTroves,
 			troveManager,
 			activePool,
@@ -170,7 +170,7 @@ class DeploymentHelper {
 		testerContracts.troveManager = await TroveManagerTester.new()
 		testerContracts.functionCaller = await FunctionCaller.new()
 		testerContracts.hintHelpers = await HintHelpers.new()
-		testerContracts.vstToken = await VSTTokenTester.new(
+		testerContracts.uToken = await UTokenTester.new(
 			testerContracts.troveManager.address,
 			testerContracts.stabilityPoolManager.address,
 			testerContracts.borrowerOperations.address
@@ -192,30 +192,30 @@ class DeploymentHelper {
 		return testerContracts
 	}
 
-	static async deployVSTAContractsHardhat(treasury) {
-		const vstaStaking = await VSTAStaking.new()
+	static async deployYOUContractsHardhat(treasury) {
+		const youStaking = await YOUStaking.new()
 		const communityIssuance = await CommunityIssuanceTester.new()
-		const lockedVSTA = await LockedVSTA.new()
+		const lockedYOU = await LockedYOU.new()
 
-		VSTAStaking.setAsDeployed(vstaStaking)
+		YOUStaking.setAsDeployed(youStaking)
 		CommunityIssuanceTester.setAsDeployed(communityIssuance)
-		LockedVSTA.setAsDeployed(lockedVSTA)
+		LockedYOU.setAsDeployed(lockedYOU)
 
-		// Deploy VSTA Token, passing Community Issuance and Factory addresses to the constructor
-		const vstaToken = await VSTATokenTester.new(treasury)
-		VSTATokenTester.setAsDeployed(vstaToken)
+		// Deploy YOU Token, passing Community Issuance and Factory addresses to the constructor
+		const youToken = await YOUTokenTester.new(treasury)
+		YOUTokenTester.setAsDeployed(youToken)
 
-		const VSTAContracts = {
-			vstaStaking,
+		const YOUContracts = {
+			youStaking,
 			communityIssuance,
-			vstaToken,
-			lockedVSTA,
+			youToken,
+			lockedYOU,
 		}
-		return VSTAContracts
+		return YOUContracts
 	}
 
-	static async deployVSTToken(contracts) {
-		contracts.vstToken = await VSTTokenTester.new(
+	static async deployUToken(contracts) {
+		contracts.uToken = await UTokenTester.new(
 			contracts.troveManager.address,
 			contracts.stabilityPoolManager.address,
 			contracts.borrowerOperations.address
@@ -223,13 +223,13 @@ class DeploymentHelper {
 		return contracts
 	}
 
-	static async deployProxyScripts(contracts, VSTAContracts, owner, users) {
+	static async deployProxyScripts(contracts, YOUContracts, owner, users) {
 		const proxies = await buildUserProxies(users)
 
 		const borrowerWrappersScript = await BorrowerWrappersScript.new(
 			contracts.borrowerOperations.address,
 			contracts.troveManager.address,
-			VSTAContracts.vstaStaking.address
+			YOUContracts.youStaking.address
 		)
 		contracts.borrowerWrappers = new BorrowerWrappersProxy(
 			owner,
@@ -267,33 +267,28 @@ class DeploymentHelper {
 
 		contracts.sortedTroves = new SortedTrovesProxy(owner, proxies, contracts.sortedTroves)
 
-		const vstTokenScript = await TokenScript.new(contracts.vstToken.address)
-		contracts.vstToken = new TokenProxy(
+		const uTokenScript = await TokenScript.new(contracts.uToken.address)
+		contracts.uToken = new TokenProxy(owner, proxies, uTokenScript.address, contracts.uToken)
+
+		const youTokenScript = await TokenScript.new(YOUContracts.youToken.address)
+		YOUContracts.youToken = new TokenProxy(
 			owner,
 			proxies,
-			vstTokenScript.address,
-			contracts.vstToken
+			youTokenScript.address,
+			YOUContracts.youToken
 		)
 
-		const vstaTokenScript = await TokenScript.new(VSTAContracts.vstaToken.address)
-		VSTAContracts.vstaToken = new TokenProxy(
+		const youStakingScript = await YOUStakingScript.new(YOUContracts.youStaking.address)
+		YOUContracts.youStaking = new YOUStakingProxy(
 			owner,
 			proxies,
-			vstaTokenScript.address,
-			VSTAContracts.vstaToken
-		)
-
-		const vstaStakingScript = await VSTAStakingScript.new(VSTAContracts.vstaStaking.address)
-		VSTAContracts.vstaStaking = new VSTAStakingProxy(
-			owner,
-			proxies,
-			vstaStakingScript.address,
-			VSTAContracts.vstaStaking
+			youStakingScript.address,
+			YOUContracts.youStaking
 		)
 	}
 
 	// Connect contracts to their dependencies
-	static async connectCoreContracts(contracts, VSTAContracts) {
+	static async connectCoreContracts(contracts, YOUContracts) {
 		// set TroveManager addr in SortedTroves
 		await contracts.sortedTroves.setParams(
 			contracts.troveManager.address,
@@ -317,9 +312,9 @@ class DeploymentHelper {
 			contracts.stabilityPoolManager.address,
 			contracts.gasPool.address,
 			contracts.collSurplusPool.address,
-			contracts.vstToken.address,
+			contracts.uToken.address,
 			contracts.sortedTroves.address,
-			VSTAContracts.vstaStaking.address,
+			YOUContracts.youStaking.address,
 			contracts.vestaParameters.address
 		)
 
@@ -330,8 +325,8 @@ class DeploymentHelper {
 			contracts.gasPool.address,
 			contracts.collSurplusPool.address,
 			contracts.sortedTroves.address,
-			contracts.vstToken.address,
-			VSTAContracts.vstaStaking.address,
+			contracts.uToken.address,
+			YOUContracts.youStaking.address,
 			contracts.vestaParameters.address
 		)
 
@@ -342,9 +337,9 @@ class DeploymentHelper {
 			contracts.stabilityPoolManager.address,
 			contracts.borrowerOperations.address,
 			contracts.troveManager.address,
-			contracts.vstToken.address,
+			contracts.uToken.address,
 			contracts.sortedTroves.address,
-			VSTAContracts.communityIssuance.address
+			YOUContracts.communityIssuance.address
 		)
 
 		await contracts.activePool.setAddresses(
@@ -374,32 +369,32 @@ class DeploymentHelper {
 		)
 	}
 
-	static async connectVSTAContractsToCore(
-		VSTAContracts,
+	static async connectYOUContractsToCore(
+		YOUContracts,
 		coreContracts,
 		skipPool = false,
 		liquitySettings = true
 	) {
-		const treasurySig = await VSTAContracts.vstaToken.treasury()
+		const treasurySig = await YOUContracts.youToken.treasury()
 
-		await VSTAContracts.vstaStaking.setAddresses(
-			VSTAContracts.vstaToken.address,
-			coreContracts.vstToken.address,
+		await YOUContracts.youStaking.setAddresses(
+			YOUContracts.youToken.address,
+			coreContracts.uToken.address,
 			coreContracts.troveManager.address,
 			coreContracts.borrowerOperations.address,
 			coreContracts.activePool.address,
 			treasurySig
 		)
 
-		await VSTAContracts.vstaStaking.unpause()
+		await YOUContracts.youStaking.unpause()
 
-		await VSTAContracts.communityIssuance.setAddresses(
-			VSTAContracts.vstaToken.address,
+		await YOUContracts.communityIssuance.setAddresses(
+			YOUContracts.youToken.address,
 			coreContracts.stabilityPoolManager.address,
 			coreContracts.adminContract.address
 		)
 
-		await VSTAContracts.lockedVSTA.setAddresses(VSTAContracts.vstaToken.address)
+		await YOUContracts.lockedYOU.setAddresses(YOUContracts.youToken.address)
 
 		if (skipPool) {
 			return
@@ -408,8 +403,8 @@ class DeploymentHelper {
 		if ((await coreContracts.adminContract.owner()) != treasurySig)
 			await coreContracts.adminContract.transferOwnership(treasurySig)
 
-		await VSTAContracts.vstaToken.approve(
-			VSTAContracts.communityIssuance.address,
+		await YOUContracts.youToken.approve(
+			YOUContracts.communityIssuance.address,
 			ethers.constants.MaxUint256,
 			{ from: treasurySig }
 		)
@@ -427,7 +422,7 @@ class DeploymentHelper {
 			0,
 			{ from: treasurySig }
 		)
-		await VSTAContracts.vstaToken.unprotectedMint(treasurySig, supply)
+		await YOUContracts.youToken.unprotectedMint(treasurySig, supply)
 		await coreContracts.adminContract.addNewCollateral(
 			coreContracts.erc20.address,
 			coreContracts.stabilityPoolTemplate.address,

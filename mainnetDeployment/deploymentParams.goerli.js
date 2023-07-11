@@ -25,7 +25,7 @@ const gOHMParameters = {
 
 const vestaAddresses = {
 	ADMIN_MULTI: "0xaD45b73CE1C0cBa2333Fe5f15Ac37df6E08f4111",
-	VSTA_SAFE: "0xaD45b73CE1C0cBa2333Fe5f15Ac37df6E08f4111", // TODO
+	YOU_SAFE: "0xaD45b73CE1C0cBa2333Fe5f15Ac37df6E08f4111", // TODO
 	DEPLOYER: "0xaD45b73CE1C0cBa2333Fe5f15Ac37df6E08f4111",
 }
 
@@ -86,7 +86,7 @@ const beneficiaries = {
 }
 
 const REDEMPTION_SAFETY = 0
-const VSTA_TOKEN_ONLY = false
+const YOU_TOKEN_ONLY = false
 
 const OUTPUT_FILE = "./mainnetDeployment/goerliDeploymentOutput.json"
 
@@ -111,6 +111,6 @@ module.exports = {
 	ETHERSCAN_BASE_URL,
 	IsMainnet,
 	REDEMPTION_SAFETY,
-	VSTA_TOKEN_ONLY,
+	YOU_TOKEN_ONLY,
 	gOHMParameters,
 }

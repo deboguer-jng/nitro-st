@@ -1,10 +1,10 @@
 {
-	"lockedVsta": {
+	"lockedYou": {
 		"address": "0xb889151Da7c8aC6773DE803B0c38018680512cb0",
 		"txHash": "0x4248ceee49e680154a4f2c781a49c05d684aa7681c2e7393a9ae86fced8db5aa",
 		"verification": "https://arbiscan.io/address/0xb889151Da7c8aC6773DE803B0c38018680512cb0#code"
 	},
-	"VSTAToken": {
+	"YOUToken": {
 		"address": "0xa684cd057951541187f288294a1e1C2646aA2d24",
 		"txHash": "0x64e188b4f61ca7d6784a682489980ab96c9bc3876bfe527db985b6e13b89c757",
 		"verification": "https://arbiscan.io/address/0xa684cd057951541187f288294a1e1C2646aA2d24#code"
@@ -74,12 +74,12 @@
 		"txHash": "0xa23cf2b52b1099061bc485eb383a5787a48c0875f05b4bcfbefe5d6ff606b33d",
 		"verification": "https://arbiscan.io/address/0x2Ba039C16B75C93E6ff33Db12acCD97d1F7FD0E0#code"
 	},
-	"VSTToken": {
+	"UToken": {
 		"address": "0x64343594Ab9b56e99087BfA6F2335Db24c2d1F17",
 		"txHash": "0xea8012c4f79a2ac2ec102bec729c74c6e20db45911481563b0c94515233d0287",
 		"verification": "https://arbiscan.io/address/0x64343594Ab9b56e99087BfA6F2335Db24c2d1F17#code"
 	},
-	"VSTAStaking": {
+	"YOUStaking": {
 		"address": "0xAC798A3694F49AB75A2D53322884Cc59D0b1266f",
 		"txHash": "0xbae0c2d4502f0a0188f8d2d08a529f191724ded09e5d133bb9a68e3803296328",
 		"verification": "https://arbiscan.io/address/0xAC798A3694F49AB75A2D53322884Cc59D0b1266f#code"

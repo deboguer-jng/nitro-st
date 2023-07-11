@@ -11,7 +11,7 @@ let config
 let deployerWallet
 let gasPrice
 let vestaCore
-let VSTAContracts
+let YOUContracts
 let deploymentState
 
 let ADMIN_WALLET
@@ -24,7 +24,7 @@ async function mainnetDeploy(configParams) {
 	gasPrice = config.GAS_PRICE
 
 	ADMIN_WALLET = config.vestaAddresses.ADMIN_MULTI
-	TREASURY_WALLET = config.vestaAddresses.VSTA_SAFE
+	TREASURY_WALLET = config.vestaAddresses.YOU_SAFE
 
 	deployerWallet = (await ethers.getSigners())[0]
 	mdh = new MainnetDeploymentHelper(config, deployerWallet)
@@ -38,32 +38,32 @@ async function mainnetDeploy(configParams) {
 		`deployerETHBalance before: ${await ethers.provider.getBalance(deployerWallet.address)}`
 	)
 
-	if (config.VSTA_TOKEN_ONLY) {
-		console.log("INIT VSTA ONLY")
+	if (config.YOU_TOKEN_ONLY) {
+		console.log("INIT YOU ONLY")
 		const partialContracts = await mdh.deployPartially(TREASURY_WALLET, deploymentState)
 
 		// create vesting rule to beneficiaries
 		console.log("Beneficiaries")
 
 		if (
-			(await partialContracts.VSTAToken.allowance(
+			(await partialContracts.YOUToken.allowance(
 				deployerWallet.address,
-				partialContracts.lockedVsta.address
+				partialContracts.lockedYou.address
 			)) == 0
 		)
-			await partialContracts.VSTAToken.approve(
-				partialContracts.lockedVsta.address,
+			await partialContracts.YOUToken.approve(
+				partialContracts.lockedYou.address,
 				ethers.constants.MaxUint256
 			)
 
 		for (const [wallet, amount] of Object.entries(config.beneficiaries)) {
 			if (amount == 0) continue
 
-			if (!(await partialContracts.lockedVsta.isEntityExits(wallet))) {
+			if (!(await partialContracts.lockedYou.isEntityExits(wallet))) {
 				console.log("Beneficiary: %s for %s", wallet, amount)
 
 				const txReceipt = await mdh.sendAndWaitForTransaction(
-					partialContracts.lockedVsta.addEntityVesting(wallet, dec(amount, 18))
+					partialContracts.lockedYou.addEntityVesting(wallet, dec(amount, 18))
 				)
 
 				deploymentState[wallet] = {
@@ -75,11 +75,11 @@ async function mainnetDeploy(configParams) {
 			}
 		}
 
-		await transferOwnership(partialContracts.lockedVsta, TREASURY_WALLET)
+		await transferOwnership(partialContracts.lockedYou, TREASURY_WALLET)
 
-		const balance = await partialContracts.VSTAToken.balanceOf(deployerWallet.address)
-		console.log(`Sending ${balance} VSTA to ${TREASURY_WALLET}`)
-		await partialContracts.VSTAToken.transfer(TREASURY_WALLET, balance)
+		const balance = await partialContracts.YOUToken.balanceOf(deployerWallet.address)
+		console.log(`Sending ${balance} YOU to ${TREASURY_WALLET}`)
+		await partialContracts.YOUToken.transfer(TREASURY_WALLET, balance)
 
 		console.log(
 			`deployerETHBalance after: ${await ethers.provider.getBalance(deployerWallet.address)}`
@@ -98,9 +98,9 @@ async function mainnetDeploy(configParams) {
 
 	await mdh.logContractObjects(vestaCore)
 
-	// Deploy VSTA Contracts
-	VSTAContracts = await mdh.deployVSTAContractsMainnet(
-		TREASURY_WALLET, // multisig VSTA endowment address
+	// Deploy YOU Contracts
+	YOUContracts = await mdh.deployYOUContractsMainnet(
+		TREASURY_WALLET, // multisig YOU endowment address
 		deploymentState
 	)
 
@@ -109,22 +109,22 @@ async function mainnetDeploy(configParams) {
 
 	await mdh.connectCoreContractsMainnet(
 		vestaCore,
-		VSTAContracts,
+		YOUContracts,
 		config.externalAddrs.CHAINLINK_SEQUENCER_UPTIME_FEED,
 		config.externalAddrs.WST_ETH
 	)
 
-	console.log("Connect VSTA Contract to Core")
-	await mdh.connectVSTAContractsToCoreMainnet(VSTAContracts, vestaCore, TREASURY_WALLET)
+	console.log("Connect YOU Contract to Core")
+	await mdh.connectYOUContractsToCoreMainnet(YOUContracts, vestaCore, TREASURY_WALLET)
 
 	console.log("Adding Collaterals")
-	const allowance = await VSTAContracts.VSTAToken.allowance(
+	const allowance = await YOUContracts.YOUToken.allowance(
 		deployerWallet.address,
-		VSTAContracts.communityIssuance.address
+		YOUContracts.communityIssuance.address
 	)
 	if (allowance == 0)
-		await VSTAContracts.VSTAToken.approve(
-			VSTAContracts.communityIssuance.address,
+		await YOUContracts.YOUToken.approve(
+			YOUContracts.communityIssuance.address,
 			ethers.constants.MaxUint256
 		)
 
@@ -140,7 +140,7 @@ async function mainnetDeploy(configParams) {
 		deploymentState,
 		config.externalAddrs.WST_ETH
 	)
-	await mdh.logContractObjects(VSTAContracts)
+	await mdh.logContractObjects(YOUContracts)
 
 	await giveContractsOwnerships()
 }
@@ -302,11 +302,11 @@ async function giveContractsOwnerships() {
 	await transferOwnership(vestaCore.priceFeed, ADMIN_WALLET)
 	await transferOwnership(vestaCore.vestaParameters, ADMIN_WALLET)
 	await transferOwnership(vestaCore.stabilityPoolManager, ADMIN_WALLET)
-	await transferOwnership(vestaCore.vstToken, ADMIN_WALLET)
-	await transferOwnership(VSTAContracts.VSTAStaking, ADMIN_WALLET)
+	await transferOwnership(vestaCore.uToken, ADMIN_WALLET)
+	await transferOwnership(YOUContracts.YOUStaking, ADMIN_WALLET)
 
-	await transferOwnership(vestaCore.lockedVsta, TREASURY_WALLET)
-	await transferOwnership(VSTAContracts.communityIssuance, TREASURY_WALLET)
+	await transferOwnership(vestaCore.lockedYou, TREASURY_WALLET)
+	await transferOwnership(YOUContracts.communityIssuance, TREASURY_WALLET)
 }
 
 async function transferOwnership(contract, newOwner) {
