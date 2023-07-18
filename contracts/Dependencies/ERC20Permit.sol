@@ -2,7 +2,7 @@ pragma solidity ^0.8.10;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
-import "../LayerZero/contracts/token/oft/v2/OFTV2.sol";
+import "@layerzerolabs/solidity-examples/contracts/token/oft/v2/OFTV2.sol";
 
 interface IERC2612Permit {
 	/**
