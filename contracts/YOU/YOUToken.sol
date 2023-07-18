@@ -13,7 +13,9 @@ contract YOUToken is CheckContract, UERC20Permit {
 
 	address public immutable treasury;
 
-	constructor(address _treasurySig) UERC20Permit("Vesta", "YOU", 6, address(0)) {
+	constructor(
+		address _treasurySig
+	) UERC20Permit("Vesta", "YOU", 6, 0x3c2269811836af69497E5F486A85D7316753cf62) {
 		require(_treasurySig != address(0), "Invalid Treasury Sig");
 		treasury = _treasurySig;
 

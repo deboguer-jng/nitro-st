@@ -24,7 +24,7 @@ contract UToken is CheckContract, Ownable, IUToken {
 		address _redemptionManagerAddress,
 		address _stabilityPoolManagerAddress,
 		address _borrowerOperationsAddress
-	) UERC20Permit("Vesta Stable", "U", 6, address(0)) {
+	) UERC20Permit("Vesta Stable", "U", 6, 0x3c2269811836af69497E5F486A85D7316753cf62) {
 		checkContract(_troveManagerAddress);
 		checkContract(_stabilityPoolManagerAddress);
 		checkContract(_borrowerOperationsAddress);
