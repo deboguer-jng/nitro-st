@@ -65,7 +65,7 @@ contract AdminContract is ProxyAdmin, ArbitroveBase {
 		address _asset,
 		address _stabilityPoolImplementation,
 		address _chainlinkOracle,
-		uint256 _tellorId,
+		bytes32 _tellorId,
 		uint256 assignedToken,
 		uint256 _tokenPerWeekDistributed,
 		uint256 redemptionLockInDay

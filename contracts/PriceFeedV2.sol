@@ -70,7 +70,7 @@ contract PriceFeedV2 is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed 
 	function addOracle(
 		address _token,
 		address _chainlinkOracle,
-		uint256 _tellorId
+		bytes32 _tellorId
 	) external override isController {
 		AggregatorV3Interface priceOracle = AggregatorV3Interface(_chainlinkOracle);
 
@@ -336,13 +336,13 @@ contract PriceFeedV2 is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed 
 	}
 
 	function _getCurrentTellorResponse(
-		uint256 _requestId
+		bytes32 _queryId
 	) internal view returns (TellorResponse memory tellorResponse) {
-		if (_requestId == 0) {
+		if (_queryId == bytes32(0)) {
 			return (tellorResponse);
 		}
 
-		try tellorCaller.getTellorCurrentValue(_requestId) returns (
+		try tellorCaller.getTellorCurrentValue(_queryId) returns (
 			bool ifRetrieve,
 			uint256 value,
 			uint256 _timestampRetrieved

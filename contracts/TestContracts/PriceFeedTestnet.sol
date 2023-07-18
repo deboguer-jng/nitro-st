@@ -16,7 +16,7 @@ contract PriceFeedTestnet is IPriceFeed {
 
 	struct MockOracleData {
 		address chainLinkOracle;
-		uint256 tellorId;
+		bytes32 tellorId;
 		bool registed;
 	}
 
@@ -36,7 +36,7 @@ contract PriceFeedTestnet is IPriceFeed {
 	function addOracle(
 		address _token,
 		address _chainlinkOracle,
-		uint256 _tellorId
+		bytes32 _tellorId
 	) external override {
 		oracles[_token] = MockOracleData(_chainlinkOracle, _tellorId, true);
 	}

@@ -22,7 +22,7 @@ interface IPriceFeed {
 	struct RegisterOracle {
 		AggregatorV3Interface chainLinkOracle;
 		bool isRegistered;
-		uint256 tellorId;
+		bytes32 tellorId;
 	}
 
 	enum Status {
@@ -37,10 +37,10 @@ interface IPriceFeed {
 	event PriceFeedStatusChanged(Status newStatus);
 	event LastGoodPriceUpdated(address indexed token, uint256 _lastGoodPrice);
 	event LastGoodIndexUpdated(address indexed token, uint256 _lastGoodIndex);
-	event RegisteredNewOracle(address token, address chainLinkAggregator, uint256 tellorId);
+	event RegisteredNewOracle(address token, address chainLinkAggregator, bytes32 tellorId);
 
 	// --- Function ---
-	function addOracle(address _token, address _chainlinkOracle, uint256 _tellorId) external;
+	function addOracle(address _token, address _chainlinkOracle, bytes32 _tellorId) external;
 
 	function fetchPrice(address _token) external returns (uint256);
 }
