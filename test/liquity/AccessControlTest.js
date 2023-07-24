@@ -25,7 +25,7 @@ contract(
 		let coreContracts
 
 		let priceFeed
-		let vstToken
+		let uToken
 		let sortedTroves
 		let troveManager
 		let nameRegistry
@@ -35,8 +35,8 @@ contract(
 		let functionCaller
 		let borrowerOperations
 
-		let vstaStaking
-		let vstaToken
+		let youStaking
+		let youToken
 		let communityIssuance
 
 		before(async () => {
@@ -46,7 +46,7 @@ contract(
 			const YOUContracts = await deploymentHelper.deployYOUContractsHardhat(treasury)
 
 			priceFeed = coreContracts.priceFeed
-			vstToken = coreContracts.vstToken
+			uToken = coreContracts.uToken
 			sortedTroves = coreContracts.sortedTroves
 			troveManager = coreContracts.troveManager
 			nameRegistry = coreContracts.nameRegistry
@@ -56,8 +56,8 @@ contract(
 			functionCaller = coreContracts.functionCaller
 			borrowerOperations = coreContracts.borrowerOperations
 
-			vstaStaking = YOUContracts.vstaStaking
-			vstaToken = YOUContracts.vstaToken
+			youStaking = YOUContracts.youStaking
+			youToken = YOUContracts.youToken
 			communityIssuance = YOUContracts.communityIssuance
 
 			await deploymentHelper.connectCoreContracts(coreContracts, YOUContracts)
@@ -77,7 +77,7 @@ contract(
 			const expectedCISupplyCap = "64000000000000000000000000" // 32mil
 
 			// Check CI has been properly funded
-			const bal = await vstaToken.balanceOf(communityIssuance.address)
+			const bal = await youToken.balanceOf(communityIssuance.address)
 			assert.equal(bal.toString(), expectedCISupplyCap)
 		})
 
@@ -386,7 +386,7 @@ contract(
 			//    mint
 			it("mint(): reverts when called by an account that is not BorrowerOperations", async () => {
 				// Attempt call from alice
-				const txAlice = vstToken.mint(th.ZERO_ADDRESS, bob, 100, { from: alice })
+				const txAlice = uToken.mint(th.ZERO_ADDRESS, bob, 100, { from: alice })
 				await th.assertRevert(txAlice, "Caller is not BorrowerOperations")
 			})
 
@@ -394,7 +394,7 @@ contract(
 			it("burn(): reverts when called by an account that is not BO nor TroveM nor SP", async () => {
 				// Attempt call from alice
 				try {
-					const txAlice = await vstToken.burn(bob, 100, { from: alice })
+					const txAlice = await uToken.burn(bob, 100, { from: alice })
 				} catch (err) {
 					assert.include(err.message, "revert")
 					// assert.include(err.message, "Caller is neither BorrowerOperations nor TroveManager nor StabilityPool")
@@ -405,7 +405,7 @@ contract(
 			it("sendToPool(): reverts when called by an account that is not StabilityPool", async () => {
 				// Attempt call from alice
 				try {
-					const txAlice = await vstToken.sendToPool(bob, activePool.address, 100, {
+					const txAlice = await uToken.sendToPool(bob, activePool.address, 100, {
 						from: alice,
 					})
 				} catch (err) {
@@ -418,7 +418,7 @@ contract(
 			it("returnFromPool(): reverts when called by an account that is not TroveManager nor StabilityPool", async () => {
 				// Attempt call from alice
 				try {
-					const txAlice = await vstToken.returnFromPool(activePool.address, bob, 100, {
+					const txAlice = await uToken.returnFromPool(activePool.address, bob, 100, {
 						from: alice,
 					})
 				} catch (err) {
@@ -483,7 +483,7 @@ contract(
 		describe("YOUStaking", async accounts => {
 			it("increaseF_U(): reverts when caller is not TroveManager", async () => {
 				try {
-					const txAlice = await vstaStaking.increaseF_U(dec(1, 18), { from: alice })
+					const txAlice = await youStaking.increaseF_U(dec(1, 18), { from: alice })
 				} catch (err) {
 					assert.include(err.message, "revert")
 				}

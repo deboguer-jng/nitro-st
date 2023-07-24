@@ -1,5 +1,6 @@
 const SortedTroves = artifacts.require("./SortedTroves.sol")
 const TroveManager = artifacts.require("./TroveManager.sol")
+const RedemptionManager = artifacts.require("./RedemptionManager.sol")
 const PriceFeedTestnet = artifacts.require("./PriceFeedTestnet.sol")
 const UToken = artifacts.require("./UToken.sol")
 const ActivePool = artifacts.require("./ActivePool.sol")
@@ -77,6 +78,7 @@ class DeploymentHelper {
 		const priceFeedTestnet = await PriceFeedTestnet.new()
 		const sortedTroves = await SortedTroves.new()
 		const troveManager = await TroveManager.new()
+		const redemptionManager = await RedemptionManager.new()
 		const activePool = await ActivePool.new()
 		const stabilityPoolTemplate = await StabilityPool.new()
 		const stabilityPoolTemplateV2 = await StabilityPool.new()
@@ -90,6 +92,7 @@ class DeploymentHelper {
 		const hintHelpers = await HintHelpers.new()
 		const uToken = await UToken.new(
 			troveManager.address,
+			redemptionManager.address,
 			stabilityPoolManager.address,
 			borrowerOperations.address
 		)
@@ -115,23 +118,12 @@ class DeploymentHelper {
 
 		await erc20.setDecimals(8)
 
-		await adminContract.setWstETH(erc20.address)
-		await activePool.setWstETH(erc20.address)
-		await borrowerOperations.setWstETH(erc20.address)
-		await collSurplusPool.setWstETH(erc20.address)
-		await defaultPool.setWstETH(erc20.address)
-		await hintHelpers.setWstETH(erc20.address)
-		await sortedTroves.setWstETH(erc20.address)
-		await stabilityPoolTemplate.setWstETH(erc20.address)
-		await stabilityPoolTemplateV2.setWstETH(erc20.address)
-		await troveManager.setWstETH(erc20.address)
-		await vestaParameters.setWstETH(erc20.address)
-
 		const coreContracts = {
 			priceFeedTestnet,
 			uToken,
 			sortedTroves,
 			troveManager,
+			redemptionManager,
 			activePool,
 			stabilityPoolTemplate,
 			stabilityPoolTemplateV2,
@@ -173,7 +165,8 @@ class DeploymentHelper {
 		testerContracts.uToken = await UTokenTester.new(
 			testerContracts.troveManager.address,
 			testerContracts.stabilityPoolManager.address,
-			testerContracts.borrowerOperations.address
+			testerContracts.borrowerOperations.address,
+			testerContracts.erc20.address
 		)
 		testerContracts.adminContract = await AdminContract.new()
 
@@ -218,7 +211,8 @@ class DeploymentHelper {
 		contracts.uToken = await UTokenTester.new(
 			contracts.troveManager.address,
 			contracts.stabilityPoolManager.address,
-			contracts.borrowerOperations.address
+			contracts.borrowerOperations.address,
+			contracts.erc20.address
 		)
 		return contracts
 	}
@@ -292,7 +286,8 @@ class DeploymentHelper {
 		// set TroveManager addr in SortedTroves
 		await contracts.sortedTroves.setParams(
 			contracts.troveManager.address,
-			contracts.borrowerOperations.address
+			contracts.borrowerOperations.address,
+			contracts.erc20.address
 		)
 
 		// set contract addresses in the FunctionCaller
@@ -303,7 +298,8 @@ class DeploymentHelper {
 			contracts.activePool.address,
 			contracts.defaultPool.address,
 			contracts.priceFeedTestnet.address,
-			contracts.adminContract.address
+			contracts.adminContract.address,
+			contracts.erc20.address
 		)
 
 		// set contracts in the Trove Manager
@@ -330,7 +326,10 @@ class DeploymentHelper {
 			contracts.vestaParameters.address
 		)
 
-		await contracts.stabilityPoolManager.setAddresses(contracts.adminContract.address)
+		await contracts.stabilityPoolManager.setAddresses(
+			contracts.adminContract.address,
+			contracts.erc20.address
+		)
 
 		await contracts.adminContract.setAddresses(
 			contracts.vestaParameters.address,
@@ -339,7 +338,8 @@ class DeploymentHelper {
 			contracts.troveManager.address,
 			contracts.uToken.address,
 			contracts.sortedTroves.address,
-			YOUContracts.communityIssuance.address
+			YOUContracts.communityIssuance.address,
+			contracts.erc20.address
 		)
 
 		await contracts.activePool.setAddresses(
@@ -347,18 +347,24 @@ class DeploymentHelper {
 			contracts.troveManager.address,
 			contracts.stabilityPoolManager.address,
 			contracts.defaultPool.address,
-			contracts.collSurplusPool.address
+			contracts.collSurplusPool.address,
+			contracts.redemptionManager.address,
+			contracts.erc20.address
 		)
 
 		await contracts.defaultPool.setAddresses(
 			contracts.troveManager.address,
-			contracts.activePool.address
+			contracts.redemptionManager.address,
+			contracts.activePool.address,
+			contracts.erc20.address
 		)
 
 		await contracts.collSurplusPool.setAddresses(
 			contracts.borrowerOperations.address,
 			contracts.troveManager.address,
-			contracts.activePool.address
+			contracts.redemptionManager.address,
+			contracts.activePool.address,
+			contracts.erc20.address
 		)
 
 		// set contracts in HintHelpers
@@ -412,16 +418,16 @@ class DeploymentHelper {
 		const supply = dec(32000000, 18)
 		const weeklyReward = dec(32000000 / 4, 18)
 
-		await coreContracts.adminContract.addNewCollateral(
-			ZERO_ADDRESS,
-			coreContracts.stabilityPoolTemplate.address,
-			ZERO_ADDRESS,
-			ZERO_ADDRESS,
-			supply,
-			weeklyReward,
-			0,
-			{ from: treasurySig }
-		)
+		// await coreContracts.adminContract.addNewCollateral(
+		// 	ZERO_ADDRESS,
+		// 	coreContracts.stabilityPoolTemplate.address,
+		// 	ZERO_ADDRESS,
+		// 	ZERO_ADDRESS,
+		// 	supply,
+		// 	weeklyReward,
+		// 	0,
+		// 	{ from: treasurySig }
+		// )
 		await YOUContracts.youToken.unprotectedMint(treasurySig, supply)
 		await coreContracts.adminContract.addNewCollateral(
 			coreContracts.erc20.address,

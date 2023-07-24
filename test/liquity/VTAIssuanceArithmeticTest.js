@@ -72,7 +72,7 @@ contract("YOU community issuance arithmetic tests", async accounts => {
 		borrowerOperations = contracts.borrowerOperations
 		erc20 = contracts.erc20
 
-		YOUToken = YOUContracts.vstaToken
+		YOUToken = YOUContracts.youToken
 		communityIssuanceTester = YOUContracts.communityIssuance
 
 		await deploymentHelper.connectCoreContracts(contracts, YOUContracts)

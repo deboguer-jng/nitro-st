@@ -18,7 +18,7 @@ contract("AdminContract", async accounts => {
 
 	let contracts
 	let adminContract
-	let vstaToken
+	let youToken
 	let stabilityPoolV1
 	let stabilityPoolV2
 	let stabilityPoolManager
@@ -31,7 +31,7 @@ contract("AdminContract", async accounts => {
 			YOUContracts = await deploymentHelper.deployYOUContractsHardhat(owner)
 
 			adminContract = contracts.adminContract
-			vstaToken = YOUContracts.vstaToken
+			youToken = YOUContracts.youToken
 			stabilityPoolV1 = contracts.stabilityPoolTemplate
 			stabilityPoolV2 = contracts.stabilityPoolTemplateV2
 			stabilityPoolManager = contracts.stabilityPoolManager
@@ -39,7 +39,7 @@ contract("AdminContract", async accounts => {
 			await deploymentHelper.connectCoreContracts(contracts, YOUContracts)
 			await deploymentHelper.connectYOUContractsToCore(YOUContracts, contracts, true)
 
-			await YOUContracts.vstaToken.approve(
+			await YOUContracts.youToken.approve(
 				YOUContracts.communityIssuance.address,
 				ethers.constants.MaxUint256
 			)
@@ -122,10 +122,10 @@ contract("AdminContract", async accounts => {
 				ZERO_ADDRESS
 			)
 			assert.equal(
-				(await vstaToken.balanceOf(YOUContracts.communityIssuance.address)).toString(),
+				(await youToken.balanceOf(YOUContracts.communityIssuance.address)).toString(),
 				dec(100, 18)
 			)
-			assert.notEqual(await YOUContracts.communityIssuance.vstaDistributionsByPool, 0)
+			assert.notEqual(await YOUContracts.communityIssuance.youDistributionsByPool, 0)
 		})
 
 		it("UpgradeStabilityPool: As Owner - Upgrade stability pool to V2", async () => {

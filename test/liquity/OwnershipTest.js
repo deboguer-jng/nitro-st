@@ -21,9 +21,9 @@ contract("All Liquity functions with onlyOwner modifier", async accounts => {
 	let defaultPool
 	let borrowerOperations
 
-	let vstaStaking
+	let youStaking
 	let communityIssuance
-	let vstaToken
+	let youToken
 	let adminContract
 
 	before(async () => {
@@ -42,9 +42,9 @@ contract("All Liquity functions with onlyOwner modifier", async accounts => {
 		borrowerOperations = contracts.borrowerOperations
 		adminContract = contracts.adminContract
 
-		vstaStaking = YOUContracts.vstaStaking
+		youStaking = YOUContracts.youStaking
 		communityIssuance = YOUContracts.communityIssuance
-		vstaToken = YOUContracts.vstaToken
+		youToken = YOUContracts.youToken
 	})
 
 	const testZeroAddress = async (
@@ -171,7 +171,7 @@ contract("All Liquity functions with onlyOwner modifier", async accounts => {
 
 	describe("CommunityIssuance", async accounts => {
 		it("setAddresses(): reverts when called by non-owner, with wrong addresses, or twice", async () => {
-			const params = [vstaToken.address, stabilityPoolManager.address, adminContract.address]
+			const params = [youToken.address, stabilityPoolManager.address, adminContract.address]
 
 			// Attempt to use zero address
 			await testZeroAddress(communityIssuance, params)
@@ -189,7 +189,7 @@ contract("All Liquity functions with onlyOwner modifier", async accounts => {
 
 	describe("YOUStaking", async accounts => {
 		it("setAddresses(): reverts when called by non-owner, with wrong addresses, or twice", async () => {
-			await testSetAddresses(vstaStaking, 6)
+			await testSetAddresses(youStaking, 6)
 		})
 	})
 })

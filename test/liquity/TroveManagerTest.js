@@ -76,7 +76,8 @@ contract("TroveManager", async accounts => {
 		contracts.vstToken = await UTokenTester.new(
 			contracts.troveManager.address,
 			contracts.stabilityPoolManager.address,
-			contracts.borrowerOperations.address
+			contracts.borrowerOperations.address,
+			contracts.erc20.address
 		)
 		const YOUContracts = await deploymentHelper.deployYOUContractsHardhat(accounts[0])
 
@@ -91,17 +92,17 @@ contract("TroveManager", async accounts => {
 		hintHelpers = contracts.hintHelpers
 		vestaParameters = contracts.vestaParameters
 
-		vstaStaking = YOUContracts.vstaStaking
-		vstaToken = YOUContracts.vstaToken
+		youStaking = YOUContracts.youStaking
+		youToken = YOUContracts.youToken
 		communityIssuance = YOUContracts.communityIssuance
 
-		await vstaToken.unprotectedMint(multisig, dec(1, 24))
+		await youToken.unprotectedMint(multisig, dec(1, 24))
 
 		erc20 = contracts.erc20
 
 		let index = 0
 		for (const acc of accounts) {
-			await vstaToken.approve(vstaStaking.address, await web3.eth.getBalance(acc), {
+			await youToken.approve(youStaking.address, await web3.eth.getBalance(acc), {
 				from: acc,
 			})
 			await erc20.mint(acc, await web3.eth.getBalance(acc))
@@ -8988,8 +8989,8 @@ contract("TroveManager", async accounts => {
 	it("redeemCollateral(): a redemption made when base rate is non-zero increases the base rate, for negligible time passed", async () => {
 		// time fast-forwards 1 year, and multisig stakes 1 YOU
 		await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
-		await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
-		await vstaStaking.stake(dec(1, 18), { from: multisig })
+		await youToken.approve(youStaking.address, dec(1, 18), { from: multisig })
+		await youStaking.stake(dec(1, 18), { from: multisig })
 
 		await openTrove({ ICR: toBN(dec(20, 18)), extraParams: { from: whale } })
 		await openTrove({
@@ -9209,8 +9210,8 @@ contract("TroveManager", async accounts => {
 	it("redeemCollateral(): a redemption made at zero base rate send a non-zero ETHFee to YOU staking contract", async () => {
 		// time fast-forwards 1 year, and multisig stakes 1 YOU
 		await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
-		await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
-		await vstaStaking.stake(dec(1, 18), { from: multisig })
+		await youToken.approve(youStaking.address, dec(1, 18), { from: multisig })
+		await youStaking.stake(dec(1, 18), { from: multisig })
 
 		await openTrove({ ICR: toBN(dec(20, 18)), extraParams: { from: whale } })
 		await openTrove({
@@ -9258,8 +9259,8 @@ contract("TroveManager", async accounts => {
 		assert.equal(await troveManager.baseRate(erc20.address), "0")
 
 		// Check YOU Staking contract balance before is zero
-		const YOUStakingBalance_Before = await web3.eth.getBalance(vstaStaking.address)
-		const YOUStakingBalance_Before_Asset = await erc20.balanceOf(vstaStaking.address)
+		const YOUStakingBalance_Before = await web3.eth.getBalance(youStaking.address)
+		const YOUStakingBalance_Before_Asset = await erc20.balanceOf(youStaking.address)
 		assert.equal(YOUStakingBalance_Before, "0")
 		assert.equal(YOUStakingBalance_Before_Asset, "0")
 
@@ -9283,18 +9284,18 @@ contract("TroveManager", async accounts => {
 		assert.isTrue(baseRate_1_Asset.gt(toBN("0")))
 
 		// Check YOU Staking contract balance after is non-zero
-		const YOUStakingBalance_After = toBN(await web3.eth.getBalance(vstaStaking.address))
+		const YOUStakingBalance_After = toBN(await web3.eth.getBalance(youStaking.address))
 		assert.isTrue(YOUStakingBalance_After.gt(toBN("0")))
 
-		const YOUStakingBalance_After_Asset = toBN(await erc20.balanceOf(vstaStaking.address))
+		const YOUStakingBalance_After_Asset = toBN(await erc20.balanceOf(youStaking.address))
 		assert.isTrue(YOUStakingBalance_After_Asset.gt(toBN("0")))
 	})
 
 	it("redeemCollateral(): a redemption made at zero base increases the ETH-fees-per-YOU-staked in YOU Staking contract", async () => {
 		// time fast-forwards 1 year, and multisig stakes 1 YOU
 		await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
-		await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
-		await vstaStaking.stake(dec(1, 18), { from: multisig })
+		await youToken.approve(youStaking.address, dec(1, 18), { from: multisig })
+		await youStaking.stake(dec(1, 18), { from: multisig })
 
 		await openTrove({ ICR: toBN(dec(20, 18)), extraParams: { from: whale } })
 		await openTrove({
@@ -9342,8 +9343,8 @@ contract("TroveManager", async accounts => {
 		assert.equal(await troveManager.baseRate(erc20.address), "0")
 
 		// Check YOU Staking ETH-fees-per-YOU-staked before is zero
-		assert.equal(await vstaStaking.F_ASSETS(ZERO_ADDRESS), "0")
-		assert.equal(await vstaStaking.F_ASSETS(erc20.address), "0")
+		assert.equal(await youStaking.F_ASSETS(ZERO_ADDRESS), "0")
+		assert.equal(await youStaking.F_ASSETS(erc20.address), "0")
 
 		const A_balanceBefore = await UToken.balanceOf(A)
 
@@ -9365,15 +9366,15 @@ contract("TroveManager", async accounts => {
 		assert.isTrue(baseRate_1_Asset.gt(toBN("0")))
 
 		// Check YOU Staking ETH-fees-per-YOU-staked after is non-zero
-		assert.isTrue((await vstaStaking.F_ASSETS(ZERO_ADDRESS)).gt("0"))
-		assert.isTrue((await vstaStaking.F_ASSETS(erc20.address)).gt("0"))
+		assert.isTrue((await youStaking.F_ASSETS(ZERO_ADDRESS)).gt("0"))
+		assert.isTrue((await youStaking.F_ASSETS(erc20.address)).gt("0"))
 	})
 
 	it("redeemCollateral(): a redemption made at a non-zero base rate send a non-zero ETHFee to YOU staking contract", async () => {
 		// time fast-forwards 1 year, and multisig stakes 1 YOU
 		await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
-		await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
-		await vstaStaking.stake(dec(1, 18), { from: multisig })
+		await youToken.approve(youStaking.address, dec(1, 18), { from: multisig })
+		await youStaking.stake(dec(1, 18), { from: multisig })
 
 		await openTrove({ ICR: toBN(dec(20, 18)), extraParams: { from: whale } })
 		await openTrove({
@@ -9440,8 +9441,8 @@ contract("TroveManager", async accounts => {
 		const baseRate_1_Asset = await troveManager.baseRate(erc20.address)
 		assert.isTrue(baseRate_1_Asset.gt(toBN("0")))
 
-		const YOUStakingBalance_Before = toBN(await web3.eth.getBalance(vstaStaking.address))
-		const YOUStakingBalance_Before_Asset = toBN(await erc20.balanceOf(vstaStaking.address))
+		const YOUStakingBalance_Before = toBN(await web3.eth.getBalance(youStaking.address))
+		const YOUStakingBalance_Before_Asset = toBN(await erc20.balanceOf(youStaking.address))
 
 		// B redeems 10 U
 		await th.redeemCollateral(B, contracts, dec(10, 18), ZERO_ADDRESS)
@@ -9453,8 +9454,8 @@ contract("TroveManager", async accounts => {
 			B_balanceBefore.sub(toBN(dec(10, 18)).mul(toBN(2))).toString()
 		)
 
-		const YOUStakingBalance_After = toBN(await web3.eth.getBalance(vstaStaking.address))
-		const YOUStakingBalance_After_Asset = toBN(await erc20.balanceOf(vstaStaking.address))
+		const YOUStakingBalance_After = toBN(await web3.eth.getBalance(youStaking.address))
+		const YOUStakingBalance_After_Asset = toBN(await erc20.balanceOf(youStaking.address))
 
 		// check YOU Staking balance has increased
 		assert.isTrue(YOUStakingBalance_After.gt(YOUStakingBalance_Before))
@@ -9464,8 +9465,8 @@ contract("TroveManager", async accounts => {
 	it("redeemCollateral(): a redemption made at a non-zero base rate increases ETH-per-YOU-staked in the staking contract", async () => {
 		// time fast-forwards 1 year, and multisig stakes 1 YOU
 		await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
-		await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
-		await vstaStaking.stake(dec(1, 18), { from: multisig })
+		await youToken.approve(youStaking.address, dec(1, 18), { from: multisig })
+		await youStaking.stake(dec(1, 18), { from: multisig })
 
 		await openTrove({ ICR: toBN(dec(20, 18)), extraParams: { from: whale } })
 		await openTrove({
@@ -9533,8 +9534,8 @@ contract("TroveManager", async accounts => {
 		assert.isTrue(baseRate_1_Asset.gt(toBN("0")))
 
 		// Check YOU Staking ETH-fees-per-YOU-staked before is zero
-		const F_ETH_Before = await vstaStaking.F_ASSETS(ZERO_ADDRESS)
-		const F_ETH_Before_Asset = await vstaStaking.F_ASSETS(erc20.address)
+		const F_ETH_Before = await youStaking.F_ASSETS(ZERO_ADDRESS)
+		const F_ETH_Before_Asset = await youStaking.F_ASSETS(erc20.address)
 
 		// B redeems 10 U
 		await th.redeemCollateral(B, contracts, dec(10, 18), ZERO_ADDRESS)
@@ -9546,8 +9547,8 @@ contract("TroveManager", async accounts => {
 			B_balanceBefore.sub(toBN(dec(10, 18)).mul(toBN(2))).toString()
 		)
 
-		const F_ETH_After = await vstaStaking.F_ASSETS(ZERO_ADDRESS)
-		const F_ETH_After_Asset = await vstaStaking.F_ASSETS(erc20.address)
+		const F_ETH_After = await youStaking.F_ASSETS(ZERO_ADDRESS)
+		const F_ETH_After_Asset = await youStaking.F_ASSETS(erc20.address)
 
 		// check YOU Staking balance has increased
 		assert.isTrue(F_ETH_After.gt(F_ETH_Before))
@@ -9557,8 +9558,8 @@ contract("TroveManager", async accounts => {
 	it("redeemCollateral(): a redemption sends the ETH remainder (ETHDrawn - ETHFee) to the redeemer", async () => {
 		// time fast-forwards 1 year, and multisig stakes 1 YOU
 		await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
-		await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
-		await vstaStaking.stake(dec(1, 18), { from: multisig })
+		await youToken.approve(youStaking.address, dec(1, 18), { from: multisig })
+		await youStaking.stake(dec(1, 18), { from: multisig })
 
 		const { totalDebt: W_totalDebt } = await openTrove({
 			ICR: toBN(dec(20, 18)),
@@ -9676,8 +9677,8 @@ contract("TroveManager", async accounts => {
 	it("redeemCollateral(): a full redemption (leaving trove with 0 debt), closes the trove", async () => {
 		// time fast-forwards 1 year, and multisig stakes 1 YOU
 		await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
-		await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
-		await vstaStaking.stake(dec(1, 18), { from: multisig })
+		await youToken.approve(youStaking.address, dec(1, 18), { from: multisig })
+		await youStaking.stake(dec(1, 18), { from: multisig })
 
 		const { netDebt: W_netDebt } = await openTrove({
 			ICR: toBN(dec(20, 18)),
@@ -9772,8 +9773,8 @@ contract("TroveManager", async accounts => {
 	const redeemCollateral3Full1Partial = async () => {
 		// time fast-forwards 1 year, and multisig stakes 1 YOU
 		await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
-		await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
-		await vstaStaking.stake(dec(1, 18), { from: multisig })
+		await youToken.approve(youStaking.address, dec(1, 18), { from: multisig })
+		await youStaking.stake(dec(1, 18), { from: multisig })
 
 		const { netDebt: W_netDebt } = await openTrove({
 			ICR: toBN(dec(20, 18)),

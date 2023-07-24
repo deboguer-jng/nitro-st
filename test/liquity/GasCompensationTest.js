@@ -34,7 +34,7 @@ contract("Gas compensation tests", async accounts => {
 	const [bountyAddress, lpRewardsAddress, multisig] = accounts.slice(997, 1000)
 
 	let priceFeed
-	let vstToken
+	let uToken
 	let sortedTroves
 	let troveManager
 	let activePool
@@ -61,15 +61,16 @@ contract("Gas compensation tests", async accounts => {
 		contracts = await deploymentHelper.deployLiquityCore()
 		contracts.troveManager = await TroveManagerTester.new()
 		contracts.borrowerOperations = await BorrowerOperationsTester.new()
-		contracts.vstToken = await UTokenTester.new(
+		contracts.uToken = await UTokenTester.new(
 			contracts.troveManager.address,
 			contracts.stabilityPoolManager.address,
-			contracts.borrowerOperations.address
+			contracts.borrowerOperations.address,
+			contracts.erc20.address
 		)
 		const YOUContracts = await deploymentHelper.deployYOUContractsHardhat(accounts[0])
 
 		priceFeed = contracts.priceFeedTestnet
-		vstToken = contracts.vstToken
+		uToken = contracts.uToken
 		sortedTroves = contracts.sortedTroves
 		troveManager = contracts.troveManager
 		activePool = contracts.activePool

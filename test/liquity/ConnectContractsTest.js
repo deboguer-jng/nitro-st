@@ -21,8 +21,8 @@ contract(
 		let defaultPool
 		let functionCaller
 		let borrowerOperations
-		let vstaStaking
-		let vstaToken
+		let youStaking
+		let youToken
 		let communityIssuance
 		let vestaParameters
 
@@ -41,8 +41,8 @@ contract(
 			borrowerOperations = coreContracts.borrowerOperations
 			vestaParameters = coreContracts.vestaParameters
 
-			vstaStaking = YOUContracts.vstaStaking
-			vstaToken = YOUContracts.vstaToken
+			youStaking = YOUContracts.youStaking
+			youToken = YOUContracts.youToken
 			communityIssuance = YOUContracts.communityIssuance
 
 			await deploymentHelper.connectCoreContracts(coreContracts, YOUContracts)
@@ -91,9 +91,9 @@ contract(
 		})
 
 		it("Sets the correct YOUStaking address in TroveManager", async () => {
-			const YOUStakingAddress = vstaStaking.address
+			const YOUStakingAddress = youStaking.address
 
-			const recordedYOUStakingAddress = await troveManager.vstaStaking()
+			const recordedYOUStakingAddress = await troveManager.youStaking()
 			assert.equal(YOUStakingAddress, recordedYOUStakingAddress)
 		})
 
@@ -203,7 +203,7 @@ contract(
 
 		// YOU Staking in BO
 		it("Sets the correct YOUStaking address in BorrowerOperations", async () => {
-			const YOUStakingAddress = vstaStaking.address
+			const YOUStakingAddress = youStaking.address
 
 			const recordedYOUStakingAddress = await borrowerOperations.YOUStakingAddress()
 			assert.equal(YOUStakingAddress, recordedYOUStakingAddress)
@@ -213,9 +213,9 @@ contract(
 
 		// Sets YOUToken in YOUStaking
 		it("Sets the correct YOUToken address in YOUStaking", async () => {
-			const YOUTokenAddress = vstaToken.address
+			const YOUTokenAddress = youToken.address
 
-			const recordedYOUTokenAddress = await vstaStaking.vstaToken()
+			const recordedYOUTokenAddress = await youStaking.youToken()
 			assert.equal(YOUTokenAddress, recordedYOUTokenAddress)
 		})
 
@@ -223,7 +223,7 @@ contract(
 		it("Sets the correct ActivePool address in YOUStaking", async () => {
 			const activePoolAddress = activePool.address
 
-			const recordedActivePoolAddress = await vstaStaking.activePoolAddress()
+			const recordedActivePoolAddress = await youStaking.activePoolAddress()
 			assert.equal(activePoolAddress, recordedActivePoolAddress)
 		})
 
@@ -231,7 +231,7 @@ contract(
 		it("Sets the correct ActivePool address in YOUStaking", async () => {
 			const UTokenAddress = vstToken.address
 
-			const recordedUTokenAddress = await vstaStaking.vstToken()
+			const recordedUTokenAddress = await youStaking.vstToken()
 			assert.equal(UTokenAddress, recordedUTokenAddress)
 		})
 
@@ -239,7 +239,7 @@ contract(
 		it("Sets the correct ActivePool address in YOUStaking", async () => {
 			const troveManagerAddress = troveManager.address
 
-			const recordedTroveManagerAddress = await vstaStaking.troveManagerAddress()
+			const recordedTroveManagerAddress = await youStaking.troveManagerAddress()
 			assert.equal(troveManagerAddress, recordedTroveManagerAddress)
 		})
 
@@ -247,7 +247,7 @@ contract(
 		it("Sets the correct BorrowerOperations address in YOUStaking", async () => {
 			const borrowerOperationsAddress = borrowerOperations.address
 
-			const recordedBorrowerOperationsAddress = await vstaStaking.borrowerOperationsAddress()
+			const recordedBorrowerOperationsAddress = await youStaking.borrowerOperationsAddress()
 			assert.equal(borrowerOperationsAddress, recordedBorrowerOperationsAddress)
 		})
 
@@ -256,9 +256,9 @@ contract(
 		// --- CI ---
 		// Sets YOUToken in CommunityIssuance
 		it("Sets the correct YOUToken address in CommunityIssuance", async () => {
-			const YOUTokenAddress = vstaToken.address
+			const YOUTokenAddress = youToken.address
 
-			const recordedYOUTokenAddress = await communityIssuance.vstaToken()
+			const recordedYOUTokenAddress = await communityIssuance.youToken()
 			assert.equal(YOUTokenAddress, recordedYOUTokenAddress)
 		})
 

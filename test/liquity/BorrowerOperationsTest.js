@@ -36,8 +36,8 @@ contract("BorrowerOperations", async accounts => {
 	let activePool
 	let defaultPool
 	let borrowerOperations
-	let vstaStaking
-	let vstaToken
+	let youStaking
+	let youToken
 	let vestaParams
 	let erc20
 
@@ -91,8 +91,8 @@ contract("BorrowerOperations", async accounts => {
 			hintHelpers = contracts.hintHelpers
 			vestaParams = contracts.vestaParameters
 
-			vstaStaking = YOUContracts.vstaStaking
-			vstaToken = YOUContracts.vstaToken
+			youStaking = YOUContracts.youStaking
+			youToken = YOUContracts.youToken
 			communityIssuance = YOUContracts.communityIssuance
 			erc20 = contracts.erc20
 
@@ -107,11 +107,11 @@ contract("BorrowerOperations", async accounts => {
 			MIN_NET_DEBT_ERC20 = await vestaParams.MIN_NET_DEBT(erc20.address)
 			BORROWING_FEE_FLOOR_ERC20 = await vestaParams.BORROWING_FEE_FLOOR(erc20.address)
 
-			await vstaToken.unprotectedMint(multisig, dec(5, 24))
+			await youToken.unprotectedMint(multisig, dec(5, 24))
 
 			let index = 0
 			for (const acc of accounts) {
-				await vstaToken.approve(vstaStaking.address, await web3.eth.getBalance(acc), {
+				await youToken.approve(youStaking.address, await web3.eth.getBalance(acc), {
 					from: acc,
 				})
 				await erc20.mint(acc, await web3.eth.getBalance(acc))
@@ -2473,11 +2473,11 @@ contract("BorrowerOperations", async accounts => {
 		it("withdrawU(): borrowing at non-zero base rate sends U fee to YOU staking contract", async () => {
 			// time fast-forwards 1 year, and multisig stakes 1 YOU
 			await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
-			await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
-			await vstaStaking.stake(dec(1, 18), { from: multisig })
+			await youToken.approve(youStaking.address, dec(1, 18), { from: multisig })
+			await youStaking.stake(dec(1, 18), { from: multisig })
 
 			// Check YOU U balance before == 0
-			const YOUStaking_UBalance_Before = await vstToken.balanceOf(vstaStaking.address)
+			const YOUStaking_UBalance_Before = await vstToken.balanceOf(youStaking.address)
 			assert.equal(YOUStaking_UBalance_Before, "0")
 
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
@@ -2557,7 +2557,7 @@ contract("BorrowerOperations", async accounts => {
 			})
 
 			// Check YOU U balance after has increased
-			const YOUStaking_UBalance_After = await vstToken.balanceOf(vstaStaking.address)
+			const YOUStaking_UBalance_After = await vstToken.balanceOf(youStaking.address)
 			assert.isTrue(YOUStaking_UBalance_After.gt(YOUStaking_UBalance_Before))
 		})
 
@@ -2566,8 +2566,8 @@ contract("BorrowerOperations", async accounts => {
 			it("withdrawU(): borrowing at non-zero base records the (drawn debt + fee) on the Trove struct", async () => {
 				// time fast-forwards 1 year, and multisig stakes 1 YOU
 				await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
-				await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
-				await vstaStaking.stake(dec(1, 18), { from: multisig })
+				await youToken.approve(youStaking.address, dec(1, 18), { from: multisig })
+				await youStaking.stake(dec(1, 18), { from: multisig })
 
 				await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
 				await openTrove({
@@ -2685,11 +2685,11 @@ contract("BorrowerOperations", async accounts => {
 		it("withdrawU(): Borrowing at non-zero base rate increases the YOU staking contract U fees-per-unit-staked", async () => {
 			// time fast-forwards 1 year, and multisig stakes 1 YOU
 			await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
-			await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
-			await vstaStaking.stake(dec(1, 18), { from: multisig })
+			await youToken.approve(youStaking.address, dec(1, 18), { from: multisig })
+			await youStaking.stake(dec(1, 18), { from: multisig })
 
 			// Check YOU contract U fees-per-unit-staked is zero
-			const F_U_Before = await vstaStaking.F_U()
+			const F_U_Before = await youStaking.F_U()
 			assert.equal(F_U_Before, "0")
 
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
@@ -2769,18 +2769,18 @@ contract("BorrowerOperations", async accounts => {
 			})
 
 			// Check YOU contract U fees-per-unit-staked has increased
-			const F_U_After = await vstaStaking.F_U()
+			const F_U_After = await youStaking.F_U()
 			assert.isTrue(F_U_After.gt(F_U_Before))
 		})
 
 		it("withdrawU(): Borrowing at non-zero base rate sends requested amount to the user", async () => {
 			// time fast-forwards 1 year, and multisig stakes 1 YOU
 			await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
-			await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
-			await vstaStaking.stake(dec(1, 18), { from: multisig })
+			await youToken.approve(youStaking.address, dec(1, 18), { from: multisig })
+			await youStaking.stake(dec(1, 18), { from: multisig })
 
 			// Check YOU Staking contract balance before == 0
-			const YOUStaking_UBalance_Before = await vstToken.balanceOf(vstaStaking.address)
+			const YOUStaking_UBalance_Before = await vstToken.balanceOf(youStaking.address)
 			assert.equal(YOUStaking_UBalance_Before, "0")
 
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
@@ -2859,7 +2859,7 @@ contract("BorrowerOperations", async accounts => {
 			})
 
 			// Check YOU staking U balance has increased
-			let YOUStaking_UBalance_After = await vstToken.balanceOf(vstaStaking.address)
+			let YOUStaking_UBalance_After = await vstToken.balanceOf(youStaking.address)
 			assert.isTrue(YOUStaking_UBalance_After.gt(YOUStaking_UBalance_Before))
 
 			// Check D's U balance now equals their initial balance plus request U
@@ -2872,7 +2872,7 @@ contract("BorrowerOperations", async accounts => {
 				from: D,
 			})
 
-			YOUStaking_UBalance_After = await vstToken.balanceOf(vstaStaking.address)
+			YOUStaking_UBalance_After = await vstToken.balanceOf(youStaking.address)
 			assert.isTrue(YOUStaking_UBalance_After.gt(YOUStaking_UBalance_Before))
 
 			D_UBalanceAfter = await vstToken.balanceOf(D)
@@ -2907,14 +2907,14 @@ contract("BorrowerOperations", async accounts => {
 			assert.equal(baseRate_1, "0")
 
 			// A artificially receives YOU, then stakes it
-			await vstaToken.unprotectedMint(A, dec(100, 18))
-			await vstaStaking.stake(dec(100, 18), { from: A })
+			await youToken.unprotectedMint(A, dec(100, 18))
+			await youStaking.stake(dec(100, 18), { from: A })
 
 			// 2 hours pass
 			th.fastForwardTime(7200, web3.currentProvider)
 
 			// Check YOU U balance before == 0
-			const F_U_Before = await vstaStaking.F_U()
+			const F_U_Before = await youStaking.F_U()
 			assert.equal(F_U_Before, "0")
 
 			// D withdraws U
@@ -2923,7 +2923,7 @@ contract("BorrowerOperations", async accounts => {
 			})
 
 			// Check YOU U balance after > 0
-			const F_U_After = await vstaStaking.F_U()
+			const F_U_After = await youStaking.F_U()
 			assert.isTrue(F_U_After.gt("0"))
 		})
 
@@ -4838,11 +4838,11 @@ contract("BorrowerOperations", async accounts => {
 		it("adjustTrove(): borrowing at non-zero base rate sends U fee to YOU staking contract", async () => {
 			// time fast-forwards 1 year, and multisig stakes 1 YOU
 			await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
-			await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
-			await vstaStaking.stake(dec(1, 18), { from: multisig })
+			await youToken.approve(youStaking.address, dec(1, 18), { from: multisig })
+			await youStaking.stake(dec(1, 18), { from: multisig })
 
 			// Check YOU U balance before == 0
-			const YOUStaking_UBalance_Before = await vstToken.balanceOf(vstaStaking.address)
+			const YOUStaking_UBalance_Before = await vstToken.balanceOf(youStaking.address)
 			assert.equal(YOUStaking_UBalance_Before, "0")
 
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
@@ -4917,7 +4917,7 @@ contract("BorrowerOperations", async accounts => {
 			})
 
 			// Check YOU U balance after has increased
-			const YOUStaking_UBalance_After = await vstToken.balanceOf(vstaStaking.address)
+			const YOUStaking_UBalance_After = await vstToken.balanceOf(youStaking.address)
 			assert.isTrue(YOUStaking_UBalance_After.gt(YOUStaking_UBalance_Before))
 		})
 
@@ -4926,8 +4926,8 @@ contract("BorrowerOperations", async accounts => {
 			it("adjustTrove(): borrowing at non-zero base records the (drawn debt + fee) on the Trove struct", async () => {
 				// time fast-forwards 1 year, and multisig stakes 1 YOU
 				await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
-				await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
-				await vstaStaking.stake(dec(1, 18), { from: multisig })
+				await youToken.approve(youStaking.address, dec(1, 18), { from: multisig })
+				await youStaking.stake(dec(1, 18), { from: multisig })
 
 				await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
 				await openTrove({
@@ -5047,11 +5047,11 @@ contract("BorrowerOperations", async accounts => {
 		it("adjustTrove(): Borrowing at non-zero base rate increases the YOU staking contract U fees-per-unit-staked", async () => {
 			// time fast-forwards 1 year, and multisig stakes 1 YOU
 			await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
-			await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
-			await vstaStaking.stake(dec(1, 18), { from: multisig })
+			await youToken.approve(youStaking.address, dec(1, 18), { from: multisig })
+			await youStaking.stake(dec(1, 18), { from: multisig })
 
 			// Check YOU contract U fees-per-unit-staked is zero
-			const F_U_Before = await vstaStaking.F_U()
+			const F_U_Before = await youStaking.F_U()
 			assert.equal(F_U_Before, "0")
 
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
@@ -5136,7 +5136,7 @@ contract("BorrowerOperations", async accounts => {
 				{ from: D }
 			)
 
-			const F_U_After = await vstaStaking.F_U()
+			const F_U_After = await youStaking.F_U()
 			assert.isTrue(F_U_After.gt(F_U_Before))
 
 			await borrowerOperations.adjustTrove(
@@ -5151,18 +5151,18 @@ contract("BorrowerOperations", async accounts => {
 				{ from: D }
 			)
 
-			const F_U_After_Asset = await vstaStaking.F_U()
+			const F_U_After_Asset = await youStaking.F_U()
 			assert.isTrue(F_U_After_Asset.gt(F_U_After))
 		})
 
 		it("adjustTrove(): Borrowing at non-zero base rate sends requested amount to the user", async () => {
 			// time fast-forwards 1 year, and multisig stakes 1 YOU
 			await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
-			await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
-			await vstaStaking.stake(dec(1, 18), { from: multisig })
+			await youToken.approve(youStaking.address, dec(1, 18), { from: multisig })
+			await youStaking.stake(dec(1, 18), { from: multisig })
 
 			// Check YOU Staking contract balance before == 0
-			const YOUStaking_UBalance_Before = await vstToken.balanceOf(vstaStaking.address)
+			const YOUStaking_UBalance_Before = await vstToken.balanceOf(youStaking.address)
 			assert.equal(YOUStaking_UBalance_Before, "0")
 
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
@@ -5251,7 +5251,7 @@ contract("BorrowerOperations", async accounts => {
 			)
 
 			// Check YOU staking U balance has increased
-			const YOUStaking_UBalance_After = await vstToken.balanceOf(vstaStaking.address)
+			const YOUStaking_UBalance_After = await vstToken.balanceOf(youStaking.address)
 			assert.isTrue(YOUStaking_UBalance_After.gt(YOUStaking_UBalance_Before))
 
 			// Check D's U balance has increased by their requested U
@@ -5271,7 +5271,7 @@ contract("BorrowerOperations", async accounts => {
 			)
 
 			// Check YOU staking U balance has increased
-			const YOUStaking_UBalance_After_Asset = await vstToken.balanceOf(vstaStaking.address)
+			const YOUStaking_UBalance_After_Asset = await vstToken.balanceOf(youStaking.address)
 			assert.isTrue(YOUStaking_UBalance_After_Asset.gt(YOUStaking_UBalance_After))
 
 			// Check D's U balance has increased by their requested U
@@ -5343,7 +5343,7 @@ contract("BorrowerOperations", async accounts => {
 			th.fastForwardTime(7200, web3.currentProvider)
 
 			// Check staking U balance before > 0
-			const YOUStaking_UBalance_Before = await vstToken.balanceOf(vstaStaking.address)
+			const YOUStaking_UBalance_Before = await vstToken.balanceOf(youStaking.address)
 			assert.isTrue(YOUStaking_UBalance_Before.gt(toBN("0")))
 
 			// D adjusts trove
@@ -5358,7 +5358,7 @@ contract("BorrowerOperations", async accounts => {
 				D,
 				{ from: D }
 			)
-			const YOUStaking_UBalance_After = await vstToken.balanceOf(vstaStaking.address)
+			const YOUStaking_UBalance_After = await vstToken.balanceOf(youStaking.address)
 			assert.isTrue(YOUStaking_UBalance_After.gt(YOUStaking_UBalance_Before))
 
 			await borrowerOperations.adjustTrove(
@@ -5372,7 +5372,7 @@ contract("BorrowerOperations", async accounts => {
 				D,
 				{ from: D }
 			)
-			const YOUStaking_UBalance_After_Asset = await vstToken.balanceOf(vstaStaking.address)
+			const YOUStaking_UBalance_After_Asset = await vstToken.balanceOf(youStaking.address)
 			assert.isTrue(YOUStaking_UBalance_After_Asset.gt(YOUStaking_UBalance_After))
 		})
 
@@ -5446,11 +5446,11 @@ contract("BorrowerOperations", async accounts => {
 			th.fastForwardTime(7200, web3.currentProvider)
 
 			// A artificially receives YOU, then stakes it
-			await vstaToken.unprotectedMint(A, dec(100, 18))
-			await vstaStaking.stake(dec(100, 18), { from: A })
+			await youToken.unprotectedMint(A, dec(100, 18))
+			await youStaking.stake(dec(100, 18), { from: A })
 
 			// Check staking U balance before == 0
-			const F_U_Before = await vstaStaking.F_U()
+			const F_U_Before = await youStaking.F_U()
 			assert.isTrue(F_U_Before.eq(toBN("0")))
 
 			// D adjusts trove
@@ -5465,7 +5465,7 @@ contract("BorrowerOperations", async accounts => {
 				D,
 				{ from: D }
 			)
-			const F_U_After = await vstaStaking.F_U()
+			const F_U_After = await youStaking.F_U()
 			assert.isTrue(F_U_After.gt(F_U_Before))
 
 			await borrowerOperations.adjustTrove(
@@ -5480,7 +5480,7 @@ contract("BorrowerOperations", async accounts => {
 				{ from: D }
 			)
 
-			const F_U_After_Asset = await vstaStaking.F_U()
+			const F_U_After_Asset = await youStaking.F_U()
 			assert.isTrue(F_U_After_Asset.gt(F_U_After))
 		})
 
@@ -6520,10 +6520,10 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(await th.checkRecoveryMode(contracts, erc20.address))
 
 			// B stakes YOU
-			await vstaToken.unprotectedMint(bob, dec(100, 18))
-			await vstaStaking.stake(dec(100, 18), { from: bob })
+			await youToken.unprotectedMint(bob, dec(100, 18))
+			await youStaking.stake(dec(100, 18), { from: bob })
 
-			const YOUStakingUBalanceBefore = await vstToken.balanceOf(vstaStaking.address)
+			const YOUStakingUBalanceBefore = await vstToken.balanceOf(youStaking.address)
 			assert.isTrue(YOUStakingUBalanceBefore.gt(toBN("0")))
 
 			const txAlice = await borrowerOperations.adjustTrove(
@@ -6567,7 +6567,7 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(await th.checkRecoveryMode(contracts, erc20.address))
 
 			// Check no fee was sent to staking contract
-			const YOUStakingUBalanceAfter = await vstToken.balanceOf(vstaStaking.address)
+			const YOUStakingUBalanceAfter = await vstToken.balanceOf(youStaking.address)
 			assert.equal(YOUStakingUBalanceAfter.toString(), YOUStakingUBalanceBefore.toString())
 		})
 
@@ -10702,11 +10702,11 @@ contract("BorrowerOperations", async accounts => {
 		it("openTrove(): borrowing at non-zero base rate sends U fee to YOU staking contract", async () => {
 			// time fast-forwards 1 year, and multisig stakes 1 YOU
 			await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
-			await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
-			await vstaStaking.stake(dec(1, 18), { from: multisig })
+			await youToken.approve(youStaking.address, dec(1, 18), { from: multisig })
+			await youStaking.stake(dec(1, 18), { from: multisig })
 
 			// Check YOU U balance before == 0
-			const YOUStaking_UBalance_Before = await vstToken.balanceOf(vstaStaking.address)
+			const YOUStaking_UBalance_Before = await vstToken.balanceOf(youStaking.address)
 			assert.equal(YOUStaking_UBalance_Before, "0")
 
 			await openTrove({
@@ -10786,7 +10786,7 @@ contract("BorrowerOperations", async accounts => {
 			})
 
 			// Check YOU U balance after has increased
-			const YOUStaking_UBalance_After = await vstToken.balanceOf(vstaStaking.address)
+			const YOUStaking_UBalance_After = await vstToken.balanceOf(youStaking.address)
 			assert.isTrue(YOUStaking_UBalance_After.gt(YOUStaking_UBalance_Before))
 		})
 
@@ -10795,8 +10795,8 @@ contract("BorrowerOperations", async accounts => {
 			it("openTrove(): borrowing at non-zero base records the (drawn debt + fee  + liq. reserve) on the Trove struct", async () => {
 				// time fast-forwards 1 year, and multisig stakes 1 YOU
 				await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
-				await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
-				await vstaStaking.stake(dec(1, 18), { from: multisig })
+				await youToken.approve(youStaking.address, dec(1, 18), { from: multisig })
+				await youStaking.stake(dec(1, 18), { from: multisig })
 
 				await openTrove({
 					extraUAmount: toBN(dec(10000, 18)),
@@ -10911,11 +10911,11 @@ contract("BorrowerOperations", async accounts => {
 		it("openTrove(): Borrowing at non-zero base rate increases the YOU staking contract U fees-per-unit-staked", async () => {
 			// time fast-forwards 1 year, and multisig stakes 1 YOU
 			await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
-			await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
-			await vstaStaking.stake(dec(1, 18), { from: multisig })
+			await youToken.approve(youStaking.address, dec(1, 18), { from: multisig })
+			await youStaking.stake(dec(1, 18), { from: multisig })
 
 			// Check YOU contract U fees-per-unit-staked is zero
-			const F_U_Before = await vstaStaking.F_U()
+			const F_U_Before = await youStaking.F_U()
 			assert.equal(F_U_Before, "0")
 
 			await openTrove({
@@ -10992,18 +10992,18 @@ contract("BorrowerOperations", async accounts => {
 			})
 
 			// Check YOU contract U fees-per-unit-staked has increased
-			const F_U_After = await vstaStaking.F_U()
+			const F_U_After = await youStaking.F_U()
 			assert.isTrue(F_U_After.gt(F_U_Before))
 		})
 
 		it("openTrove(): Borrowing at non-zero base rate sends requested amount to the user", async () => {
 			// time fast-forwards 1 year, and multisig stakes 1 YOU
 			await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
-			await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
-			await vstaStaking.stake(dec(1, 18), { from: multisig })
+			await youToken.approve(youStaking.address, dec(1, 18), { from: multisig })
+			await youStaking.stake(dec(1, 18), { from: multisig })
 
 			// Check YOU Staking contract balance before == 0
-			const YOUStaking_UBalance_Before = await vstToken.balanceOf(vstaStaking.address)
+			const YOUStaking_UBalance_Before = await vstToken.balanceOf(youStaking.address)
 			assert.equal(YOUStaking_UBalance_Before, "0")
 
 			await openTrove({
@@ -11086,7 +11086,7 @@ contract("BorrowerOperations", async accounts => {
 			)
 
 			// Check YOU staking U balance has increased
-			const YOUStaking_UBalance_After = await vstToken.balanceOf(vstaStaking.address)
+			const YOUStaking_UBalance_After = await vstToken.balanceOf(youStaking.address)
 			assert.isTrue(YOUStaking_UBalance_After.gt(YOUStaking_UBalance_Before))
 
 			// Check D's U balance now equals their requested U
@@ -11141,12 +11141,12 @@ contract("BorrowerOperations", async accounts => {
 			th.fastForwardTime(7200, web3.currentProvider)
 
 			// Check U reward per YOU staked == 0
-			const F_U_Before = await vstaStaking.F_U()
+			const F_U_Before = await youStaking.F_U()
 			assert.equal(F_U_Before, "0")
 
 			// A stakes YOU
-			await vstaToken.unprotectedMint(A, dec(100, 18))
-			await vstaStaking.stake(dec(100, 18), { from: A })
+			await youToken.unprotectedMint(A, dec(100, 18))
+			await youStaking.stake(dec(100, 18), { from: A })
 
 			// D opens trove
 			await openTrove({
@@ -11162,7 +11162,7 @@ contract("BorrowerOperations", async accounts => {
 			})
 
 			// Check U reward per YOU staked > 0
-			const F_U_After = await vstaStaking.F_U()
+			const F_U_After = await youStaking.F_U()
 			assert.isTrue(F_U_After.gt(toBN("0")))
 		})
 

@@ -34,7 +34,7 @@ module.exports = {
 		sources: "./contracts",
 		tests: "./test",
 		cache: "./cache",
-		artifacts: "./artifacts",
+		artifacts: "./artifacts/contracts",
 	},
 	solidity: {
 		compilers: [
@@ -43,37 +43,40 @@ module.exports = {
 				settings: {
 					optimizer: {
 						enabled: true,
-						runs: 1,
-					},
-				},
-			},
-			{
-				version: "0.8.4",
-				settings: {
-					optimizer: {
-						enabled: true,
 						runs: 200,
 					},
 				},
 			},
-			{
-				version: "0.7.6",
-				settings: {
-					optimizer: {
-						enabled: true,
-						runs: 200,
-					},
-				},
-			},
-			{
-				version: "0.8.12",
-				settings: {
-					optimizer: {
-						enabled: true,
-						runs: 200,
-					},
-				},
-			},
+			// {
+			// 	version: "0.8.2",
+			// },
+			// {
+			// 	version: "0.8.4",
+			// 	settings: {
+			// 		optimizer: {
+			// 			enabled: true,
+			// 			runs: 200,
+			// 		},
+			// 	},
+			// },
+			// {
+			// 	version: "0.7.6",
+			// 	settings: {
+			// 		optimizer: {
+			// 			enabled: true,
+			// 			runs: 200,
+			// 		},
+			// 	},
+			// },
+			// {
+			// 	version: "0.8.12",
+			// 	settings: {
+			// 		optimizer: {
+			// 			enabled: true,
+			// 			runs: 200,
+			// 		},
+			// 	},
+			// },
 		],
 	},
 	networks: {

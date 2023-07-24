@@ -39,8 +39,8 @@ contract("YOUStaking revenue share tests", async accounts => {
 	let stabilityPool
 	let defaultPool
 	let borrowerOperations
-	let vstaStaking
-	let vstaToken
+	let youStaking
+	let youToken
 	let erc20
 
 	let contracts
@@ -68,13 +68,13 @@ contract("YOUStaking revenue share tests", async accounts => {
 		hintHelpers = contracts.hintHelpers
 		erc20 = contracts.erc20
 
-		vstaToken = YOUContracts.vstaToken
-		vstaStaking = YOUContracts.vstaStaking
-		await vstaToken.unprotectedMint(multisig, dec(5, 24))
+		youToken = YOUContracts.youToken
+		youStaking = YOUContracts.youStaking
+		await youToken.unprotectedMint(multisig, dec(5, 24))
 
 		let index = 0
 		for (const acc of accounts) {
-			await vstaToken.approve(vstaStaking.address, await web3.eth.getBalance(acc), {
+			await youToken.approve(youStaking.address, await web3.eth.getBalance(acc), {
 				from: acc,
 			})
 			await erc20.mint(acc, await web3.eth.getBalance(acc))
@@ -89,13 +89,10 @@ contract("YOUStaking revenue share tests", async accounts => {
 		await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
 
 		// multisig transfers YOU to staker A
-		await vstaToken.transfer(A, dec(100, 18), { from: multisig })
+		await youToken.transfer(A, dec(100, 18), { from: multisig })
 
-		await vstaToken.approve(vstaStaking.address, dec(100, 18), { from: A })
-		await assertRevert(
-			vstaStaking.stake(0, { from: A }),
-			"YOUStaking: Amount must be non-zero"
-		)
+		await youToken.approve(youStaking.address, dec(100, 18), { from: A })
+		await assertRevert(youStaking.stake(0, { from: A }), "YOUStaking: Amount must be non-zero")
 	})
 
 	it("ETH fee per YOU staked increases when a redemption fee is triggered and totalStakes > 0", async () => {
@@ -147,14 +144,14 @@ contract("YOUStaking revenue share tests", async accounts => {
 
 		await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
 
-		await vstaToken.transfer(A, dec(100, 18), { from: multisig })
+		await youToken.transfer(A, dec(100, 18), { from: multisig })
 
-		await vstaToken.approve(vstaStaking.address, dec(100, 18), { from: A })
-		await vstaStaking.stake(dec(100, 18), { from: A })
+		await youToken.approve(youStaking.address, dec(100, 18), { from: A })
+		await youStaking.stake(dec(100, 18), { from: A })
 
 		// Check ETH fee per unit staked is zero
-		const F_ETH_Before = await vstaStaking.F_ASSETS(ZERO_ADDRESS)
-		const F_ETH_Before_Asset = await vstaStaking.F_ASSETS(erc20.address)
+		const F_ETH_Before = await youStaking.F_ASSETS(ZERO_ADDRESS)
+		const F_ETH_Before_Asset = await youStaking.F_ASSETS(erc20.address)
 		assert.equal(F_ETH_Before, "0")
 		assert.equal(F_ETH_Before_Asset, "0")
 
@@ -178,8 +175,8 @@ contract("YOUStaking revenue share tests", async accounts => {
 		assert.isTrue(emittedETHFee_Asset.gt(toBN("0")))
 
 		// Check ETH fee per unit staked has increased by correct amount
-		const F_ETH_After = await vstaStaking.F_ASSETS(ZERO_ADDRESS)
-		const F_ETH_After_Asset = await vstaStaking.F_ASSETS(erc20.address)
+		const F_ETH_After = await youStaking.F_ASSETS(ZERO_ADDRESS)
+		const F_ETH_After_Asset = await youStaking.F_ASSETS(erc20.address)
 
 		// Expect fee per unit staked = fee/100, since there is 100 U totalStaked
 		const expected_F_ETH_After = emittedETHFee.div(toBN("100"))
@@ -251,11 +248,11 @@ contract("YOUStaking revenue share tests", async accounts => {
 		await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
 
 		// multisig transfers YOU to staker A
-		await vstaToken.transfer(A, dec(100, 18), { from: multisig })
+		await youToken.transfer(A, dec(100, 18), { from: multisig })
 
 		// Check ETH fee per unit staked is zero
-		assert.equal(await vstaStaking.F_ASSETS(ZERO_ADDRESS), "0")
-		assert.equal(await vstaStaking.F_ASSETS(erc20.address), "0")
+		assert.equal(await youStaking.F_ASSETS(ZERO_ADDRESS), "0")
+		assert.equal(await youStaking.F_ASSETS(erc20.address), "0")
 
 		const B_BalBeforeREdemption = await vstToken.balanceOf(B)
 		// B redeems
@@ -277,8 +274,8 @@ contract("YOUStaking revenue share tests", async accounts => {
 		assert.isTrue(emittedETHFee_Asset.gt(toBN("0")))
 
 		// Check ETH fee per unit staked has not increased
-		assert.equal(await vstaStaking.F_ASSETS(ZERO_ADDRESS), "0")
-		assert.equal(await vstaStaking.F_ASSETS(erc20.address), "0")
+		assert.equal(await youStaking.F_ASSETS(ZERO_ADDRESS), "0")
+		assert.equal(await youStaking.F_ASSETS(erc20.address), "0")
 	})
 
 	it("U fee per YOU staked increases when a redemption fee is triggered and totalStakes > 0", async () => {
@@ -343,15 +340,15 @@ contract("YOUStaking revenue share tests", async accounts => {
 		await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
 
 		// multisig transfers YOU to staker A
-		await vstaToken.transfer(A, dec(100, 18), { from: multisig })
+		await youToken.transfer(A, dec(100, 18), { from: multisig })
 
 		// A makes stake
-		await vstaToken.approve(vstaStaking.address, dec(100, 18), { from: A })
-		await vstaStaking.stake(dec(100, 18), { from: A })
+		await youToken.approve(youStaking.address, dec(100, 18), { from: A })
+		await youStaking.stake(dec(100, 18), { from: A })
 
 		// Check U fee per unit staked is zero
-		assert.equal(await vstaStaking.F_ASSETS(ZERO_ADDRESS), "0")
-		assert.equal(await vstaStaking.F_ASSETS(erc20.address), "0")
+		assert.equal(await youStaking.F_ASSETS(ZERO_ADDRESS), "0")
+		assert.equal(await youStaking.F_ASSETS(erc20.address), "0")
 
 		const B_BalBeforeREdemption = await vstToken.balanceOf(B)
 		// B redeems
@@ -390,7 +387,7 @@ contract("YOUStaking revenue share tests", async accounts => {
 		assert.isTrue(emittedUFee_Asset.gt(toBN("0")))
 
 		// Check U fee per unit staked has increased by correct amount
-		const F_U_After = await vstaStaking.F_U()
+		const F_U_After = await youStaking.F_U()
 
 		// Expect fee per unit staked = fee/100, since there is 100 U totalStaked
 		const expected_F_U_After = emittedUFee.div(toBN("100"))
@@ -461,11 +458,11 @@ contract("YOUStaking revenue share tests", async accounts => {
 		await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
 
 		// multisig transfers YOU to staker A
-		await vstaToken.transfer(A, dec(100, 18), { from: multisig })
+		await youToken.transfer(A, dec(100, 18), { from: multisig })
 
 		// Check U fee per unit staked is zero
-		assert.equal(await vstaStaking.F_ASSETS(ZERO_ADDRESS), "0")
-		assert.equal(await vstaStaking.F_ASSETS(erc20.address), "0")
+		assert.equal(await youStaking.F_ASSETS(ZERO_ADDRESS), "0")
+		assert.equal(await youStaking.F_ASSETS(erc20.address), "0")
 
 		const B_BalBeforeREdemption = await vstToken.balanceOf(B)
 		// B redeems
@@ -502,7 +499,7 @@ contract("YOUStaking revenue share tests", async accounts => {
 		assert.isTrue(toBN(th.getUFeeFromUBorrowingEvent(tx_Asset)).gt(toBN("0")))
 
 		// Check U fee per unit staked did not increase, is still zero
-		const F_U_After = await vstaStaking.F_U()
+		const F_U_After = await youStaking.F_U()
 		assert.equal(F_U_After, "0")
 	})
 
@@ -568,11 +565,11 @@ contract("YOUStaking revenue share tests", async accounts => {
 		await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
 
 		// multisig transfers YOU to staker A
-		await vstaToken.transfer(A, dec(100, 18), { from: multisig })
+		await youToken.transfer(A, dec(100, 18), { from: multisig })
 
 		// A makes stake
-		await vstaToken.approve(vstaStaking.address, dec(100, 18), { from: A })
-		await vstaStaking.stake(dec(100, 18), { from: A })
+		await youToken.approve(youStaking.address, dec(100, 18), { from: A })
+		await youStaking.stake(dec(100, 18), { from: A })
 
 		const B_BalBeforeREdemption = await vstToken.balanceOf(B)
 		// B redeems
@@ -673,7 +670,7 @@ contract("YOUStaking revenue share tests", async accounts => {
 		const A_UBalance_Before = toBN(await vstToken.balanceOf(A))
 
 		// A un-stakes
-		await vstaStaking.unstake(dec(100, 18), { from: A, gasPrice: 0 })
+		await youStaking.unstake(dec(100, 18), { from: A, gasPrice: 0 })
 
 		const A_ETHBalance_After = toBN(await web3.eth.getBalance(A))
 		const A_ETHBalance_After_Asset = toBN(await erc20.balanceOf(A))
@@ -754,11 +751,11 @@ contract("YOUStaking revenue share tests", async accounts => {
 		await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
 
 		// multisig transfers YOU to staker A
-		await vstaToken.transfer(A, dec(100, 18), { from: multisig })
+		await youToken.transfer(A, dec(100, 18), { from: multisig })
 
 		// A makes stake
-		await vstaToken.approve(vstaStaking.address, dec(100, 18), { from: A })
-		await vstaStaking.stake(dec(50, 18), { from: A })
+		await youToken.approve(youStaking.address, dec(100, 18), { from: A })
+		await youStaking.stake(dec(50, 18), { from: A })
 
 		const B_BalBeforeREdemption = await vstToken.balanceOf(B)
 		// B redeems
@@ -858,7 +855,7 @@ contract("YOUStaking revenue share tests", async accounts => {
 		const A_UBalance_Before = toBN(await vstToken.balanceOf(A))
 
 		// A tops up
-		await vstaStaking.stake(dec(50, 18), { from: A, gasPrice: 0 })
+		await youStaking.stake(dec(50, 18), { from: A, gasPrice: 0 })
 
 		const A_ETHBalance_After = toBN(await web3.eth.getBalance(A))
 		const A_ETHBalance_After_Asset = toBN(await erc20.balanceOf(A))
@@ -938,11 +935,11 @@ contract("YOUStaking revenue share tests", async accounts => {
 		await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
 
 		// multisig transfers YOU to staker A
-		await vstaToken.transfer(A, dec(100, 18), { from: multisig })
+		await youToken.transfer(A, dec(100, 18), { from: multisig })
 
 		// A makes stake
-		await vstaToken.approve(vstaStaking.address, dec(100, 18), { from: A })
-		await vstaStaking.stake(dec(50, 18), { from: A })
+		await youToken.approve(youStaking.address, dec(100, 18), { from: A })
+		await youStaking.stake(dec(50, 18), { from: A })
 
 		const B_BalBeforeREdemption = await vstToken.balanceOf(B)
 		// B redeems
@@ -985,8 +982,8 @@ contract("YOUStaking revenue share tests", async accounts => {
 		const expectedTotalETHGain = emittedETHFee_1.add(emittedETHFee_2)
 		const expectedTotalETHGain_Asset = emittedETHFee_1_Asset.add(emittedETHFee_2_Asset)
 
-		const A_ETHGain = await vstaStaking.getPendingAssetGain(ZERO_ADDRESS, A)
-		const A_ETHGain_Asset = await vstaStaking.getPendingAssetGain(erc20.address, A)
+		const A_ETHGain = await youStaking.getPendingAssetGain(ZERO_ADDRESS, A)
+		const A_ETHGain_Asset = await youStaking.getPendingAssetGain(erc20.address, A)
 
 		assert.isAtMost(th.getDifference(expectedTotalETHGain, A_ETHGain), 1000)
 		assert.isAtMost(th.getDifference(expectedTotalETHGain_Asset, A_ETHGain_Asset), 1000)
@@ -1054,11 +1051,11 @@ contract("YOUStaking revenue share tests", async accounts => {
 		await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
 
 		// multisig transfers YOU to staker A
-		await vstaToken.transfer(A, dec(100, 18), { from: multisig })
+		await youToken.transfer(A, dec(100, 18), { from: multisig })
 
 		// A makes stake
-		await vstaToken.approve(vstaStaking.address, dec(100, 18), { from: A })
-		await vstaStaking.stake(dec(50, 18), { from: A })
+		await youToken.approve(youStaking.address, dec(100, 18), { from: A })
+		await youStaking.stake(dec(50, 18), { from: A })
 
 		const B_BalBeforeREdemption = await vstToken.balanceOf(B)
 		// B redeems
@@ -1148,7 +1145,7 @@ contract("YOUStaking revenue share tests", async accounts => {
 
 		const expectedTotalUGain = emittedUFee_1.add(emittedUFee_2)
 		const expectedTotalUGain_Asset = emittedUFee_1_Asset.add(emittedUFee_2_Asset)
-		const A_UGain = await vstaStaking.getPendingUGain(A)
+		const A_UGain = await youStaking.getPendingUGain(A)
 
 		assert.isAtMost(
 			th.getDifference(expectedTotalUGain.add(expectedTotalUGain_Asset), A_UGain),
@@ -1252,22 +1249,22 @@ contract("YOUStaking revenue share tests", async accounts => {
 		await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
 
 		// multisig transfers YOU to staker A, B, C
-		await vstaToken.transfer(A, dec(100, 18), { from: multisig })
-		await vstaToken.transfer(B, dec(200, 18), { from: multisig })
-		await vstaToken.transfer(C, dec(300, 18), { from: multisig })
+		await youToken.transfer(A, dec(100, 18), { from: multisig })
+		await youToken.transfer(B, dec(200, 18), { from: multisig })
+		await youToken.transfer(C, dec(300, 18), { from: multisig })
 
 		// A, B, C make stake
-		await vstaToken.approve(vstaStaking.address, dec(100, 18), { from: A })
-		await vstaToken.approve(vstaStaking.address, dec(200, 18), { from: B })
-		await vstaToken.approve(vstaStaking.address, dec(300, 18), { from: C })
-		await vstaStaking.stake(dec(100, 18), { from: A })
-		await vstaStaking.stake(dec(200, 18), { from: B })
-		await vstaStaking.stake(dec(300, 18), { from: C })
+		await youToken.approve(youStaking.address, dec(100, 18), { from: A })
+		await youToken.approve(youStaking.address, dec(200, 18), { from: B })
+		await youToken.approve(youStaking.address, dec(300, 18), { from: C })
+		await youStaking.stake(dec(100, 18), { from: A })
+		await youStaking.stake(dec(200, 18), { from: B })
+		await youStaking.stake(dec(300, 18), { from: C })
 
 		// Confirm staking contract holds 600 YOU
-		// console.log(`YOU staking YOU bal: ${await YOUToken.balanceOf(vstaStaking.address)}`)
-		assert.equal(await vstaToken.balanceOf(vstaStaking.address), dec(600, 18))
-		assert.equal(await vstaStaking.totalYOUStaked(), dec(600, 18))
+		// console.log(`YOU staking YOU bal: ${await YOUToken.balanceOf(youStaking.address)}`)
+		assert.equal(await youToken.balanceOf(youStaking.address), dec(600, 18))
+		assert.equal(await youStaking.totalYOUStaked(), dec(600, 18))
 
 		// F redeems
 		const redemptionTx_1 = await th.redeemCollateralAndGetTxObject(F, contracts, dec(45, 18))
@@ -1344,13 +1341,13 @@ contract("YOUStaking revenue share tests", async accounts => {
 		assert.isTrue(emittedUFee_2_Asset.gt(toBN("0")))
 
 		// D obtains YOU from owner and makes a stake
-		await vstaToken.transfer(D, dec(50, 18), { from: multisig })
-		await vstaToken.approve(vstaStaking.address, dec(50, 18), { from: D })
-		await vstaStaking.stake(dec(50, 18), { from: D })
+		await youToken.transfer(D, dec(50, 18), { from: multisig })
+		await youToken.approve(youStaking.address, dec(50, 18), { from: D })
+		await youStaking.stake(dec(50, 18), { from: D })
 
 		// Confirm staking contract holds 650 YOU
-		assert.equal(await vstaToken.balanceOf(vstaStaking.address), dec(650, 18))
-		assert.equal(await vstaStaking.totalYOUStaked(), dec(650, 18))
+		assert.equal(await youToken.balanceOf(youStaking.address), dec(650, 18))
+		assert.equal(await youStaking.totalYOUStaked(), dec(650, 18))
 
 		// G redeems
 		const redemptionTx_3 = await th.redeemCollateralAndGetTxObject(C, contracts, dec(197, 18))
@@ -1499,16 +1496,16 @@ contract("YOUStaking revenue share tests", async accounts => {
 		const D_UBalance_Before = toBN(await vstToken.balanceOf(D))
 
 		// A-D un-stake
-		await vstaStaking.unstake(dec(100, 18), { from: A, gasPrice: 0 })
-		await vstaStaking.unstake(dec(200, 18), { from: B, gasPrice: 0 })
-		await vstaStaking.unstake(dec(400, 18), { from: C, gasPrice: 0 })
-		await vstaStaking.unstake(dec(50, 18), { from: D, gasPrice: 0 })
+		await youStaking.unstake(dec(100, 18), { from: A, gasPrice: 0 })
+		await youStaking.unstake(dec(200, 18), { from: B, gasPrice: 0 })
+		await youStaking.unstake(dec(400, 18), { from: C, gasPrice: 0 })
+		await youStaking.unstake(dec(50, 18), { from: D, gasPrice: 0 })
 
 		// Confirm all depositors could withdraw
 
 		//Confirm pool Size is now 0
-		assert.equal(await vstaToken.balanceOf(vstaStaking.address), "0")
-		assert.equal(await vstaStaking.totalYOUStaked(), "0")
+		assert.equal(await youToken.balanceOf(youStaking.address), "0")
+		assert.equal(await youStaking.totalYOUStaked(), "0")
 
 		// Get A-D ETH and U balances
 		const A_ETHBalance_After = toBN(await web3.eth.getBalance(A))
@@ -1639,34 +1636,34 @@ contract("YOUStaking revenue share tests", async accounts => {
 		await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
 
 		// multisig transfers YOU to staker A and the non-payable proxy
-		await vstaToken.transfer(A, dec(100, 18), { from: multisig })
-		await vstaToken.transfer(nonPayable.address, dec(100, 18), { from: multisig })
+		await youToken.transfer(A, dec(100, 18), { from: multisig })
+		await youToken.transfer(nonPayable.address, dec(100, 18), { from: multisig })
 
 		//  A makes stake
-		const A_stakeTx = await vstaStaking.stake(dec(100, 18), { from: A })
+		const A_stakeTx = await youStaking.stake(dec(100, 18), { from: A })
 		assert.isTrue(A_stakeTx.receipt.status)
 
 		//  A tells proxy to make a stake
 		const proxyApproveTxData = await th.getTransactionData("approve(address,uint256)", [
-			vstaStaking.address,
+			youStaking.address,
 			"0x56bc75e2d63100000",
 		]) // proxy stakes 100 YOU
-		await nonPayable.forward(vstaToken.address, proxyApproveTxData, { from: A })
+		await nonPayable.forward(youToken.address, proxyApproveTxData, { from: A })
 
 		const proxystakeTxData = await th.getTransactionData("stake(uint256)", [
 			"0x56bc75e2d63100000",
 		]) // proxy stakes 100 YOU
-		await nonPayable.forward(vstaStaking.address, proxystakeTxData, { from: A })
+		await nonPayable.forward(youStaking.address, proxystakeTxData, { from: A })
 
 		// B makes a redemption, creating ETH gain for proxy
 		await th.redeemCollateralAndGetTxObject(B, contracts, dec(45, 18))
 		await th.redeemCollateralAndGetTxObject(B, contracts, dec(45, 18), erc20.address)
 
 		assert.isTrue(
-			(await vstaStaking.getPendingAssetGain(ZERO_ADDRESS, nonPayable.address)).gt(toBN("0"))
+			(await youStaking.getPendingAssetGain(ZERO_ADDRESS, nonPayable.address)).gt(toBN("0"))
 		)
 		assert.isTrue(
-			(await vstaStaking.getPendingAssetGain(erc20.address, nonPayable.address)).gt(toBN("0"))
+			(await youStaking.getPendingAssetGain(erc20.address, nonPayable.address)).gt(toBN("0"))
 		)
 
 		// Expect this tx to revert: stake() tries to send nonPayable proxy's accumulated ETH gain (albeit 0),
@@ -1674,7 +1671,7 @@ contract("YOUStaking revenue share tests", async accounts => {
 		const proxyUnStakeTxData = await th.getTransactionData("unstake(uint256)", [
 			"0x56bc75e2d63100000",
 		]) // proxy stakes 100 YOU
-		const proxyUnstakeTxPromise = nonPayable.forward(vstaStaking.address, proxyUnStakeTxData, {
+		const proxyUnstakeTxPromise = nonPayable.forward(youStaking.address, proxyUnStakeTxData, {
 			from: A,
 		})
 
@@ -1684,12 +1681,12 @@ contract("YOUStaking revenue share tests", async accounts => {
 
 	it("receive(): reverts when it receives ETH from an address that is not the Active Pool", async () => {
 		const ethSendTxPromise1 = web3.eth.sendTransaction({
-			to: vstaStaking.address,
+			to: youStaking.address,
 			from: A,
 			value: dec(1, "ether"),
 		})
 		const ethSendTxPromise2 = web3.eth.sendTransaction({
-			to: vstaStaking.address,
+			to: youStaking.address,
 			from: owner,
 			value: dec(1, "ether"),
 		})
@@ -1699,17 +1696,17 @@ contract("YOUStaking revenue share tests", async accounts => {
 	})
 
 	it("unstake(): reverts if user has no stake", async () => {
-		const unstakeTxPromise1 = vstaStaking.unstake(1, { from: A })
-		const unstakeTxPromise2 = vstaStaking.unstake(1, { from: owner })
+		const unstakeTxPromise1 = youStaking.unstake(1, { from: A })
+		const unstakeTxPromise2 = youStaking.unstake(1, { from: owner })
 
 		await assertRevert(unstakeTxPromise1)
 		await assertRevert(unstakeTxPromise2)
 	})
 
 	it("Test requireCallerIsTroveManager", async () => {
-		const vstaStakingTester = await YOUStakingTester.new()
+		const youStakingTester = await YOUStakingTester.new()
 		await assertRevert(
-			vstaStakingTester.requireCallerIsTroveManager(),
+			youStakingTester.requireCallerIsTroveManager(),
 			"YOUStaking: caller is not TroveM"
 		)
 	})

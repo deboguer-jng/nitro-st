@@ -19,7 +19,7 @@ contract("LockedYOUTest", async accounts => {
 
 	let contracts
 	let lockedYOU
-	let vstaToken
+	let youToken
 	let TOTAL_YOU
 
 	async function applyVestingFormula(vestingRule, ignoreClaimed) {
@@ -43,17 +43,17 @@ contract("LockedYOUTest", async accounts => {
 			const YOUContracts = await deploymentHelper.deployYOUContractsHardhat(treasury)
 
 			lockedYOU = YOUContracts.lockedYOU
-			vstaToken = YOUContracts.vstaToken
+			youToken = YOUContracts.youToken
 
 			await deploymentHelper.connectCoreContracts(contracts, YOUContracts)
 			await deploymentHelper.connectYOUContractsToCore(YOUContracts, contracts, true)
 
-			await YOUContracts.vstaToken.approve(lockedYOU.address, ethers.constants.MaxUint256, {
+			await YOUContracts.youToken.approve(lockedYOU.address, ethers.constants.MaxUint256, {
 				from: treasury,
 			})
 
 			await lockedYOU.transferOwnership(treasury)
-			TOTAL_YOU = await YOUContracts.vstaToken.balanceOf(treasury)
+			TOTAL_YOU = await YOUContracts.youToken.balanceOf(treasury)
 		})
 
 		it("Validate Time Constants", async () => {
@@ -131,7 +131,7 @@ contract("LockedYOUTest", async accounts => {
 
 			await lockedYOU.lowerEntityVesting(A, newTotal, { from: treasury })
 			await assert.equal(
-				(await vstaToken.balanceOf(A)).toString(),
+				(await youToken.balanceOf(A)).toString(),
 				await applyVestingFormula(entityVestingDataBefore, true)
 			)
 			const entityVestingDataAfter = await lockedYOU.entitiesVesting(A)
@@ -180,7 +180,7 @@ contract("LockedYOUTest", async accounts => {
 
 			const claimable = await lockedYOU.getClaimableYOU(B)
 			assert.isTrue(claimable.gt(toBN(0)))
-			assert.equal((await vstaToken.balanceOf(B)).toString(), 0)
+			assert.equal((await youToken.balanceOf(B)).toString(), 0)
 
 			await lockedYOU.removeEntityVesting(B, { from: treasury })
 
@@ -190,7 +190,7 @@ contract("LockedYOUTest", async accounts => {
 			assert.equal(entityVestingData_B.startVestingDate.toString(), 0)
 			assert.equal(entityVestingData_B.claimed.toString(), 0)
 
-			assert.closeTo(th.getDifferenceEther(await vstaToken.balanceOf(B), claimable), 0, 1)
+			assert.closeTo(th.getDifferenceEther(await youToken.balanceOf(B), claimable), 0, 1)
 		})
 
 		it("transferUnassignedYOU: called by user, valid environment, revert transaction", async () => {
@@ -207,10 +207,10 @@ contract("LockedYOUTest", async accounts => {
 
 			assert.equal((await lockedYOU.getUnassignYOUTokensAmount()).toString(), dec(1, 24))
 
-			const currentBalance = await vstaToken.balanceOf(treasury)
+			const currentBalance = await youToken.balanceOf(treasury)
 			await lockedYOU.transferUnassignedYOU({ from: treasury })
 			assert.equal(
-				(await vstaToken.balanceOf(treasury)).toString(),
+				(await youToken.balanceOf(treasury)).toString(),
 				currentBalance.add(toBN(dec(1, 24)))
 			)
 		})
@@ -237,10 +237,10 @@ contract("LockedYOUTest", async accounts => {
 				unAssignedTotal.toString()
 			)
 
-			const currentBalance = await vstaToken.balanceOf(treasury)
+			const currentBalance = await youToken.balanceOf(treasury)
 			await lockedYOU.transferUnassignedYOU({ from: treasury })
 			assert.equal(
-				(await vstaToken.balanceOf(treasury)).toString(),
+				(await youToken.balanceOf(treasury)).toString(),
 				currentBalance.add(unAssignedTotal)
 			)
 		})
@@ -273,11 +273,11 @@ contract("LockedYOUTest", async accounts => {
 			assert.equal(claimable, await applyVestingFormula(entityVestingData))
 			assert.closeTo(th.getDifferenceEther(claimable, dec(250000, 18)), 0, 1000)
 
-			assert.equal((await vstaToken.balanceOf(A)).toString(), 0)
+			assert.equal((await youToken.balanceOf(A)).toString(), 0)
 			await lockedYOU.claimYOUToken({ from: A })
 			const currentBlockClaimData = await applyVestingFormula(entityVestingData)
 
-			assert.equal((await vstaToken.balanceOf(A)).toString(), currentBlockClaimData)
+			assert.equal((await youToken.balanceOf(A)).toString(), currentBlockClaimData)
 			assert.equal((await lockedYOU.getUnassignYOUTokensAmount()).toString(), 0)
 
 			assert.equal(
@@ -298,12 +298,12 @@ contract("LockedYOUTest", async accounts => {
 			assert.equal(claimable, await applyVestingFormula(entityVestingData))
 			assert.closeTo(th.getDifferenceEther(claimable, dec("500000", 18)), 0, 1)
 
-			assert.equal((await vstaToken.balanceOf(A)).toString(), 0)
+			assert.equal((await youToken.balanceOf(A)).toString(), 0)
 
 			await lockedYOU.claimYOUToken({ from: A })
 			const currentBlockClaimData = await applyVestingFormula(entityVestingData)
 
-			assert.equal((await vstaToken.balanceOf(A)).toString(), currentBlockClaimData)
+			assert.equal((await youToken.balanceOf(A)).toString(), currentBlockClaimData)
 			assert.equal((await lockedYOU.getUnassignYOUTokensAmount()).toString(), 0)
 
 			assert.equal(
@@ -324,11 +324,11 @@ contract("LockedYOUTest", async accounts => {
 			assert.equal(claimable, await applyVestingFormula(entityVestingData))
 			assert.closeTo(th.getDifferenceEther(claimable, dec("750000", 18)), 0, 1000)
 
-			assert.equal((await vstaToken.balanceOf(A)).toString(), 0)
+			assert.equal((await youToken.balanceOf(A)).toString(), 0)
 			await lockedYOU.claimYOUToken({ from: A })
 			const currentBlockClaimData = await applyVestingFormula(entityVestingData)
 
-			assert.equal((await vstaToken.balanceOf(A)).toString(), currentBlockClaimData)
+			assert.equal((await youToken.balanceOf(A)).toString(), currentBlockClaimData)
 			assert.equal((await lockedYOU.getUnassignYOUTokensAmount()).toString(), 0)
 			assert.equal(
 				(await lockedYOU.entitiesVesting(A)).claimed.toString(),
@@ -348,15 +348,15 @@ contract("LockedYOUTest", async accounts => {
 			assert.equal(claimable, (await applyVestingFormula(entityVestingData)).toString())
 			assert.closeTo(th.getDifferenceEther(claimable, dec(1, 24)), 0, 1000)
 
-			assert.equal((await vstaToken.balanceOf(A)).toString(), 0)
+			assert.equal((await youToken.balanceOf(A)).toString(), 0)
 			await lockedYOU.claimYOUToken({ from: A })
 
-			assert.equal((await vstaToken.balanceOf(A)).toString(), dec(1, 24))
+			assert.equal((await youToken.balanceOf(A)).toString(), dec(1, 24))
 			assert.equal((await lockedYOU.getUnassignYOUTokensAmount()).toString(), 0)
 			assert.equal((await lockedYOU.entitiesVesting(A)).claimed.toString(), dec(1, 24))
 			assert.equal((await lockedYOU.entitiesVesting(B)).claimed.toString(), 0)
 
-			assert.equal((await vstaToken.balanceOf(lockedYOU.address)).toString(), dec(1, 24))
+			assert.equal((await youToken.balanceOf(lockedYOU.address)).toString(), dec(1, 24))
 		})
 
 		it("Vesting Formula 1M over 4 Year, returns 1M claimable, unassign YOU is 0", async () => {
@@ -370,15 +370,15 @@ contract("LockedYOUTest", async accounts => {
 			assert.equal(claimable, (await applyVestingFormula(entityVestingData)).toString())
 			assert.closeTo(th.getDifferenceEther(claimable, dec(1, 24)), 0, 1000)
 
-			assert.equal((await vstaToken.balanceOf(A)).toString(), 0)
+			assert.equal((await youToken.balanceOf(A)).toString(), 0)
 			await lockedYOU.claimYOUToken({ from: A })
 
-			assert.equal((await vstaToken.balanceOf(A)).toString(), dec(1, 24))
+			assert.equal((await youToken.balanceOf(A)).toString(), dec(1, 24))
 			assert.equal((await lockedYOU.getUnassignYOUTokensAmount()).toString(), 0)
 			assert.equal((await lockedYOU.entitiesVesting(A)).claimed.toString(), dec(1, 24))
 			assert.equal((await lockedYOU.entitiesVesting(B)).claimed.toString(), 0)
 
-			assert.equal((await vstaToken.balanceOf(lockedYOU.address)).toString(), dec(1, 24))
+			assert.equal((await youToken.balanceOf(lockedYOU.address)).toString(), dec(1, 24))
 		})
 
 		it("Vesting Formula 1M over 2 Years multiple claiming with deleted Entity in the way", async () => {
@@ -409,8 +409,8 @@ contract("LockedYOUTest", async accounts => {
 			let entityVestingData_B = await lockedYOU.entitiesVesting(B)
 
 			assert.equal(
-				(await vstaToken.balanceOf(A)).toString(),
-				(await vstaToken.balanceOf(B)).toString()
+				(await youToken.balanceOf(A)).toString(),
+				(await youToken.balanceOf(B)).toString()
 			)
 			assert.equal(
 				entityVestingData.claimed.toString(),
@@ -422,10 +422,10 @@ contract("LockedYOUTest", async accounts => {
 			await lockedYOU.claimYOUToken({ from: A })
 			await lockedYOU.claimYOUToken({ from: B })
 
-			assert.equal((await vstaToken.balanceOf(A)).toString(), dec(1, 24))
-			assert.equal((await vstaToken.balanceOf(B)).toString(), dec(1, 24))
+			assert.equal((await youToken.balanceOf(A)).toString(), dec(1, 24))
+			assert.equal((await youToken.balanceOf(B)).toString(), dec(1, 24))
 
-			assert.equal((await vstaToken.balanceOf(lockedYOU.address)).toString(), 0)
+			assert.equal((await youToken.balanceOf(lockedYOU.address)).toString(), 0)
 			assert.equal((await lockedYOU.getUnassignYOUTokensAmount()).toString(), 0)
 		})
 	})

@@ -43,7 +43,7 @@ contract("StabilityPool - YOU Rewards", async accounts => {
 	let sortedTroves
 	let troveManager
 	let borrowerOperations
-	let vstaToken
+	let youToken
 	let communityIssuanceTester
 
 	let issuance_M1 = toBN(dec(Math.round(204_425 * 4.28575), 18))
@@ -62,7 +62,8 @@ contract("StabilityPool - YOU Rewards", async accounts => {
 			contracts.vstToken = await UTokenTester.new(
 				contracts.troveManager.address,
 				contracts.stabilityPoolManager.address,
-				contracts.borrowerOperations.address
+				contracts.borrowerOperations.address,
+				contracts.erc20.address
 			)
 			const YOUContracts = await deploymentHelper.deployYOUContractsHardhat(treasury)
 
@@ -73,7 +74,7 @@ contract("StabilityPool - YOU Rewards", async accounts => {
 			borrowerOperations = contracts.borrowerOperations
 			erc20 = contracts.erc20
 
-			vstaToken = YOUContracts.vstaToken
+			youToken = YOUContracts.youToken
 			communityIssuanceTester = YOUContracts.communityIssuance
 
 			let index = 0
@@ -97,7 +98,7 @@ contract("StabilityPool - YOU Rewards", async accounts => {
 			// Check community issuance starts with 32 million YOU
 			assert.isAtMost(
 				getDifference(
-					toBN(await vstaToken.balanceOf(communityIssuanceTester.address)),
+					toBN(await youToken.balanceOf(communityIssuanceTester.address)),
 					"64000000000000000000000000"
 				),
 				1000
@@ -321,9 +322,9 @@ contract("StabilityPool - YOU Rewards", async accounts => {
 		//   await borrowerOperations.openTrove(erc20.address, dec(100, 'ether'), th._100pct, dec(1, 22), D, D, { from: D })
 
 		//   // Check all YOU balances are initially 0
-		//   assert.equal(await vstaToken.balanceOf(A), 0)
-		//   assert.equal(await vstaToken.balanceOf(B), 0)
-		//   assert.equal(await vstaToken.balanceOf(C), 0)
+		//   assert.equal(await youToken.balanceOf(A), 0)
+		//   assert.equal(await youToken.balanceOf(B), 0)
+		//   assert.equal(await youToken.balanceOf(C), 0)
 
 		//   // A, B, C deposit
 		//   await stabilityPool.provideToSP(dec(1, 22), { from: A })
@@ -411,9 +412,9 @@ contract("StabilityPool - YOU Rewards", async accounts => {
 		//   await stabilityPoolERC20.withdrawFromSP(dec(100, 18), { from: C })
 
 		//   // Check YOU balances increase by correct amount
-		//   assert.isAtMost(getDifference((await vstaToken.balanceOf(A)), expectedYOUGain_2yr.add(expectedYOUGain_2yrERC20)), 1e12)
-		//   assert.isAtMost(getDifference((await vstaToken.balanceOf(B)), expectedYOUGain_2yr.add(expectedYOUGain_2yrERC20)), 1e12)
-		//   assert.isAtMost(getDifference((await vstaToken.balanceOf(C)), expectedYOUGain_2yr.add(expectedYOUGain_2yrERC20)), 1e12)
+		//   assert.isAtMost(getDifference((await youToken.balanceOf(A)), expectedYOUGain_2yr.add(expectedYOUGain_2yrERC20)), 1e12)
+		//   assert.isAtMost(getDifference((await youToken.balanceOf(B)), expectedYOUGain_2yr.add(expectedYOUGain_2yrERC20)), 1e12)
+		//   assert.isAtMost(getDifference((await youToken.balanceOf(C)), expectedYOUGain_2yr.add(expectedYOUGain_2yrERC20)), 1e12)
 		// })
 
 		// // 3 depositors, varied stake. No liquidations. No front-end.
@@ -440,9 +441,9 @@ contract("StabilityPool - YOU Rewards", async accounts => {
 		//   await borrowerOperations.openTrove(erc20.address, dec(100, 'ether'), th._100pct, dec(10000, 18), D, D, { from: D })
 
 		//   // Check all YOU balances are initially 0
-		//   assert.equal(await vstaToken.balanceOf(A), 0)
-		//   assert.equal(await vstaToken.balanceOf(B), 0)
-		//   assert.equal(await vstaToken.balanceOf(C), 0)
+		//   assert.equal(await youToken.balanceOf(A), 0)
+		//   assert.equal(await youToken.balanceOf(B), 0)
+		//   assert.equal(await youToken.balanceOf(C), 0)
 
 		//   // A, B, C deposit
 		//   await stabilityPool.provideToSP(dec(10000, 18), { from: A })
@@ -570,9 +571,9 @@ contract("StabilityPool - YOU Rewards", async accounts => {
 		//   await stabilityPoolERC20.withdrawFromSP(dec(10000, 18), { from: C })
 
 		//   // Check YOU balances increase by correct amount
-		//   assert.isAtMost(getDifference((await vstaToken.balanceOf(A)), A_expectedYOUGain_2yr.add(A_expectedYOUGain_2yrERC20)), 1e12)
-		//   assert.isAtMost(getDifference((await vstaToken.balanceOf(B)), B_expectedYOUGain_2yr.add(B_expectedYOUGain_2yrERC20)), 1e12)
-		//   assert.isAtMost(getDifference((await vstaToken.balanceOf(C)), C_expectedYOUGain_2yr.add(C_expectedYOUGain_2yrERC20)), 1e12)
+		//   assert.isAtMost(getDifference((await youToken.balanceOf(A)), A_expectedYOUGain_2yr.add(A_expectedYOUGain_2yrERC20)), 1e12)
+		//   assert.isAtMost(getDifference((await youToken.balanceOf(B)), B_expectedYOUGain_2yr.add(B_expectedYOUGain_2yrERC20)), 1e12)
+		//   assert.isAtMost(getDifference((await youToken.balanceOf(C)), C_expectedYOUGain_2yr.add(C_expectedYOUGain_2yrERC20)), 1e12)
 		// })
 
 		// // A, B, C deposit. Varied stake. 1 Liquidation. D joins.
@@ -605,10 +606,10 @@ contract("StabilityPool - YOU Rewards", async accounts => {
 		//   await borrowerOperations.openTrove(erc20.address, dec(300, 'ether'), th._100pct, await getOpenTroveUAmount(dec(30000, 18)), defaulter_1, defaulter_1, { from: defaulter_1 })
 
 		//   // Check all YOU balances are initially 0
-		//   assert.equal(await vstaToken.balanceOf(A), 0)
-		//   assert.equal(await vstaToken.balanceOf(B), 0)
-		//   assert.equal(await vstaToken.balanceOf(C), 0)
-		//   assert.equal(await vstaToken.balanceOf(D), 0)
+		//   assert.equal(await youToken.balanceOf(A), 0)
+		//   assert.equal(await youToken.balanceOf(B), 0)
+		//   assert.equal(await youToken.balanceOf(C), 0)
+		//   assert.equal(await youToken.balanceOf(D), 0)
 
 		//   // A, B, C deposit
 		//   await stabilityPool.provideToSP(dec(10000, 18), { from: A })
@@ -774,10 +775,10 @@ contract("StabilityPool - YOU Rewards", async accounts => {
 		//   await stabilityPoolERC20.withdrawFromSP(dec(40000, 18), { from: D })
 
 		//   // Check YOU balances increase by correct amount
-		//   assert.isAtMost(getDifference((await vstaToken.balanceOf(A)), A_expectedTotalGain.add(A_expectedTotalGainERC20)), 1e12)
-		//   assert.isAtMost(getDifference((await vstaToken.balanceOf(B)), B_expectedTotalGain.add(B_expectedTotalGainERC20)), 1e12)
-		//   assert.isAtMost(getDifference((await vstaToken.balanceOf(C)), C_expectedTotalGain.add(C_expectedTotalGainERC20)), 1e12)
-		//   assert.isAtMost(getDifference((await vstaToken.balanceOf(D)), D_expectedTotalGain.add(D_expectedTotalGainERC20)), 1e12)
+		//   assert.isAtMost(getDifference((await youToken.balanceOf(A)), A_expectedTotalGain.add(A_expectedTotalGainERC20)), 1e12)
+		//   assert.isAtMost(getDifference((await youToken.balanceOf(B)), B_expectedTotalGain.add(B_expectedTotalGainERC20)), 1e12)
+		//   assert.isAtMost(getDifference((await youToken.balanceOf(C)), C_expectedTotalGain.add(C_expectedTotalGainERC20)), 1e12)
+		//   assert.isAtMost(getDifference((await youToken.balanceOf(D)), D_expectedTotalGain.add(D_expectedTotalGainERC20)), 1e12)
 		// })
 
 		// //--- Serial pool-emptying liquidations ---
@@ -820,7 +821,7 @@ contract("StabilityPool - YOU Rewards", async accounts => {
 
 		//   // Check all would-be depositors have 0 YOU balance
 		//   for (depositor of allDepositors) {
-		//     assert.equal(await vstaToken.balanceOf(depositor), '0')
+		//     assert.equal(await youToken.balanceOf(depositor), '0')
 		//   }
 
 		//   // A, B each deposit 10k U
@@ -906,25 +907,25 @@ contract("StabilityPool - YOU Rewards", async accounts => {
 
 		//   // Check A, B only earn issuance from month 1. Error tolerance = 1e-3 tokens
 		//   for (depositor of [A, B]) {
-		//     const YOUBalance = await vstaToken.balanceOf(depositor)
+		//     const YOUBalance = await youToken.balanceOf(depositor)
 		//     assert.isAtMost(getDifference(YOUBalance, expectedYOUGain_M1), 1e15)
 		//   }
 
 		//   // Check C, D only earn issuance from month 2.  Error tolerance = 1e-3 tokens
 		//   for (depositor of [C, D]) {
-		//     const YOUBalance = await vstaToken.balanceOf(depositor)
+		//     const YOUBalance = await youToken.balanceOf(depositor)
 		//     assert.isAtMost(getDifference(YOUBalance, expectedYOUGain_M2), 1e15)
 		//   }
 
 		//   // Check E, F only earn issuance from month 3.  Error tolerance = 1e-3 tokens
 		//   for (depositor of [E, F]) {
-		//     const YOUBalance = await vstaToken.balanceOf(depositor)
+		//     const YOUBalance = await youToken.balanceOf(depositor)
 		//     assert.isAtMost(getDifference(YOUBalance, expectedYOUGain_M3), 1e15)
 		//   }
 
 		//   // Check G, H only earn issuance from month 4.  Error tolerance = 1e-3 tokens
 		//   for (depositor of [G, H]) {
-		//     const YOUBalance = await vstaToken.balanceOf(depositor)
+		//     const YOUBalance = await youToken.balanceOf(depositor)
 		//     assert.isAtMost(getDifference(YOUBalance, expectedYOUGain_M4), 1e15)
 		//   }
 
@@ -936,7 +937,7 @@ contract("StabilityPool - YOU Rewards", async accounts => {
 		// })
 
 		// it('YOU issuance for a given period is not obtainable if the SP was empty during the period', async () => {
-		//   const CIBalanceBefore = await vstaToken.balanceOf(communityIssuanceTester.address)
+		//   const CIBalanceBefore = await youToken.balanceOf(communityIssuanceTester.address)
 
 		//   await borrowerOperations.openTrove(ZERO_ADDRESS, 0, th._100pct, dec(16000, 18), A, A, { from: A, value: dec(200, 'ether') })
 		//   await borrowerOperations.openTrove(ZERO_ADDRESS, 0, th._100pct, dec(10000, 18), B, B, { from: B, value: dec(100, 'ether') })
@@ -1041,8 +1042,8 @@ contract("StabilityPool - YOU Rewards", async accounts => {
 		//   assert.isTrue(totalYOUissuance_4ERC20.gt(totalYOUissuance_3ERC20))
 
 		//   // Get YOU Gains
-		//   const A_YOUGain = await vstaToken.balanceOf(A)
-		//   const C_YOUGain = await vstaToken.balanceOf(C)
+		//   const A_YOUGain = await youToken.balanceOf(A)
+		//   const C_YOUGain = await youToken.balanceOf(C)
 
 		//   // Check A earns gains from M2 only
 		//   assert.isAtMost(getDifference(A_YOUGain, issuance_M2.mul(toBN(2))), 1e15)
@@ -1056,7 +1057,7 @@ contract("StabilityPool - YOU Rewards", async accounts => {
 
 		//   // Check CI has only transferred out tokens for M2 + M4.  1e-3 error tolerance.
 		//   const expectedYOUSentOutFromCI = issuance_M2.add(issuance_M4)
-		//   const CIBalanceAfter = await vstaToken.balanceOf(communityIssuanceTester.address)
+		//   const CIBalanceAfter = await youToken.balanceOf(communityIssuanceTester.address)
 		//   const CIBalanceDifference = CIBalanceBefore.sub(CIBalanceAfter)
 		//   assert.isAtMost(getDifference(CIBalanceDifference, expectedYOUSentOutFromCI.mul(toBN(2))), 1e15)
 		// })
@@ -1175,7 +1176,7 @@ contract("StabilityPool - YOU Rewards", async accounts => {
 
 			// Confirm all depositors have 0 YOU
 			for (const depositor of [A, B, C, D, E, F]) {
-				assert.equal(await vstaToken.balanceOf(depositor), "0")
+				assert.equal(await youToken.balanceOf(depositor), "0")
 			}
 			// price drops by 50%
 			await priceFeed.setPrice(dec(100, 18))
@@ -1285,12 +1286,12 @@ contract("StabilityPool - YOU Rewards", async accounts => {
 				await stabilityPool.withdrawFromSP(dec(10000, 18), { from: depositor })
 			}
 
-			const YOUGain_A = await vstaToken.balanceOf(A)
-			const YOUGain_B = await vstaToken.balanceOf(B)
-			const YOUGain_C = await vstaToken.balanceOf(C)
-			const YOUGain_D = await vstaToken.balanceOf(D)
-			const YOUGain_E = await vstaToken.balanceOf(E)
-			const YOUGain_F = await vstaToken.balanceOf(F)
+			const YOUGain_A = await youToken.balanceOf(A)
+			const YOUGain_B = await youToken.balanceOf(B)
+			const YOUGain_C = await youToken.balanceOf(C)
+			const YOUGain_D = await youToken.balanceOf(D)
+			const YOUGain_E = await youToken.balanceOf(E)
+			const YOUGain_F = await youToken.balanceOf(F)
 
 			//The timespam in a blockchain is a little bit different, which is why we are allowing 20 tokens of difference for the tests
 			//This won't be an issue on the mainnet
@@ -1401,7 +1402,7 @@ contract("StabilityPool - YOU Rewards", async accounts => {
 
 			// Confirm all depositors have 0 YOU
 			for (const depositor of [A, B, C, D, E, F]) {
-				assert.equal(await vstaToken.balanceOf(depositor), "0")
+				assert.equal(await youToken.balanceOf(depositor), "0")
 			}
 			// price drops by 50%
 			await priceFeed.setPrice(dec(100, 18))
@@ -1518,12 +1519,12 @@ contract("StabilityPool - YOU Rewards", async accounts => {
 				await stabilityPool.withdrawFromSP(dec(10000, 18), { from: depositor })
 			}
 
-			const YOUGain_A = await vstaToken.balanceOf(A)
-			const YOUGain_B = await vstaToken.balanceOf(B)
-			const YOUGain_C = await vstaToken.balanceOf(C)
-			const YOUGain_D = await vstaToken.balanceOf(D)
-			const YOUGain_E = await vstaToken.balanceOf(E)
-			const YOUGain_F = await vstaToken.balanceOf(F)
+			const YOUGain_A = await youToken.balanceOf(A)
+			const YOUGain_B = await youToken.balanceOf(B)
+			const YOUGain_C = await youToken.balanceOf(C)
+			const YOUGain_D = await youToken.balanceOf(D)
+			const YOUGain_E = await youToken.balanceOf(E)
+			const YOUGain_F = await youToken.balanceOf(F)
 
 			//The timespam in a blockchain is a little bit different, which is why we are allowing 20 tokens of difference for the tests
 			//This won't be an issue on the mainnet
@@ -1633,7 +1634,7 @@ contract("StabilityPool - YOU Rewards", async accounts => {
 
 			// Confirm all depositors have 0 YOU
 			for (const depositor of [A, B, C, D, E, F]) {
-				assert.equal(await vstaToken.balanceOf(depositor), "0")
+				assert.equal(await youToken.balanceOf(depositor), "0")
 			}
 			// price drops by 50%
 			await priceFeed.setPrice(dec(100, 18))

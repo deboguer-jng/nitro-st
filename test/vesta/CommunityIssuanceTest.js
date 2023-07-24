@@ -17,7 +17,7 @@ contract("CommunityIssuance", async accounts => {
 	let communityIssuance
 	let stabilityPool
 	let stabilityPoolERC20
-	let vstaToken
+	let youToken
 	let erc20
 
 	describe("Community Issuance", async () => {
@@ -26,7 +26,7 @@ contract("CommunityIssuance", async accounts => {
 			contracts.troveManager = await TroveManagerTester.new()
 			const YOUContracts = await deploymentHelper.deployYOUContractsHardhat(treasury)
 
-			vstaToken = YOUContracts.vstaToken
+			youToken = YOUContracts.youToken
 			communityIssuance = YOUContracts.communityIssuance
 			erc20 = contracts.erc20
 
@@ -59,7 +59,7 @@ contract("CommunityIssuance", async accounts => {
 				await contracts.stabilityPoolManager.getAssetStabilityPool(erc20.address)
 			)
 			await communityIssuance.transferOwnership(treasury)
-			await YOUContracts.vstaToken.approve(
+			await YOUContracts.youToken.approve(
 				YOUContracts.communityIssuance.address,
 				ethers.constants.MaxUint256,
 				{ from: treasury }
@@ -71,7 +71,7 @@ contract("CommunityIssuance", async accounts => {
 		})
 
 		it("addFundToStabilityPool: Called by owner, invalid SP then invalid supply, revert transaction", async () => {
-			const balance = await vstaToken.balanceOf(treasury)
+			const balance = await youToken.balanceOf(treasury)
 
 			await assertRevert(
 				communityIssuance.addFundToStabilityPool(communityIssuance.address, dec(100, 18), {
@@ -213,8 +213,8 @@ contract("CommunityIssuance", async accounts => {
 				from: treasury,
 			})
 
-			const beforeBalance = await vstaToken.balanceOf(communityIssuance.address)
-			const beforeBalanceTreasury = await vstaToken.balanceOf(treasury)
+			const beforeBalance = await youToken.balanceOf(communityIssuance.address)
+			const beforeBalanceTreasury = await youToken.balanceOf(treasury)
 
 			await communityIssuance.removeFundFromStabilityPool(stabilityPool.address, dec(50, 18), {
 				from: treasury,
@@ -224,11 +224,11 @@ contract("CommunityIssuance", async accounts => {
 				dec(50, 18)
 			)
 			assert.equal(
-				(await vstaToken.balanceOf(communityIssuance.address)).toString(),
+				(await youToken.balanceOf(communityIssuance.address)).toString(),
 				beforeBalance.sub(toBN(dec(50, 18)))
 			)
 			assert.equal(
-				(await vstaToken.balanceOf(treasury)).toString(),
+				(await youToken.balanceOf(treasury)).toString(),
 				beforeBalanceTreasury.add(toBN(dec(50, 18))).toString()
 			)
 		})

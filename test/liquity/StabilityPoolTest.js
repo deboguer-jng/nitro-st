@@ -48,7 +48,7 @@ contract("StabilityPool", async accounts => {
 	let stabilityPoolERC20
 	let defaultPool
 	let borrowerOperations
-	let vstaToken
+	let youToken
 	let communityIssuance
 	let erc20
 
@@ -83,7 +83,7 @@ contract("StabilityPool", async accounts => {
 			borrowerOperations = contracts.borrowerOperations
 			hintHelpers = contracts.hintHelpers
 
-			vstaToken = YOUContracts.vstaToken
+			youToken = YOUContracts.youToken
 			communityIssuance = YOUContracts.communityIssuance
 
 			erc20 = contracts.erc20
@@ -1904,8 +1904,8 @@ contract("StabilityPool", async accounts => {
 			})
 
 			// Get A, B, C YOU balances before and confirm they're zero
-			const A_YOUBalance_Before = await vstaToken.balanceOf(A)
-			const B_YOUBalance_Before = await vstaToken.balanceOf(B)
+			const A_YOUBalance_Before = await youToken.balanceOf(A)
+			const B_YOUBalance_Before = await youToken.balanceOf(B)
 
 			assert.equal(A_YOUBalance_Before, "0")
 			assert.equal(B_YOUBalance_Before, "0")
@@ -1920,8 +1920,8 @@ contract("StabilityPool", async accounts => {
 			await stabilityPoolERC20.provideToSP(dec(2000, 18), { from: B })
 
 			// Get A, B, C YOU balances after, and confirm they're still zero
-			const A_YOUBalance_After = await vstaToken.balanceOf(A)
-			const B_YOUBalance_After = await vstaToken.balanceOf(B)
+			const A_YOUBalance_After = await youToken.balanceOf(A)
+			const B_YOUBalance_After = await youToken.balanceOf(B)
 
 			assert.equal(A_YOUBalance_After, "0")
 			assert.equal(B_YOUBalance_After, "0")
@@ -2033,8 +2033,8 @@ contract("StabilityPool", async accounts => {
 			// --- TEST ---
 
 			// Get A, B, C YOU balances before and confirm they're non-zero
-			const A_YOUBalance_Before = await vstaToken.balanceOf(A)
-			const B_YOUBalance_Before = await vstaToken.balanceOf(B)
+			const A_YOUBalance_Before = await youToken.balanceOf(A)
+			const B_YOUBalance_Before = await youToken.balanceOf(B)
 			assert.isTrue(A_YOUBalance_Before.gt(toBN("0")))
 			assert.isTrue(B_YOUBalance_Before.gt(toBN("0")))
 
@@ -2048,8 +2048,8 @@ contract("StabilityPool", async accounts => {
 			await stabilityPoolERC20.provideToSP(dec(200, 18), { from: B })
 
 			// Get A, B, C YOU balances after, and confirm they have not changed
-			const A_YOUBalance_After = await vstaToken.balanceOf(A)
-			const B_YOUBalance_After = await vstaToken.balanceOf(B)
+			const A_YOUBalance_After = await youToken.balanceOf(A)
+			const B_YOUBalance_After = await youToken.balanceOf(B)
 
 			assert.isTrue(A_YOUBalance_After.eq(A_YOUBalance_Before))
 			assert.isTrue(B_YOUBalance_After.eq(B_YOUBalance_Before))
@@ -2645,9 +2645,9 @@ contract("StabilityPool", async accounts => {
 			await th.fastForwardTime(timeValues.SECONDS_IN_ONE_HOUR, web3.currentProvider)
 
 			// Get A, B, C YOU balance before
-			const A_YOUBalance_Before = await vstaToken.balanceOf(A)
-			const B_YOUBalance_Before = await vstaToken.balanceOf(B)
-			const C_YOUBalance_Before = await vstaToken.balanceOf(C)
+			const A_YOUBalance_Before = await youToken.balanceOf(A)
+			const B_YOUBalance_Before = await youToken.balanceOf(B)
+			const C_YOUBalance_Before = await youToken.balanceOf(C)
 
 			// A, B, C top up
 			await stabilityPool.provideToSP(dec(10, 18), { from: A })
@@ -2659,9 +2659,9 @@ contract("StabilityPool", async accounts => {
 			await stabilityPoolERC20.provideToSP(dec(30, 18), { from: C })
 
 			// Get YOU balance after
-			const A_YOUBalance_After = await vstaToken.balanceOf(A)
-			const B_YOUBalance_After = await vstaToken.balanceOf(B)
-			const C_YOUBalance_After = await vstaToken.balanceOf(C)
+			const A_YOUBalance_After = await youToken.balanceOf(A)
+			const B_YOUBalance_After = await youToken.balanceOf(B)
+			const C_YOUBalance_After = await youToken.balanceOf(C)
 
 			// Check YOU Balance of A, B, C has increased
 			assert.isTrue(A_YOUBalance_After.gt(A_YOUBalance_Before))
@@ -4493,7 +4493,7 @@ contract("StabilityPool", async accounts => {
 
 			const A_ETHBalBefore = toBN(await web3.eth.getBalance(A))
 			const A_ETHBalBeforeERC20 = toBN(await erc20.balanceOf(A))
-			const A_YOUBalBefore = await vstaToken.balanceOf(A)
+			const A_YOUBalBefore = await youToken.balanceOf(A)
 
 			// Check Alice has gains to withdraw
 			const A_pendingETHGain = await stabilityPool.getDepositorAssetGain(A)
@@ -4516,7 +4516,7 @@ contract("StabilityPool", async accounts => {
 			const A_ETHBalAfter = toBN(await web3.eth.getBalance(A))
 			const A_ETHBalAfterERC20 = toBN(await erc20.balanceOf(A))
 
-			const A_YOUBalAfter = await vstaToken.balanceOf(A)
+			const A_YOUBalAfter = await youToken.balanceOf(A)
 			const A_YOUBalDiff = A_YOUBalAfter.sub(A_YOUBalBefore)
 
 			// Check A's ETH and YOU balances have increased correctly
@@ -5537,9 +5537,9 @@ contract("StabilityPool", async accounts => {
 			await th.fastForwardTime(timeValues.SECONDS_IN_ONE_HOUR, web3.currentProvider)
 
 			// Get A, B, C YOU balance before
-			const A_YOUBalance_Before = await vstaToken.balanceOf(A)
-			const B_YOUBalance_Before = await vstaToken.balanceOf(B)
-			const C_YOUBalance_Before = await vstaToken.balanceOf(C)
+			const A_YOUBalance_Before = await youToken.balanceOf(A)
+			const B_YOUBalance_Before = await youToken.balanceOf(B)
+			const C_YOUBalance_Before = await youToken.balanceOf(C)
 
 			// A, B, C withdraw
 			await stabilityPool.withdrawFromSP(dec(1, 18), { from: A })
@@ -5551,9 +5551,9 @@ contract("StabilityPool", async accounts => {
 			await stabilityPoolERC20.withdrawFromSP(dec(3, 18), { from: C })
 
 			// Get YOU balance after
-			const A_YOUBalance_After = await vstaToken.balanceOf(A)
-			const B_YOUBalance_After = await vstaToken.balanceOf(B)
-			const C_YOUBalance_After = await vstaToken.balanceOf(C)
+			const A_YOUBalance_After = await youToken.balanceOf(A)
+			const B_YOUBalance_After = await youToken.balanceOf(B)
+			const C_YOUBalance_After = await youToken.balanceOf(C)
 
 			// Check YOU Balance of A, B, C has increased
 			assert.isTrue(A_YOUBalance_After.gt(A_YOUBalance_Before))
@@ -7434,9 +7434,9 @@ contract("StabilityPool", async accounts => {
 			assert.isFalse(await sortedTroves.contains(erc20.address, defaulter_1))
 
 			// Get A, B, C YOU balance before
-			const A_YOUBalance_Before = await vstaToken.balanceOf(A)
-			const B_YOUBalance_Before = await vstaToken.balanceOf(B)
-			const C_YOUBalance_Before = await vstaToken.balanceOf(C)
+			const A_YOUBalance_Before = await youToken.balanceOf(A)
+			const B_YOUBalance_Before = await youToken.balanceOf(B)
+			const C_YOUBalance_Before = await youToken.balanceOf(C)
 
 			// Check A, B, C have non-zero ETH gain
 			assert.isTrue((await stabilityPool.getDepositorAssetGain(A)).gt(ZERO))
@@ -7455,9 +7455,9 @@ contract("StabilityPool", async accounts => {
 			await stabilityPool.withdrawAssetGainToTrove(C, C, { from: C })
 
 			// Get YOU balance after
-			const A_YOUBalance_After = await vstaToken.balanceOf(A)
-			const B_YOUBalance_After = await vstaToken.balanceOf(B)
-			const C_YOUBalance_After = await vstaToken.balanceOf(C)
+			const A_YOUBalance_After = await youToken.balanceOf(A)
+			const B_YOUBalance_After = await youToken.balanceOf(B)
+			const C_YOUBalance_After = await youToken.balanceOf(C)
 
 			// Check YOU Balance of A, B, C has increased
 			assert.isTrue(A_YOUBalance_After.gt(A_YOUBalance_Before))
@@ -7469,9 +7469,9 @@ contract("StabilityPool", async accounts => {
 			await stabilityPoolERC20.withdrawAssetGainToTrove(C, C, { from: C })
 
 			// Get YOU balance after
-			const A_YOUBalance_AfterERC20 = await vstaToken.balanceOf(A)
-			const B_YOUBalance_AfterERC20 = await vstaToken.balanceOf(B)
-			const C_YOUBalance_AfterERC20 = await vstaToken.balanceOf(C)
+			const A_YOUBalance_AfterERC20 = await youToken.balanceOf(A)
+			const B_YOUBalance_AfterERC20 = await youToken.balanceOf(B)
+			const C_YOUBalance_AfterERC20 = await youToken.balanceOf(C)
 
 			// Check YOU Balance of A, B, C has increased
 			assert.isTrue(A_YOUBalance_AfterERC20.gt(A_YOUBalance_After))

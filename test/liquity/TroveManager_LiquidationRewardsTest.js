@@ -63,7 +63,8 @@ contract("TroveManager - Redistribution reward calculations", async accounts => 
 		contracts.vstToken = await UTokenTester.new(
 			contracts.troveManager.address,
 			contracts.stabilityPoolManager.address,
-			contracts.borrowerOperations.address
+			contracts.borrowerOperations.address,
+			contracts.erc20.address
 		)
 		const YOUContracts = await deploymentHelper.deployYOUContractsHardhat(accounts[0])
 

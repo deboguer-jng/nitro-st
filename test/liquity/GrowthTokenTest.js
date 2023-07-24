@@ -35,8 +35,8 @@ contract("YOU Token", async accounts => {
 	const A_PrivateKey = "0xeaa445c85f7b438dEd6e831d06a4eD0CEBDc2f8527f84Fcda6EBB5fCfAd4C0e9"
 
 	let contracts
-	let vstaTokenTester
-	let vstaStaking
+	let youTokenTester
+	let youStaking
 	let communityIssuance
 
 	let tokenName
@@ -76,17 +76,17 @@ contract("YOU Token", async accounts => {
 
 	const mintToABC = async () => {
 		// mint some tokens
-		await vstaTokenTester.unprotectedMint(A, dec(150, 18))
-		await vstaTokenTester.unprotectedMint(B, dec(100, 18))
-		await vstaTokenTester.unprotectedMint(C, dec(50, 18))
+		await youTokenTester.unprotectedMint(A, dec(150, 18))
+		await youTokenTester.unprotectedMint(B, dec(100, 18))
+		await youTokenTester.unprotectedMint(C, dec(50, 18))
 	}
 
 	const buildPermitTx = async deadline => {
-		const nonce = (await vstaTokenTester.nonces(approve.owner)).toString()
+		const nonce = (await youTokenTester.nonces(approve.owner)).toString()
 
 		// Get the EIP712 digest
 		const digest = getPermitDigest(
-			await vstaTokenTester.DOMAIN_SEPARATOR(),
+			await youTokenTester.DOMAIN_SEPARATOR(),
 			approve.owner,
 			approve.spender,
 			approve.value,
@@ -96,7 +96,7 @@ contract("YOU Token", async accounts => {
 
 		const { v, r, s } = sign(digest, A_PrivateKey)
 
-		const tx = vstaTokenTester.permit(
+		const tx = youTokenTester.permit(
 			approve.owner,
 			approve.spender,
 			approve.value,
@@ -113,13 +113,13 @@ contract("YOU Token", async accounts => {
 		contracts = await deploymentHelper.deployLiquityCore()
 		const YOUContracts = await deploymentHelper.deployYOUContractsHardhat(accounts[0])
 
-		vstaStaking = YOUContracts.vstaStaking
-		vstaTokenTester = YOUContracts.vstaToken
+		youStaking = YOUContracts.youStaking
+		youTokenTester = YOUContracts.youToken
 		communityIssuance = YOUContracts.communityIssuance
 
-		tokenName = await vstaTokenTester.name()
+		tokenName = await youTokenTester.name()
 		tokenVersion = 1
-		chainId = await vstaTokenTester.getChainId()
+		chainId = await youTokenTester.getChainId()
 
 		await deploymentHelper.connectCoreContracts(contracts, YOUContracts)
 		await deploymentHelper.connectYOUContractsToCore(YOUContracts, contracts)
@@ -128,9 +128,9 @@ contract("YOU Token", async accounts => {
 	it("balanceOf(): gets the balance of the account", async () => {
 		await mintToABC()
 
-		const A_Balance = await vstaTokenTester.balanceOf(A)
-		const B_Balance = await vstaTokenTester.balanceOf(B)
-		const C_Balance = await vstaTokenTester.balanceOf(C)
+		const A_Balance = await youTokenTester.balanceOf(A)
+		const B_Balance = await youTokenTester.balanceOf(B)
+		const C_Balance = await youTokenTester.balanceOf(C)
 
 		assert.equal(A_Balance, dec(150, 18))
 		assert.equal(B_Balance, dec(100, 18))
@@ -138,33 +138,33 @@ contract("YOU Token", async accounts => {
 	})
 
 	it("totalSupply(): gets the total supply (132e24 due of tests minting extra 32M)", async () => {
-		const total = (await vstaTokenTester.totalSupply()).toString()
+		const total = (await youTokenTester.totalSupply()).toString()
 
 		assert.equal(total, dec(132, 24))
 	})
 
 	it("name(): returns the token's name", async () => {
-		const name = await vstaTokenTester.name()
+		const name = await youTokenTester.name()
 		assert.equal(name, "Vesta")
 	})
 
 	it("symbol(): returns the token's symbol", async () => {
-		const symbol = await vstaTokenTester.symbol()
+		const symbol = await youTokenTester.symbol()
 		assert.equal(symbol, "YOU")
 	})
 
 	it("decimal(): returns the number of decimal digits used", async () => {
-		const decimals = await vstaTokenTester.decimals()
+		const decimals = await youTokenTester.decimals()
 		assert.equal(decimals, "18")
 	})
 
 	it("allowance(): returns an account's spending allowance for another account's balance", async () => {
 		await mintToABC()
 
-		await vstaTokenTester.approve(A, dec(100, 18), { from: B })
+		await youTokenTester.approve(A, dec(100, 18), { from: B })
 
-		const allowance_A = await vstaTokenTester.allowance(B, A)
-		const allowance_D = await vstaTokenTester.allowance(B, D)
+		const allowance_A = await youTokenTester.allowance(B, A)
+		const allowance_D = await youTokenTester.allowance(B, D)
 
 		assert.equal(allowance_A, dec(100, 18))
 		assert.equal(allowance_D, "0")
@@ -173,26 +173,26 @@ contract("YOU Token", async accounts => {
 	it("approve(): approves an account to spend the specified ammount", async () => {
 		await mintToABC()
 
-		const allowance_A_before = await vstaTokenTester.allowance(B, A)
+		const allowance_A_before = await youTokenTester.allowance(B, A)
 		assert.equal(allowance_A_before, "0")
 
-		await vstaTokenTester.approve(A, dec(100, 18), { from: B })
+		await youTokenTester.approve(A, dec(100, 18), { from: B })
 
-		const allowance_A_after = await vstaTokenTester.allowance(B, A)
+		const allowance_A_after = await youTokenTester.allowance(B, A)
 		assert.equal(allowance_A_after, dec(100, 18))
 	})
 
 	it("approve(): reverts when spender param is address(0)", async () => {
 		await mintToABC()
 
-		const txPromise = vstaTokenTester.approve(ZERO_ADDRESS, dec(100, 18), { from: B })
+		const txPromise = youTokenTester.approve(ZERO_ADDRESS, dec(100, 18), { from: B })
 		await assertRevert(txPromise)
 	})
 
 	it("approve(): reverts when owner param is address(0)", async () => {
 		await mintToABC()
 
-		const txPromise = vstaTokenTester.callInternalApprove(ZERO_ADDRESS, A, dec(100, 18), {
+		const txPromise = youTokenTester.callInternalApprove(ZERO_ADDRESS, A, dec(100, 18), {
 			from: B,
 		})
 		await assertRevert(txPromise)
@@ -201,62 +201,62 @@ contract("YOU Token", async accounts => {
 	it("transferFrom(): successfully transfers from an account which it is approved to transfer from", async () => {
 		await mintToABC()
 
-		const allowance_A_0 = await vstaTokenTester.allowance(B, A)
+		const allowance_A_0 = await youTokenTester.allowance(B, A)
 		assert.equal(allowance_A_0, "0")
 
-		await vstaTokenTester.approve(A, dec(50, 18), { from: B })
+		await youTokenTester.approve(A, dec(50, 18), { from: B })
 
 		// Check A's allowance of B's funds has increased
-		const allowance_A_1 = await vstaTokenTester.allowance(B, A)
+		const allowance_A_1 = await youTokenTester.allowance(B, A)
 		assert.equal(allowance_A_1, dec(50, 18))
 
-		assert.equal(await vstaTokenTester.balanceOf(C), dec(50, 18))
+		assert.equal(await youTokenTester.balanceOf(C), dec(50, 18))
 
 		// A transfers from B to C, using up her allowance
-		await vstaTokenTester.transferFrom(B, C, dec(50, 18), { from: A })
-		assert.equal(await vstaTokenTester.balanceOf(C), dec(100, 18))
+		await youTokenTester.transferFrom(B, C, dec(50, 18), { from: A })
+		assert.equal(await youTokenTester.balanceOf(C), dec(100, 18))
 
 		// Check A's allowance of B's funds has decreased
-		const allowance_A_2 = await vstaTokenTester.allowance(B, A)
+		const allowance_A_2 = await youTokenTester.allowance(B, A)
 		assert.equal(allowance_A_2, "0")
 
 		// Check B's balance has decreased
-		assert.equal(await vstaTokenTester.balanceOf(B), dec(50, 18))
+		assert.equal(await youTokenTester.balanceOf(B), dec(50, 18))
 
 		// A tries to transfer more tokens from B's account to C than she's allowed
-		const txPromise = vstaTokenTester.transferFrom(B, C, dec(50, 18), { from: A })
+		const txPromise = youTokenTester.transferFrom(B, C, dec(50, 18), { from: A })
 		await assertRevert(txPromise)
 	})
 
 	it("transfer(): increases the recipient's balance by the correct amount", async () => {
 		await mintToABC()
 
-		assert.equal(await vstaTokenTester.balanceOf(A), dec(150, 18))
+		assert.equal(await youTokenTester.balanceOf(A), dec(150, 18))
 
-		await vstaTokenTester.transfer(A, dec(37, 18), { from: B })
+		await youTokenTester.transfer(A, dec(37, 18), { from: B })
 
-		assert.equal(await vstaTokenTester.balanceOf(A), dec(187, 18))
+		assert.equal(await youTokenTester.balanceOf(A), dec(187, 18))
 	})
 
 	it("transfer(): reverts when amount exceeds sender's balance", async () => {
 		await mintToABC()
 
-		assert.equal(await vstaTokenTester.balanceOf(B), dec(100, 18))
+		assert.equal(await youTokenTester.balanceOf(B), dec(100, 18))
 
-		const txPromise = vstaTokenTester.transfer(A, dec(101, 18), { from: B })
+		const txPromise = youTokenTester.transfer(A, dec(101, 18), { from: B })
 		await assertRevert(txPromise)
 	})
 
 	it("transfer(): transfer to or from the zero-address reverts", async () => {
 		await mintToABC()
 
-		const txPromiseFromZero = vstaTokenTester.callInternalTransfer(
+		const txPromiseFromZero = youTokenTester.callInternalTransfer(
 			ZERO_ADDRESS,
 			A,
 			dec(100, 18),
 			{ from: B }
 		)
-		const txPromiseToZero = vstaTokenTester.callInternalTransfer(
+		const txPromiseToZero = youTokenTester.callInternalTransfer(
 			A,
 			ZERO_ADDRESS,
 			dec(100, 18),
@@ -267,69 +267,69 @@ contract("YOU Token", async accounts => {
 	})
 
 	it("mint(): issues correct amount of tokens to the given address", async () => {
-		const A_balanceBefore = await vstaTokenTester.balanceOf(A)
+		const A_balanceBefore = await youTokenTester.balanceOf(A)
 		assert.equal(A_balanceBefore, "0")
 
-		await vstaTokenTester.unprotectedMint(A, dec(100, 18))
+		await youTokenTester.unprotectedMint(A, dec(100, 18))
 
-		const A_BalanceAfter = await vstaTokenTester.balanceOf(A)
+		const A_BalanceAfter = await youTokenTester.balanceOf(A)
 		assert.equal(A_BalanceAfter, dec(100, 18))
 	})
 
 	it("mint(): reverts when beneficiary is address(0)", async () => {
-		const tx = vstaTokenTester.unprotectedMint(ZERO_ADDRESS, 100)
+		const tx = youTokenTester.unprotectedMint(ZERO_ADDRESS, 100)
 		await assertRevert(tx)
 	})
 
 	it("increaseAllowance(): increases an account's allowance by the correct amount", async () => {
-		const allowance_A_Before = await vstaTokenTester.allowance(B, A)
+		const allowance_A_Before = await youTokenTester.allowance(B, A)
 		assert.equal(allowance_A_Before, "0")
 
-		await vstaTokenTester.increaseAllowance(A, dec(100, 18), { from: B })
+		await youTokenTester.increaseAllowance(A, dec(100, 18), { from: B })
 
-		const allowance_A_After = await vstaTokenTester.allowance(B, A)
+		const allowance_A_After = await youTokenTester.allowance(B, A)
 		assert.equal(allowance_A_After, dec(100, 18))
 	})
 
 	it("decreaseAllowance(): decreases an account's allowance by the correct amount", async () => {
-		await vstaTokenTester.increaseAllowance(A, dec(100, 18), { from: B })
+		await youTokenTester.increaseAllowance(A, dec(100, 18), { from: B })
 
-		const A_allowance = await vstaTokenTester.allowance(B, A)
+		const A_allowance = await youTokenTester.allowance(B, A)
 		assert.equal(A_allowance, dec(100, 18))
 
-		await vstaTokenTester.decreaseAllowance(A, dec(100, 18), { from: B })
+		await youTokenTester.decreaseAllowance(A, dec(100, 18), { from: B })
 
-		const A_allowanceAfterDecrease = await vstaTokenTester.allowance(B, A)
+		const A_allowanceAfterDecrease = await youTokenTester.allowance(B, A)
 		assert.equal(A_allowanceAfterDecrease, "0")
 	})
 
 	it("sendToYOUStaking(): changes balances of YOUStaking and calling account by the correct amounts", async () => {
 		// mint some tokens to A
-		await vstaTokenTester.unprotectedMint(A, dec(150, 18))
+		await youTokenTester.unprotectedMint(A, dec(150, 18))
 
 		// Check caller and YOUStaking balance before
-		const A_BalanceBefore = await vstaTokenTester.balanceOf(A)
+		const A_BalanceBefore = await youTokenTester.balanceOf(A)
 		assert.equal(A_BalanceBefore, dec(150, 18))
-		const YOUStakingBalanceBefore = await vstaTokenTester.balanceOf(vstaStaking.address)
+		const YOUStakingBalanceBefore = await youTokenTester.balanceOf(youStaking.address)
 		assert.equal(YOUStakingBalanceBefore, "0")
 
-		await vstaTokenTester.unprotectedTransferFrom(A, vstaStaking.address, dec(37, 18))
+		await youTokenTester.unprotectedTransferFrom(A, youStaking.address, dec(37, 18))
 
 		// Check caller and YOUStaking balance before
-		const A_BalanceAfter = await vstaTokenTester.balanceOf(A)
+		const A_BalanceAfter = await youTokenTester.balanceOf(A)
 		assert.equal(A_BalanceAfter, dec(113, 18))
-		const YOUStakingBalanceAfter = await vstaTokenTester.balanceOf(vstaStaking.address)
+		const YOUStakingBalanceAfter = await youTokenTester.balanceOf(youStaking.address)
 		assert.equal(YOUStakingBalanceAfter, dec(37, 18))
 	})
 
 	// EIP2612 tests
 
 	it("Initializes PERMIT_TYPEHASH correctly", async () => {
-		assert.equal(await vstaTokenTester.PERMIT_TYPEHASH(), PERMIT_TYPEHASH)
+		assert.equal(await youTokenTester.PERMIT_TYPEHASH(), PERMIT_TYPEHASH)
 	})
 
 	it("Initial nonce for a given address is 0", async function () {
-		assert.equal(toBN(await vstaTokenTester.nonces(A)).toString(), "0")
+		assert.equal(toBN(await youTokenTester.nonces(A)).toString(), "0")
 	})
 
 	it("permit(): permits and emits an Approval event (replay protected)", async () => {
@@ -342,21 +342,18 @@ contract("YOU Token", async accounts => {
 
 		// Check that approval was successful
 		assert.equal(event.event, "Approval")
-		assert.equal(await vstaTokenTester.nonces(approve.owner), 1)
-		assert.equal(
-			await vstaTokenTester.allowance(approve.owner, approve.spender),
-			approve.value
-		)
+		assert.equal(await youTokenTester.nonces(approve.owner), 1)
+		assert.equal(await youTokenTester.allowance(approve.owner, approve.spender), approve.value)
 
 		// Check that we can not use re-use the same signature, since the user's nonce has been incremented (replay protection)
 		await assertRevert(
-			vstaTokenTester.permit(approve.owner, approve.spender, approve.value, deadline, v, r, s),
+			youTokenTester.permit(approve.owner, approve.spender, approve.value, deadline, v, r, s),
 			"YOU: invalid signature"
 		)
 
 		// Check that the zero address fails
 		await assertRevert(
-			vstaTokenTester.permit(
+			youTokenTester.permit(
 				"0x0000000000000000000000000000000000000000",
 				approve.spender,
 				approve.value,
@@ -381,7 +378,7 @@ contract("YOU Token", async accounts => {
 
 		const { v, r, s } = await buildPermitTx(deadline)
 
-		const tx = vstaTokenTester.permit(
+		const tx = youTokenTester.permit(
 			C,
 			approve.spender,
 			approve.value, // Carol is passed as spender param, rather than Bob
