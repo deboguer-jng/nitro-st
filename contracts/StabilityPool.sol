@@ -104,6 +104,13 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 
 	bool public isInitialized;
 
+	bool public isPreYOU;
+
+	uint256 public YOUExchangeRate;
+
+	event UPaidToDepositorPreYOU(uint256 U);
+	event IsPreYOUToggled(bool isPreYOU);
+
 	// --- Contract setters ---
 
 	function getNameBytes() external pure override returns (bytes32) {
@@ -121,7 +128,8 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		address _uTokenAddress,
 		address _sortedTrovesAddress,
 		address _communityIssuanceAddress,
-		address _vestaParamsAddress
+		address _vestaParamsAddress,
+		uint256 _YOUExchangeRate
 	) external override initializer {
 		require(!isInitialized, "Already initialized");
 		checkContract(_borrowerOperationsAddress);
@@ -132,6 +140,8 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		checkContract(_vestaParamsAddress);
 
 		isInitialized = true;
+		isPreYOU = true;
+		YOUExchangeRate = _YOUExchangeRate;
 		__Ownable_init();
 
 		if (_assetAddress != ETH_REF_ADDRESS) {
@@ -153,6 +163,12 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		emit UTokenAddressChanged(_uTokenAddress);
 		emit SortedTrovesAddressChanged(_sortedTrovesAddress);
 		emit CommunityIssuanceAddressChanged(_communityIssuanceAddress);
+	}
+
+	// Toggle isPreYOU. If isPreYOU is true, distribute U instead of YOU.
+	function togglePreYOU() external onlyOwner {
+		isPreYOU = !isPreYOU;
+		emit IsPreYOUToggled(isPreYOU);
 	}
 
 	// --- Getters for public variables. Required by IPool interface ---
@@ -763,8 +779,14 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 	) internal {
 		// Pay out depositor's YOU gain
 		uint256 depositorYOUGain = getDepositorYOUGain(_depositor);
-		_communityIssuance.sendYOU(_depositor, depositorYOUGain);
-		emit YOUPaidToDepositor(_depositor, depositorYOUGain);
+		if (isPreYOU) {
+			uToken.transfer(_depositor, depositorYOUGain * 1e18 / YOUExchangeRate);
+			emit UPaidToDepositorPreYOU(_depositor, depositorYOUGain*1e18/YOUExchangeRate);
+		}
+		else {
+			_communityIssuance.sendYOU(_depositor, depositorYOUGain);
+			emit YOUPaidToDepositor(_depositor, depositorYOUGain);
+		}
 	}
 
 	// --- 'require' functions ---
