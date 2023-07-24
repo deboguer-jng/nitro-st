@@ -29,8 +29,8 @@ contract("All Liquity functions with onlyOwner modifier", async accounts => {
 	before(async () => {
 		contracts = await deploymentHelper.deployLiquityCore()
 		contracts.borrowerOperations = await BorrowerOperationsTester.new()
-		contracts = await deploymentHelper.deployVSTToken(contracts)
-		const VSTAContracts = await deploymentHelper.deployVSTAContractsHardhat(accounts[0])
+		contracts = await deploymentHelper.deployUToken(contracts)
+		const YOUContracts = await deploymentHelper.deployYOUContractsHardhat(accounts[0])
 
 		vstToken = contracts.vstToken
 		sortedTroves = contracts.sortedTroves
@@ -42,9 +42,9 @@ contract("All Liquity functions with onlyOwner modifier", async accounts => {
 		borrowerOperations = contracts.borrowerOperations
 		adminContract = contracts.adminContract
 
-		vstaStaking = VSTAContracts.vstaStaking
-		communityIssuance = VSTAContracts.communityIssuance
-		vstaToken = VSTAContracts.vstaToken
+		vstaStaking = YOUContracts.vstaStaking
+		communityIssuance = YOUContracts.communityIssuance
+		vstaToken = YOUContracts.vstaToken
 	})
 
 	const testZeroAddress = async (
@@ -187,7 +187,7 @@ contract("All Liquity functions with onlyOwner modifier", async accounts => {
 		})
 	})
 
-	describe("VSTAStaking", async accounts => {
+	describe("YOUStaking", async accounts => {
 		it("setAddresses(): reverts when called by non-owner, with wrong addresses, or twice", async () => {
 			await testSetAddresses(vstaStaking, 6)
 		})

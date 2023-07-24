@@ -15,10 +15,10 @@ const timeValues = testHelpers.TimeValues
 const ZERO_ADDRESS = th.ZERO_ADDRESS
 const assertRevert = th.assertRevert
 
-/* NOTE: Some of the borrowing tests do not test for specific VST fee values. They only test that the
+/* NOTE: Some of the borrowing tests do not test for specific U fee values. They only test that the
  * fees are non-zero when they should occur, and that they decay over time.
  *
- * Specific VST fee values will depend on the final fee schedule used, and the final choice for
+ * Specific U fee values will depend on the final fee schedule used, and the final choice for
  *  the parameter MINUTE_DECAY_FACTOR in the TroveManager, which is still TBD based on economic
  * modelling.
  *
@@ -43,8 +43,8 @@ contract("BorrowerOperations", async accounts => {
 
 	let contracts
 
-	const getOpenTroveVSTAmount = async (totalDebt, asset) =>
-		th.getOpenTroveVSTAmount(contracts, totalDebt, asset)
+	const getOpenTroveUAmount = async (totalDebt, asset) =>
+		th.getOpenTroveUAmount(contracts, totalDebt, asset)
 	const getNetBorrowingAmount = async (debtWithFee, asset) =>
 		th.getNetBorrowingAmount(contracts, debtWithFee, asset)
 	const getActualDebtFromComposite = async compositeDebt =>
@@ -56,10 +56,10 @@ contract("BorrowerOperations", async accounts => {
 		th.getTroveEntireDebt(contracts, trove, asset)
 	const getTroveStake = async (trove, asset) => th.getTroveStake(contracts, trove, asset)
 
-	let VST_GAS_COMPENSATION
+	let U_GAS_COMPENSATION
 	let MIN_NET_DEBT
 	let BORROWING_FEE_FLOOR
-	let VST_GAS_COMPENSATION_ERC20
+	let U_GAS_COMPENSATION_ERC20
 	let MIN_NET_DEBT_ERC20
 	let BORROWING_FEE_FLOOR_ERC20
 
@@ -70,15 +70,15 @@ contract("BorrowerOperations", async accounts => {
 			contracts = await deploymentHelper.deployLiquityCore()
 			contracts.borrowerOperations = await BorrowerOperationsTester.new()
 			contracts.troveManager = await TroveManagerTester.new()
-			contracts = await deploymentHelper.deployVSTToken(contracts)
-			const VSTAContracts = await deploymentHelper.deployVSTAContractsHardhat(accounts[0])
+			contracts = await deploymentHelper.deployUToken(contracts)
+			const YOUContracts = await deploymentHelper.deployYOUContractsHardhat(accounts[0])
 
-			await deploymentHelper.connectCoreContracts(contracts, VSTAContracts)
-			await deploymentHelper.connectVSTAContractsToCore(VSTAContracts, contracts)
+			await deploymentHelper.connectCoreContracts(contracts, YOUContracts)
+			await deploymentHelper.connectYOUContractsToCore(YOUContracts, contracts)
 
 			if (withProxy) {
 				const users = [alice, bob, carol, dennis, whale, A, B, C, D, E]
-				await deploymentHelper.deployProxyScripts(contracts, VSTAContracts, owner, users)
+				await deploymentHelper.deployProxyScripts(contracts, YOUContracts, owner, users)
 			}
 
 			priceFeed = contracts.priceFeedTestnet
@@ -91,19 +91,19 @@ contract("BorrowerOperations", async accounts => {
 			hintHelpers = contracts.hintHelpers
 			vestaParams = contracts.vestaParameters
 
-			vstaStaking = VSTAContracts.vstaStaking
-			vstaToken = VSTAContracts.vstaToken
-			communityIssuance = VSTAContracts.communityIssuance
+			vstaStaking = YOUContracts.vstaStaking
+			vstaToken = YOUContracts.vstaToken
+			communityIssuance = YOUContracts.communityIssuance
 			erc20 = contracts.erc20
 
 			await vestaParams.sanitizeParameters(ZERO_ADDRESS)
 			await vestaParams.sanitizeParameters(erc20.address)
 
-			VST_GAS_COMPENSATION = await vestaParams.VST_GAS_COMPENSATION(ZERO_ADDRESS)
+			U_GAS_COMPENSATION = await vestaParams.U_GAS_COMPENSATION(ZERO_ADDRESS)
 			MIN_NET_DEBT = await vestaParams.MIN_NET_DEBT(ZERO_ADDRESS)
 			BORROWING_FEE_FLOOR = await vestaParams.BORROWING_FEE_FLOOR(ZERO_ADDRESS)
 
-			VST_GAS_COMPENSATION_ERC20 = await vestaParams.VST_GAS_COMPENSATION(erc20.address)
+			U_GAS_COMPENSATION_ERC20 = await vestaParams.U_GAS_COMPENSATION(erc20.address)
 			MIN_NET_DEBT_ERC20 = await vestaParams.MIN_NET_DEBT(erc20.address)
 			BORROWING_FEE_FLOOR_ERC20 = await vestaParams.BORROWING_FEE_FLOOR(erc20.address)
 
@@ -350,20 +350,20 @@ contract("BorrowerOperations", async accounts => {
 			)
 		})
 
-		it("addColl(), active Trove: applies pending rewards and updates user's L_ETH, L_VSTDebt snapshots", async () => {
+		it("addColl(), active Trove: applies pending rewards and updates user's L_ETH, L_UDebt snapshots", async () => {
 			// --- SETUP ---
 			const { collateral: aliceCollBefore, totalDebt: aliceDebtBefore } = await openTrove({
-				extraVSTAmount: toBN(dec(15000, 18)),
+				extraUAmount: toBN(dec(15000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			const { collateral: bobCollBefore, totalDebt: bobDebtBefore } = await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: carol },
 			})
@@ -371,26 +371,26 @@ contract("BorrowerOperations", async accounts => {
 			const { collateral: aliceCollBeforeAsset, totalDebt: aliceDebtBeforeAsset } =
 				await openTrove({
 					asset: erc20.address,
-					extraVSTAmount: toBN(dec(15000, 18)),
+					extraUAmount: toBN(dec(15000, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: alice },
 				})
 			const { collateral: bobCollBeforeAsset, totalDebt: bobDebtBeforeAsset } =
 				await openTrove({
 					asset: erc20.address,
-					extraVSTAmount: toBN(dec(10000, 18)),
+					extraUAmount: toBN(dec(10000, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: bob },
 				})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: carol },
 			})
 			// --- TEST ---
 
-			// price drops to 1ETH:100VST, reducing Carol's ICR below MCR
+			// price drops to 1ETH:100U, reducing Carol's ICR below MCR
 			await priceFeed.setPrice("100000000000000000000")
 
 			// Liquidate Carol's Trove,
@@ -401,10 +401,10 @@ contract("BorrowerOperations", async accounts => {
 			assert.isFalse(await sortedTroves.contains(erc20.address, carol))
 
 			const L_ETH = await troveManager.L_ASSETS(ZERO_ADDRESS)
-			const L_VSTDebt = await troveManager.L_VSTDebts(ZERO_ADDRESS)
+			const L_UDebt = await troveManager.L_UDebts(ZERO_ADDRESS)
 
 			const L_Asset = await troveManager.L_ASSETS(erc20.address)
-			const L_VSTDebt_Asset = await troveManager.L_VSTDebts(erc20.address)
+			const L_UDebt_Asset = await troveManager.L_UDebts(erc20.address)
 
 			// check Alice and Bob's reward snapshots are zero before they alter their Troves
 			const alice_rewardSnapshot_Before = await troveManager.rewardSnapshots(
@@ -412,49 +412,46 @@ contract("BorrowerOperations", async accounts => {
 				ZERO_ADDRESS
 			)
 			const alice_ETHrewardSnapshot_Before = alice_rewardSnapshot_Before[0]
-			const alice_VSTDebtRewardSnapshot_Before = alice_rewardSnapshot_Before[1]
+			const alice_UDebtRewardSnapshot_Before = alice_rewardSnapshot_Before[1]
 
 			const alice_rewardSnapshot_Before_Asset = await troveManager.rewardSnapshots(
 				alice,
 				erc20.address
 			)
 			const alice_ETHrewardSnapshot_Before_Asset = alice_rewardSnapshot_Before_Asset[0]
-			const alice_VSTDebtRewardSnapshot_Before_Asset = alice_rewardSnapshot_Before_Asset[1]
+			const alice_UDebtRewardSnapshot_Before_Asset = alice_rewardSnapshot_Before_Asset[1]
 
 			const bob_rewardSnapshot_Before = await troveManager.rewardSnapshots(bob, ZERO_ADDRESS)
 			const bob_ETHrewardSnapshot_Before = bob_rewardSnapshot_Before[0]
-			const bob_VSTDebtRewardSnapshot_Before = bob_rewardSnapshot_Before[1]
+			const bob_UDebtRewardSnapshot_Before = bob_rewardSnapshot_Before[1]
 
 			const bob_rewardSnapshot_Before_Asset = await troveManager.rewardSnapshots(
 				bob,
 				erc20.address
 			)
 			const bob_ETHrewardSnapshot_Before_Asset = bob_rewardSnapshot_Before_Asset[0]
-			const bob_VSTDebtRewardSnapshot_Before_Asset = bob_rewardSnapshot_Before_Asset[1]
+			const bob_UDebtRewardSnapshot_Before_Asset = bob_rewardSnapshot_Before_Asset[1]
 
 			assert.equal(alice_ETHrewardSnapshot_Before, 0)
-			assert.equal(alice_VSTDebtRewardSnapshot_Before, 0)
+			assert.equal(alice_UDebtRewardSnapshot_Before, 0)
 			assert.equal(bob_ETHrewardSnapshot_Before, 0)
-			assert.equal(bob_VSTDebtRewardSnapshot_Before, 0)
+			assert.equal(bob_UDebtRewardSnapshot_Before, 0)
 
 			assert.equal(alice_ETHrewardSnapshot_Before_Asset, 0)
-			assert.equal(alice_VSTDebtRewardSnapshot_Before_Asset, 0)
+			assert.equal(alice_UDebtRewardSnapshot_Before_Asset, 0)
 			assert.equal(bob_ETHrewardSnapshot_Before_Asset, 0)
-			assert.equal(bob_VSTDebtRewardSnapshot_Before_Asset, 0)
+			assert.equal(bob_UDebtRewardSnapshot_Before_Asset, 0)
 
 			const alicePendingETHReward = await troveManager.getPendingAssetReward(
 				ZERO_ADDRESS,
 				alice
 			)
 			const bobPendingETHReward = await troveManager.getPendingAssetReward(ZERO_ADDRESS, bob)
-			const alicePendingVSTDebtReward = await troveManager.getPendingVSTDebtReward(
+			const alicePendingUDebtReward = await troveManager.getPendingUDebtReward(
 				ZERO_ADDRESS,
 				alice
 			)
-			const bobPendingVSTDebtReward = await troveManager.getPendingVSTDebtReward(
-				ZERO_ADDRESS,
-				bob
-			)
+			const bobPendingUDebtReward = await troveManager.getPendingUDebtReward(ZERO_ADDRESS, bob)
 
 			const alicePendingETHRewardAsset = await troveManager.getPendingAssetReward(
 				erc20.address,
@@ -464,11 +461,11 @@ contract("BorrowerOperations", async accounts => {
 				erc20.address,
 				bob
 			)
-			const alicePendingVSTDebtRewardAsset = await troveManager.getPendingVSTDebtReward(
+			const alicePendingUDebtRewardAsset = await troveManager.getPendingUDebtReward(
 				erc20.address,
 				alice
 			)
-			const bobPendingVSTDebtRewardAsset = await troveManager.getPendingVSTDebtReward(
+			const bobPendingUDebtRewardAsset = await troveManager.getPendingUDebtReward(
 				erc20.address,
 				bob
 			)
@@ -476,12 +473,12 @@ contract("BorrowerOperations", async accounts => {
 			for (reward of [
 				alicePendingETHReward,
 				bobPendingETHReward,
-				alicePendingVSTDebtReward,
-				bobPendingVSTDebtReward,
+				alicePendingUDebtReward,
+				bobPendingUDebtReward,
 				alicePendingETHRewardAsset,
 				bobPendingETHRewardAsset,
-				alicePendingVSTDebtRewardAsset,
-				bobPendingVSTDebtRewardAsset,
+				alicePendingUDebtRewardAsset,
+				bobPendingUDebtRewardAsset,
 			]) {
 				assert.isTrue(reward.gt(toBN("0")))
 			}
@@ -518,9 +515,9 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(
 				aliceNewColl.eq(aliceCollBefore.add(alicePendingETHReward).add(aliceTopUp))
 			)
-			assert.isTrue(aliceNewDebt.eq(aliceDebtBefore.add(alicePendingVSTDebtReward)))
+			assert.isTrue(aliceNewDebt.eq(aliceDebtBefore.add(alicePendingUDebtReward)))
 			assert.isTrue(bobNewColl.eq(bobCollBefore.add(bobPendingETHReward).add(bobTopUp)))
-			assert.isTrue(bobNewDebt.eq(bobDebtBefore.add(bobPendingVSTDebtReward)))
+			assert.isTrue(bobNewDebt.eq(bobDebtBefore.add(bobPendingUDebtReward)))
 
 			assert.isTrue(
 				aliceNewColl_Asset.eq(
@@ -528,53 +525,53 @@ contract("BorrowerOperations", async accounts => {
 				)
 			)
 			assert.isTrue(
-				aliceNewDebt_Asset.eq(aliceDebtBeforeAsset.add(alicePendingVSTDebtRewardAsset))
+				aliceNewDebt_Asset.eq(aliceDebtBeforeAsset.add(alicePendingUDebtRewardAsset))
 			)
 			assert.isTrue(
 				bobNewColl_Asset.eq(bobCollBeforeAsset.add(bobPendingETHRewardAsset).add(bobTopUp))
 			)
-			assert.isTrue(bobNewDebt_Asset.eq(bobDebtBeforeAsset.add(bobPendingVSTDebtRewardAsset)))
+			assert.isTrue(bobNewDebt_Asset.eq(bobDebtBeforeAsset.add(bobPendingUDebtRewardAsset)))
 
 			/* Check that both Alice and Bob's snapshots of the rewards-per-unit-staked metrics should be updated
-		   to the latest values of L_ETH and L_VSTDebt */
+		   to the latest values of L_ETH and L_UDebt */
 			const alice_rewardSnapshot_After = await troveManager.rewardSnapshots(
 				alice,
 				ZERO_ADDRESS
 			)
 			const alice_ETHrewardSnapshot_After = alice_rewardSnapshot_After[0]
-			const alice_VSTDebtRewardSnapshot_After = alice_rewardSnapshot_After[1]
+			const alice_UDebtRewardSnapshot_After = alice_rewardSnapshot_After[1]
 
 			const alice_rewardSnapshot_After_Asset = await troveManager.rewardSnapshots(
 				alice,
 				erc20.address
 			)
 			const alice_ETHrewardSnapshot_After_Asset = alice_rewardSnapshot_After_Asset[0]
-			const alice_VSTDebtRewardSnapshot_After_Asset = alice_rewardSnapshot_After_Asset[1]
+			const alice_UDebtRewardSnapshot_After_Asset = alice_rewardSnapshot_After_Asset[1]
 
 			const bob_rewardSnapshot_After = await troveManager.rewardSnapshots(bob, ZERO_ADDRESS)
 			const bob_ETHrewardSnapshot_After = bob_rewardSnapshot_After[0]
-			const bob_VSTDebtRewardSnapshot_After = bob_rewardSnapshot_After[1]
+			const bob_UDebtRewardSnapshot_After = bob_rewardSnapshot_After[1]
 
 			const bob_rewardSnapshot_After_Asset = await troveManager.rewardSnapshots(
 				bob,
 				erc20.address
 			)
 			const bob_ETHrewardSnapshot_After_Asset = bob_rewardSnapshot_After_Asset[0]
-			const bob_VSTDebtRewardSnapshot_After_Asset = bob_rewardSnapshot_After_Asset[1]
+			const bob_UDebtRewardSnapshot_After_Asset = bob_rewardSnapshot_After_Asset[1]
 
 			assert.isAtMost(th.getDifference(alice_ETHrewardSnapshot_After, L_ETH), 100)
-			assert.isAtMost(th.getDifference(alice_VSTDebtRewardSnapshot_After, L_VSTDebt), 100)
+			assert.isAtMost(th.getDifference(alice_UDebtRewardSnapshot_After, L_UDebt), 100)
 			assert.isAtMost(th.getDifference(bob_ETHrewardSnapshot_After, L_ETH), 100)
-			assert.isAtMost(th.getDifference(bob_VSTDebtRewardSnapshot_After, L_VSTDebt), 100)
+			assert.isAtMost(th.getDifference(bob_UDebtRewardSnapshot_After, L_UDebt), 100)
 
 			assert.isAtMost(th.getDifference(alice_ETHrewardSnapshot_After_Asset, L_Asset), 100)
 			assert.isAtMost(
-				th.getDifference(alice_VSTDebtRewardSnapshot_After_Asset, L_VSTDebt_Asset),
+				th.getDifference(alice_UDebtRewardSnapshot_After_Asset, L_UDebt_Asset),
 				100
 			)
 			assert.isAtMost(th.getDifference(bob_ETHrewardSnapshot_After_Asset, L_Asset), 100)
 			assert.isAtMost(
-				th.getDifference(bob_VSTDebtRewardSnapshot_After_Asset, L_VSTDebt_Asset),
+				th.getDifference(bob_UDebtRewardSnapshot_After_Asset, L_UDebt_Asset),
 				100
 			)
 		})
@@ -749,25 +746,25 @@ contract("BorrowerOperations", async accounts => {
 		// reverts when calling address does not have active trove
 		it("withdrawColl(): reverts when calling address does not have active trove", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
@@ -1011,7 +1008,7 @@ contract("BorrowerOperations", async accounts => {
 
 			// --- TEST ---
 
-			// price drops to 1ETH:150VST, reducing TCR below 150%
+			// price drops to 1ETH:150U, reducing TCR below 150%
 			await priceFeed.setPrice("150000000000000000000")
 
 			//Alice tries to withdraw collateral during Recovery Mode
@@ -1290,7 +1287,7 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(balanceDiff_Asset.eq(toBN(dec(1, 8))))
 		})
 
-		it("withdrawColl(): applies pending rewards and updates user's L_ETH, L_VSTDebt snapshots", async () => {
+		it("withdrawColl(): applies pending rewards and updates user's L_ETH, L_UDebt snapshots", async () => {
 			// --- SETUP ---
 			// Alice adds 15 ether, Bob adds 5 ether, Carol adds 1 ether
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
@@ -1340,18 +1337,18 @@ contract("BorrowerOperations", async accounts => {
 
 			// --- TEST ---
 
-			// price drops to 1ETH:100VST, reducing Carol's ICR below MCR
+			// price drops to 1ETH:100U, reducing Carol's ICR below MCR
 			await priceFeed.setPrice("100000000000000000000")
 
-			// close Carol's Trove, liquidating her 1 ether and 180VST.
+			// close Carol's Trove, liquidating her 1 ether and 180U.
 			await troveManager.liquidate(ZERO_ADDRESS, carol, { from: owner })
 			await troveManager.liquidate(erc20.address, carol, { from: owner })
 
 			const L_ETH = await troveManager.L_ASSETS(ZERO_ADDRESS)
-			const L_VSTDebt = await troveManager.L_VSTDebts(ZERO_ADDRESS)
+			const L_UDebt = await troveManager.L_UDebts(ZERO_ADDRESS)
 
 			const L_ASSET = await troveManager.L_ASSETS(erc20.address)
-			const L_VSTDebt_Asset = await troveManager.L_VSTDebts(erc20.address)
+			const L_UDebt_Asset = await troveManager.L_UDebts(erc20.address)
 
 			// check Alice and Bob's reward snapshots are zero before they alter their Troves
 			const alice_rewardSnapshot_Before = await troveManager.rewardSnapshots(
@@ -1359,44 +1356,41 @@ contract("BorrowerOperations", async accounts => {
 				ZERO_ADDRESS
 			)
 			const alice_ETHrewardSnapshot_Before = alice_rewardSnapshot_Before[0]
-			const alice_VSTDebtRewardSnapshot_Before = alice_rewardSnapshot_Before[1]
+			const alice_UDebtRewardSnapshot_Before = alice_rewardSnapshot_Before[1]
 
 			const bob_rewardSnapshot_Before = await troveManager.rewardSnapshots(bob, ZERO_ADDRESS)
 			const bob_ETHrewardSnapshot_Before = bob_rewardSnapshot_Before[0]
-			const bob_VSTDebtRewardSnapshot_Before = bob_rewardSnapshot_Before[1]
+			const bob_UDebtRewardSnapshot_Before = bob_rewardSnapshot_Before[1]
 
 			const alice_rewardSnapshot_Before_Asset = await troveManager.rewardSnapshots(
 				alice,
 				erc20.address
 			)
 			const alice_ETHrewardSnapshot_Before_Asset = alice_rewardSnapshot_Before_Asset[0]
-			const alice_VSTDebtRewardSnapshot_Before_Asset = alice_rewardSnapshot_Before_Asset[1]
+			const alice_UDebtRewardSnapshot_Before_Asset = alice_rewardSnapshot_Before_Asset[1]
 
 			const bob_rewardSnapshot_Before_Asset = await troveManager.rewardSnapshots(
 				bob,
 				erc20.address
 			)
 			const bob_ETHrewardSnapshot_Before_Asset = bob_rewardSnapshot_Before_Asset[0]
-			const bob_VSTDebtRewardSnapshot_Before_Asset = bob_rewardSnapshot_Before_Asset[1]
+			const bob_UDebtRewardSnapshot_Before_Asset = bob_rewardSnapshot_Before_Asset[1]
 
 			assert.equal(alice_ETHrewardSnapshot_Before, 0)
-			assert.equal(alice_VSTDebtRewardSnapshot_Before, 0)
+			assert.equal(alice_UDebtRewardSnapshot_Before, 0)
 			assert.equal(bob_ETHrewardSnapshot_Before, 0)
-			assert.equal(bob_VSTDebtRewardSnapshot_Before, 0)
+			assert.equal(bob_UDebtRewardSnapshot_Before, 0)
 
 			assert.equal(alice_ETHrewardSnapshot_Before_Asset, 0)
-			assert.equal(alice_VSTDebtRewardSnapshot_Before_Asset, 0)
+			assert.equal(alice_UDebtRewardSnapshot_Before_Asset, 0)
 			assert.equal(bob_ETHrewardSnapshot_Before_Asset, 0)
-			assert.equal(bob_VSTDebtRewardSnapshot_Before_Asset, 0)
+			assert.equal(bob_UDebtRewardSnapshot_Before_Asset, 0)
 
 			// Check A and B have pending rewards
 			const pendingCollReward_A = await troveManager.getPendingAssetReward(ZERO_ADDRESS, alice)
-			const pendingDebtReward_A = await troveManager.getPendingVSTDebtReward(
-				ZERO_ADDRESS,
-				alice
-			)
+			const pendingDebtReward_A = await troveManager.getPendingUDebtReward(ZERO_ADDRESS, alice)
 			const pendingCollReward_B = await troveManager.getPendingAssetReward(ZERO_ADDRESS, bob)
-			const pendingDebtReward_B = await troveManager.getPendingVSTDebtReward(ZERO_ADDRESS, bob)
+			const pendingDebtReward_B = await troveManager.getPendingUDebtReward(ZERO_ADDRESS, bob)
 			for (reward of [
 				pendingCollReward_A,
 				pendingDebtReward_A,
@@ -1410,7 +1404,7 @@ contract("BorrowerOperations", async accounts => {
 				erc20.address,
 				alice
 			)
-			const pendingDebtReward_A_Asset = await troveManager.getPendingVSTDebtReward(
+			const pendingDebtReward_A_Asset = await troveManager.getPendingUDebtReward(
 				erc20.address,
 				alice
 			)
@@ -1418,7 +1412,7 @@ contract("BorrowerOperations", async accounts => {
 				erc20.address,
 				bob
 			)
-			const pendingDebtReward_B_Asset = await troveManager.getPendingVSTDebtReward(
+			const pendingDebtReward_B_Asset = await troveManager.getPendingUDebtReward(
 				erc20.address,
 				bob
 			)
@@ -1504,47 +1498,47 @@ contract("BorrowerOperations", async accounts => {
 			)
 
 			/* After top up, both Alice and Bob's snapshots of the rewards-per-unit-staked metrics should be updated
-		   to the latest values of L_ETH and L_VSTDebt */
+		   to the latest values of L_ETH and L_UDebt */
 			const alice_rewardSnapshot_After = await troveManager.rewardSnapshots(
 				alice,
 				ZERO_ADDRESS
 			)
 			const alice_ETHrewardSnapshot_After = alice_rewardSnapshot_After[0]
-			const alice_VSTDebtRewardSnapshot_After = alice_rewardSnapshot_After[1]
+			const alice_UDebtRewardSnapshot_After = alice_rewardSnapshot_After[1]
 
 			const bob_rewardSnapshot_After = await troveManager.rewardSnapshots(bob, ZERO_ADDRESS)
 			const bob_ETHrewardSnapshot_After = bob_rewardSnapshot_After[0]
-			const bob_VSTDebtRewardSnapshot_After = bob_rewardSnapshot_After[1]
+			const bob_UDebtRewardSnapshot_After = bob_rewardSnapshot_After[1]
 
 			const alice_rewardSnapshot_After_Asset = await troveManager.rewardSnapshots(
 				alice,
 				erc20.address
 			)
 			const alice_ETHrewardSnapshot_After_Asset = alice_rewardSnapshot_After_Asset[0]
-			const alice_VSTDebtRewardSnapshot_After_Asset = alice_rewardSnapshot_After_Asset[1]
+			const alice_UDebtRewardSnapshot_After_Asset = alice_rewardSnapshot_After_Asset[1]
 
 			const bob_rewardSnapshot_After_Asset = await troveManager.rewardSnapshots(
 				bob,
 				erc20.address
 			)
 			const bob_ETHrewardSnapshot_After_Asset = bob_rewardSnapshot_After_Asset[0]
-			const bob_VSTDebtRewardSnapshot_After_Asset = bob_rewardSnapshot_After_Asset[1]
+			const bob_UDebtRewardSnapshot_After_Asset = bob_rewardSnapshot_After_Asset[1]
 
 			assert.isAtMost(th.getDifference(alice_ETHrewardSnapshot_After_Asset, L_ASSET), 100)
 			assert.isAtMost(
-				th.getDifference(alice_VSTDebtRewardSnapshot_After_Asset, L_VSTDebt_Asset),
+				th.getDifference(alice_UDebtRewardSnapshot_After_Asset, L_UDebt_Asset),
 				100
 			)
 			assert.isAtMost(th.getDifference(bob_ETHrewardSnapshot_After_Asset, L_ASSET), 100)
 			assert.isAtMost(
-				th.getDifference(bob_VSTDebtRewardSnapshot_After_Asset, L_VSTDebt_Asset),
+				th.getDifference(bob_UDebtRewardSnapshot_After_Asset, L_UDebt_Asset),
 				100
 			)
 		})
 
-		// --- withdrawVST() ---
+		// --- withdrawU() ---
 
-		it("withdrawVST(): reverts when withdrawal would leave trove with ICR < MCR", async () => {
+		it("withdrawU(): reverts when withdrawal would leave trove with ICR < MCR", async () => {
 			// alice creates a Trove and adds first collateral
 			await openTrove({ ICR: toBN(dec(2, 18)), extraParams: { from: alice } })
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: bob } })
@@ -1574,29 +1568,24 @@ contract("BorrowerOperations", async accounts => {
 				(await troveManager.getCurrentICR(erc20.address, alice, price)).lt(toBN(dec(110, 16)))
 			)
 
-			const VSTwithdrawal = 1 // withdraw 1 wei VST
+			const Uwithdrawal = 1 // withdraw 1 wei U
 
 			await assertRevert(
-				borrowerOperations.withdrawVST(ZERO_ADDRESS, th._100pct, VSTwithdrawal, alice, alice, {
+				borrowerOperations.withdrawU(ZERO_ADDRESS, th._100pct, Uwithdrawal, alice, alice, {
 					from: alice,
 				}),
 				"BorrowerOps: An operation that would result in ICR < MCR is not permitted"
 			)
 
 			await assertRevert(
-				borrowerOperations.withdrawVST(
-					erc20.address,
-					th._100pct,
-					VSTwithdrawal,
-					alice,
-					alice,
-					{ from: alice }
-				),
+				borrowerOperations.withdrawU(erc20.address, th._100pct, Uwithdrawal, alice, alice, {
+					from: alice,
+				}),
 				"BorrowerOps: An operation that would result in ICR < MCR is not permitted"
 			)
 		})
 
-		it("withdrawVST(): decays a non-zero base rate", async () => {
+		it("withdrawU(): decays a non-zero base rate", async () => {
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
 			await openTrove({
 				asset: erc20.address,
@@ -1605,52 +1594,52 @@ contract("BorrowerOperations", async accounts => {
 			})
 
 			await openTrove({
-				extraVSTAmount: toBN(dec(20, 18)),
+				extraUAmount: toBN(dec(20, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(20, 18)),
+				extraUAmount: toBN(dec(20, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(20, 18)),
+				extraUAmount: toBN(dec(20, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(20, 18)),
+				extraUAmount: toBN(dec(20, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: E },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(20, 18)),
+				extraUAmount: toBN(dec(20, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(20, 18)),
+				extraUAmount: toBN(dec(20, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(20, 18)),
+				extraUAmount: toBN(dec(20, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(20, 18)),
+				extraUAmount: toBN(dec(20, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: E },
 			})
 
-			const A_VSTBal = await vstToken.balanceOf(A)
+			const A_UBal = await vstToken.balanceOf(A)
 			await troveManager.setBaseRate(ZERO_ADDRESS, dec(5, 16))
 			await troveManager.setBaseRate(erc20.address, dec(5, 16))
 
@@ -1664,11 +1653,11 @@ contract("BorrowerOperations", async accounts => {
 			// 2 hours pass
 			th.fastForwardTime(7200, web3.currentProvider)
 
-			// D withdraws VST
-			await borrowerOperations.withdrawVST(ZERO_ADDRESS, th._100pct, dec(1, 18), A, A, {
+			// D withdraws U
+			await borrowerOperations.withdrawU(ZERO_ADDRESS, th._100pct, dec(1, 18), A, A, {
 				from: D,
 			})
-			await borrowerOperations.withdrawVST(erc20.address, th._100pct, dec(1, 18), A, A, {
+			await borrowerOperations.withdrawU(erc20.address, th._100pct, dec(1, 18), A, A, {
 				from: D,
 			})
 
@@ -1682,11 +1671,11 @@ contract("BorrowerOperations", async accounts => {
 			// 1 hour passes
 			th.fastForwardTime(3600, web3.currentProvider)
 
-			// E withdraws VST
-			await borrowerOperations.withdrawVST(ZERO_ADDRESS, th._100pct, dec(1, 18), A, A, {
+			// E withdraws U
+			await borrowerOperations.withdrawU(ZERO_ADDRESS, th._100pct, dec(1, 18), A, A, {
 				from: E,
 			})
-			await borrowerOperations.withdrawVST(erc20.address, th._100pct, dec(1, 18), A, A, {
+			await borrowerOperations.withdrawU(erc20.address, th._100pct, dec(1, 18), A, A, {
 				from: E,
 			})
 
@@ -1697,217 +1686,212 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(baseRate_3_Asset.lt(baseRate_2_Asset))
 		})
 
-		it("withdrawVST(): reverts if max fee > 100%", async () => {
+		it("withdrawU(): reverts if max fee > 100%", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10, 18)),
+				extraUAmount: toBN(dec(10, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(20, 18)),
+				extraUAmount: toBN(dec(20, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10, 18)),
+				extraUAmount: toBN(dec(10, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(20, 18)),
+				extraUAmount: toBN(dec(20, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 
 			await assertRevert(
-				borrowerOperations.withdrawVST(ZERO_ADDRESS, dec(2, 18), dec(1, 18), A, A, {
+				borrowerOperations.withdrawU(ZERO_ADDRESS, dec(2, 18), dec(1, 18), A, A, {
 					from: A,
 				}),
 				"Max fee percentage must be between 0.5% and 100%"
 			)
 			await assertRevert(
-				borrowerOperations.withdrawVST(ZERO_ADDRESS, "1000000000000000001", dec(1, 18), A, A, {
-					from: A,
-				}),
-				"Max fee percentage must be between 0.5% and 100%"
-			)
-
-			await assertRevert(
-				borrowerOperations.withdrawVST(erc20.address, dec(2, 18), dec(1, 18), A, A, {
-					from: A,
-				}),
-				"Max fee percentage must be between 0.5% and 100%"
-			)
-			await assertRevert(
-				borrowerOperations.withdrawVST(
-					erc20.address,
-					"1000000000000000001",
-					dec(1, 18),
-					A,
-					A,
-					{ from: A }
-				),
-				"Max fee percentage must be between 0.5% and 100%"
-			)
-		})
-
-		it("withdrawVST(): reverts if max fee < 0.5% in Normal mode", async () => {
-			await openTrove({
-				extraVSTAmount: toBN(dec(10, 18)),
-				ICR: toBN(dec(2, 18)),
-				extraParams: { from: A },
-			})
-			await openTrove({
-				extraVSTAmount: toBN(dec(20, 18)),
-				ICR: toBN(dec(2, 18)),
-				extraParams: { from: B },
-			})
-			await openTrove({
-				extraVSTAmount: toBN(dec(40, 18)),
-				ICR: toBN(dec(2, 18)),
-				extraParams: { from: C },
-			})
-			await openTrove({
-				extraVSTAmount: toBN(dec(40, 18)),
-				ICR: toBN(dec(2, 18)),
-				extraParams: { from: D },
-			})
-
-			await openTrove({
-				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10, 18)),
-				ICR: toBN(dec(2, 18)),
-				extraParams: { from: A },
-			})
-			await openTrove({
-				asset: erc20.address,
-				extraVSTAmount: toBN(dec(20, 18)),
-				ICR: toBN(dec(2, 18)),
-				extraParams: { from: B },
-			})
-			await openTrove({
-				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40, 18)),
-				ICR: toBN(dec(2, 18)),
-				extraParams: { from: C },
-			})
-			await openTrove({
-				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40, 18)),
-				ICR: toBN(dec(2, 18)),
-				extraParams: { from: D },
-			})
-
-			await assertRevert(
-				borrowerOperations.withdrawVST(ZERO_ADDRESS, 0, dec(1, 18), A, A, { from: A }),
-				"Max fee percentage must be between 0.5% and 100%"
-			)
-			await assertRevert(
-				borrowerOperations.withdrawVST(ZERO_ADDRESS, 1, dec(1, 18), A, A, { from: A }),
-				"Max fee percentage must be between 0.5% and 100%"
-			)
-			await assertRevert(
-				borrowerOperations.withdrawVST(ZERO_ADDRESS, "4999999999999999", dec(1, 18), A, A, {
+				borrowerOperations.withdrawU(ZERO_ADDRESS, "1000000000000000001", dec(1, 18), A, A, {
 					from: A,
 				}),
 				"Max fee percentage must be between 0.5% and 100%"
 			)
 
 			await assertRevert(
-				borrowerOperations.withdrawVST(erc20.address, 0, dec(1, 18), A, A, { from: A }),
+				borrowerOperations.withdrawU(erc20.address, dec(2, 18), dec(1, 18), A, A, {
+					from: A,
+				}),
 				"Max fee percentage must be between 0.5% and 100%"
 			)
 			await assertRevert(
-				borrowerOperations.withdrawVST(erc20.address, 1, dec(1, 18), A, A, { from: A }),
-				"Max fee percentage must be between 0.5% and 100%"
-			)
-			await assertRevert(
-				borrowerOperations.withdrawVST(erc20.address, "4999999999999999", dec(1, 18), A, A, {
+				borrowerOperations.withdrawU(erc20.address, "1000000000000000001", dec(1, 18), A, A, {
 					from: A,
 				}),
 				"Max fee percentage must be between 0.5% and 100%"
 			)
 		})
 
-		it("withdrawVST(): reverts if fee exceeds max fee percentage", async () => {
+		it("withdrawU(): reverts if max fee < 0.5% in Normal mode", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(60, 18)),
+				extraUAmount: toBN(dec(10, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(60, 18)),
+				extraUAmount: toBN(dec(20, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(70, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(80, 18)),
+				extraUAmount: toBN(dec(40, 18)),
+				ICR: toBN(dec(2, 18)),
+				extraParams: { from: D },
+			})
+
+			await openTrove({
+				asset: erc20.address,
+				extraUAmount: toBN(dec(10, 18)),
+				ICR: toBN(dec(2, 18)),
+				extraParams: { from: A },
+			})
+			await openTrove({
+				asset: erc20.address,
+				extraUAmount: toBN(dec(20, 18)),
+				ICR: toBN(dec(2, 18)),
+				extraParams: { from: B },
+			})
+			await openTrove({
+				asset: erc20.address,
+				extraUAmount: toBN(dec(40, 18)),
+				ICR: toBN(dec(2, 18)),
+				extraParams: { from: C },
+			})
+			await openTrove({
+				asset: erc20.address,
+				extraUAmount: toBN(dec(40, 18)),
+				ICR: toBN(dec(2, 18)),
+				extraParams: { from: D },
+			})
+
+			await assertRevert(
+				borrowerOperations.withdrawU(ZERO_ADDRESS, 0, dec(1, 18), A, A, { from: A }),
+				"Max fee percentage must be between 0.5% and 100%"
+			)
+			await assertRevert(
+				borrowerOperations.withdrawU(ZERO_ADDRESS, 1, dec(1, 18), A, A, { from: A }),
+				"Max fee percentage must be between 0.5% and 100%"
+			)
+			await assertRevert(
+				borrowerOperations.withdrawU(ZERO_ADDRESS, "4999999999999999", dec(1, 18), A, A, {
+					from: A,
+				}),
+				"Max fee percentage must be between 0.5% and 100%"
+			)
+
+			await assertRevert(
+				borrowerOperations.withdrawU(erc20.address, 0, dec(1, 18), A, A, { from: A }),
+				"Max fee percentage must be between 0.5% and 100%"
+			)
+			await assertRevert(
+				borrowerOperations.withdrawU(erc20.address, 1, dec(1, 18), A, A, { from: A }),
+				"Max fee percentage must be between 0.5% and 100%"
+			)
+			await assertRevert(
+				borrowerOperations.withdrawU(erc20.address, "4999999999999999", dec(1, 18), A, A, {
+					from: A,
+				}),
+				"Max fee percentage must be between 0.5% and 100%"
+			)
+		})
+
+		it("withdrawU(): reverts if fee exceeds max fee percentage", async () => {
+			await openTrove({
+				extraUAmount: toBN(dec(60, 18)),
+				ICR: toBN(dec(2, 18)),
+				extraParams: { from: A },
+			})
+			await openTrove({
+				extraUAmount: toBN(dec(60, 18)),
+				ICR: toBN(dec(2, 18)),
+				extraParams: { from: B },
+			})
+			await openTrove({
+				extraUAmount: toBN(dec(70, 18)),
+				ICR: toBN(dec(2, 18)),
+				extraParams: { from: C },
+			})
+			await openTrove({
+				extraUAmount: toBN(dec(80, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(180, 18)),
+				extraUAmount: toBN(dec(180, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: E },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(60, 18)),
+				extraUAmount: toBN(dec(60, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(60, 18)),
+				extraUAmount: toBN(dec(60, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(70, 18)),
+				extraUAmount: toBN(dec(70, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(80, 18)),
+				extraUAmount: toBN(dec(80, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(180, 18)),
+				extraUAmount: toBN(dec(180, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: E },
 			})
@@ -1932,20 +1916,20 @@ contract("BorrowerOperations", async accounts => {
 			// 0.5%: 5e15
 			// actual: 0.5%, 5e15
 
-			// VSTFee:                  15000000558793542
+			// UFee:                  15000000558793542
 			// absolute _fee:            15000000558793542
 			// actual feePercentage:      5000000186264514
 			// user's _maxFeePercentage: 49999999999999999
 
 			const lessThan5pct = "49999999999999999"
 			await assertRevert(
-				borrowerOperations.withdrawVST(ZERO_ADDRESS, lessThan5pct, dec(3, 18), A, A, {
+				borrowerOperations.withdrawU(ZERO_ADDRESS, lessThan5pct, dec(3, 18), A, A, {
 					from: A,
 				}),
 				"Fee exceeded provided maximum"
 			)
 			await assertRevert(
-				borrowerOperations.withdrawVST(erc20.address, lessThan5pct, dec(3, 18), A, A, {
+				borrowerOperations.withdrawU(erc20.address, lessThan5pct, dec(3, 18), A, A, {
 					from: A,
 				}),
 				"Fee exceeded provided maximum"
@@ -1958,13 +1942,13 @@ contract("BorrowerOperations", async accounts => {
 			assert.equal(baseRate_Asset, dec(5, 16))
 			// Attempt with maxFee 1%
 			await assertRevert(
-				borrowerOperations.withdrawVST(ZERO_ADDRESS, dec(1, 16), dec(1, 18), A, A, {
+				borrowerOperations.withdrawU(ZERO_ADDRESS, dec(1, 16), dec(1, 18), A, A, {
 					from: B,
 				}),
 				"Fee exceeded provided maximum"
 			)
 			await assertRevert(
-				borrowerOperations.withdrawVST(erc20.address, dec(1, 16), dec(1, 18), A, A, {
+				borrowerOperations.withdrawU(erc20.address, dec(1, 16), dec(1, 18), A, A, {
 					from: B,
 				}),
 				"Fee exceeded provided maximum"
@@ -1976,13 +1960,13 @@ contract("BorrowerOperations", async accounts => {
 			assert.equal(baseRate_Asset, dec(5, 16))
 			// Attempt with maxFee 3.754%
 			await assertRevert(
-				borrowerOperations.withdrawVST(ZERO_ADDRESS, dec(3754, 13), dec(1, 18), A, A, {
+				borrowerOperations.withdrawU(ZERO_ADDRESS, dec(3754, 13), dec(1, 18), A, A, {
 					from: C,
 				}),
 				"Fee exceeded provided maximum"
 			)
 			await assertRevert(
-				borrowerOperations.withdrawVST(erc20.address, dec(3754, 13), dec(1, 18), A, A, {
+				borrowerOperations.withdrawU(erc20.address, dec(3754, 13), dec(1, 18), A, A, {
 					from: C,
 				}),
 				"Fee exceeded provided maximum"
@@ -1994,73 +1978,73 @@ contract("BorrowerOperations", async accounts => {
 			assert.equal(baseRate_Asset, dec(5, 16))
 			// Attempt with maxFee 0.5%%
 			await assertRevert(
-				borrowerOperations.withdrawVST(ZERO_ADDRESS, dec(5, 15), dec(1, 18), A, A, {
+				borrowerOperations.withdrawU(ZERO_ADDRESS, dec(5, 15), dec(1, 18), A, A, {
 					from: D,
 				}),
 				"Fee exceeded provided maximum"
 			)
 			await assertRevert(
-				borrowerOperations.withdrawVST(erc20.address, dec(5, 15), dec(1, 18), A, A, {
+				borrowerOperations.withdrawU(erc20.address, dec(5, 15), dec(1, 18), A, A, {
 					from: D,
 				}),
 				"Fee exceeded provided maximum"
 			)
 		})
 
-		it("withdrawVST(): succeeds when fee is less than max fee percentage", async () => {
+		it("withdrawU(): succeeds when fee is less than max fee percentage", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(60, 18)),
+				extraUAmount: toBN(dec(60, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(60, 18)),
+				extraUAmount: toBN(dec(60, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(70, 18)),
+				extraUAmount: toBN(dec(70, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(80, 18)),
+				extraUAmount: toBN(dec(80, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(180, 18)),
+				extraUAmount: toBN(dec(180, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: E },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(60, 18)),
+				extraUAmount: toBN(dec(60, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(60, 18)),
+				extraUAmount: toBN(dec(60, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(70, 18)),
+				extraUAmount: toBN(dec(70, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(80, 18)),
+				extraUAmount: toBN(dec(80, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(180, 18)),
+				extraUAmount: toBN(dec(180, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: E },
 			})
@@ -2081,7 +2065,7 @@ contract("BorrowerOperations", async accounts => {
 
 			// Attempt with maxFee > 5%
 			const moreThan5pct = "50000000000000001"
-			const tx1 = await borrowerOperations.withdrawVST(
+			const tx1 = await borrowerOperations.withdrawU(
 				ZERO_ADDRESS,
 				moreThan5pct,
 				dec(1, 18),
@@ -2089,7 +2073,7 @@ contract("BorrowerOperations", async accounts => {
 				A,
 				{ from: A }
 			)
-			const tx1_Asset = await borrowerOperations.withdrawVST(
+			const tx1_Asset = await borrowerOperations.withdrawU(
 				erc20.address,
 				moreThan5pct,
 				dec(1, 18),
@@ -2106,7 +2090,7 @@ contract("BorrowerOperations", async accounts => {
 			assert.equal(baseRate_Asset, dec(5, 16))
 
 			// Attempt with maxFee = 5%
-			const tx2 = await borrowerOperations.withdrawVST(
+			const tx2 = await borrowerOperations.withdrawU(
 				ZERO_ADDRESS,
 				dec(5, 16),
 				dec(1, 18),
@@ -2114,7 +2098,7 @@ contract("BorrowerOperations", async accounts => {
 				A,
 				{ from: B }
 			)
-			const tx2_Asset = await borrowerOperations.withdrawVST(
+			const tx2_Asset = await borrowerOperations.withdrawU(
 				erc20.address,
 				dec(5, 16),
 				dec(1, 18),
@@ -2131,7 +2115,7 @@ contract("BorrowerOperations", async accounts => {
 			assert.equal(baseRate_Asset, dec(5, 16))
 
 			// Attempt with maxFee 10%
-			const tx3 = await borrowerOperations.withdrawVST(
+			const tx3 = await borrowerOperations.withdrawU(
 				ZERO_ADDRESS,
 				dec(1, 17),
 				dec(1, 18),
@@ -2139,7 +2123,7 @@ contract("BorrowerOperations", async accounts => {
 				A,
 				{ from: C }
 			)
-			const tx3_Asset = await borrowerOperations.withdrawVST(
+			const tx3_Asset = await borrowerOperations.withdrawU(
 				erc20.address,
 				dec(1, 17),
 				dec(1, 18),
@@ -2156,7 +2140,7 @@ contract("BorrowerOperations", async accounts => {
 			assert.equal(baseRate_Asset, dec(5, 16))
 
 			// Attempt with maxFee 37.659%
-			const tx4 = await borrowerOperations.withdrawVST(
+			const tx4 = await borrowerOperations.withdrawU(
 				ZERO_ADDRESS,
 				dec(37659, 13),
 				dec(1, 18),
@@ -2164,7 +2148,7 @@ contract("BorrowerOperations", async accounts => {
 				A,
 				{ from: D }
 			)
-			const tx4_Asset = await borrowerOperations.withdrawVST(
+			const tx4_Asset = await borrowerOperations.withdrawU(
 				erc20.address,
 				dec(37659, 13),
 				dec(1, 18),
@@ -2176,7 +2160,7 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(tx4_Asset.receipt.status)
 
 			// Attempt with maxFee 100%
-			const tx5 = await borrowerOperations.withdrawVST(
+			const tx5 = await borrowerOperations.withdrawU(
 				ZERO_ADDRESS,
 				dec(1, 18),
 				dec(1, 18),
@@ -2184,7 +2168,7 @@ contract("BorrowerOperations", async accounts => {
 				A,
 				{ from: E }
 			)
-			const tx5_Asset = await borrowerOperations.withdrawVST(
+			const tx5_Asset = await borrowerOperations.withdrawU(
 				erc20.address,
 				dec(1, 18),
 				dec(1, 18),
@@ -2196,7 +2180,7 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(tx5_Asset.receipt.status)
 		})
 
-		it("withdrawVST(): doesn't change base rate if it is already zero", async () => {
+		it("withdrawU(): doesn't change base rate if it is already zero", async () => {
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
 			await openTrove({
 				asset: erc20.address,
@@ -2205,58 +2189,58 @@ contract("BorrowerOperations", async accounts => {
 			})
 
 			await openTrove({
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: E },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: E },
 			})
@@ -2270,11 +2254,11 @@ contract("BorrowerOperations", async accounts => {
 			// 2 hours pass
 			th.fastForwardTime(7200, web3.currentProvider)
 
-			// D withdraws VST
-			await borrowerOperations.withdrawVST(ZERO_ADDRESS, th._100pct, dec(37, 18), A, A, {
+			// D withdraws U
+			await borrowerOperations.withdrawU(ZERO_ADDRESS, th._100pct, dec(37, 18), A, A, {
 				from: D,
 			})
-			await borrowerOperations.withdrawVST(erc20.address, th._100pct, dec(37, 18), A, A, {
+			await borrowerOperations.withdrawU(erc20.address, th._100pct, dec(37, 18), A, A, {
 				from: D,
 			})
 
@@ -2288,10 +2272,10 @@ contract("BorrowerOperations", async accounts => {
 			th.fastForwardTime(3600, web3.currentProvider)
 
 			// E opens trove
-			await borrowerOperations.withdrawVST(ZERO_ADDRESS, th._100pct, dec(12, 18), A, A, {
+			await borrowerOperations.withdrawU(ZERO_ADDRESS, th._100pct, dec(12, 18), A, A, {
 				from: E,
 			})
-			await borrowerOperations.withdrawVST(erc20.address, th._100pct, dec(12, 18), A, A, {
+			await borrowerOperations.withdrawU(erc20.address, th._100pct, dec(12, 18), A, A, {
 				from: E,
 			})
 
@@ -2301,7 +2285,7 @@ contract("BorrowerOperations", async accounts => {
 			assert.equal(baseRate_3_Asset, "0")
 		})
 
-		it("withdrawVST(): lastFeeOpTime doesn't update if less time than decay interval has passed since the last fee operation", async () => {
+		it("withdrawU(): lastFeeOpTime doesn't update if less time than decay interval has passed since the last fee operation", async () => {
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
 			await openTrove({
 				asset: erc20.address,
@@ -2310,36 +2294,36 @@ contract("BorrowerOperations", async accounts => {
 			})
 
 			await openTrove({
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
@@ -2363,10 +2347,10 @@ contract("BorrowerOperations", async accounts => {
 			th.fastForwardTime(10, web3.currentProvider)
 
 			// Borrower C triggers a fee
-			await borrowerOperations.withdrawVST(ZERO_ADDRESS, th._100pct, dec(1, 18), C, C, {
+			await borrowerOperations.withdrawU(ZERO_ADDRESS, th._100pct, dec(1, 18), C, C, {
 				from: C,
 			})
-			await borrowerOperations.withdrawVST(erc20.address, th._100pct, dec(1, 18), C, C, {
+			await borrowerOperations.withdrawU(erc20.address, th._100pct, dec(1, 18), C, C, {
 				from: C,
 			})
 
@@ -2387,10 +2371,10 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(toBN(timeNow).sub(lastFeeOpTime_1_Asset).gte(60))
 
 			// Borrower C triggers a fee
-			await borrowerOperations.withdrawVST(ZERO_ADDRESS, th._100pct, dec(1, 18), C, C, {
+			await borrowerOperations.withdrawU(ZERO_ADDRESS, th._100pct, dec(1, 18), C, C, {
 				from: C,
 			})
-			await borrowerOperations.withdrawVST(erc20.address, th._100pct, dec(1, 18), C, C, {
+			await borrowerOperations.withdrawU(erc20.address, th._100pct, dec(1, 18), C, C, {
 				from: C,
 			})
 
@@ -2403,20 +2387,20 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(lastFeeOpTime_3_Asset.gt(lastFeeOpTime_1_Asset))
 		})
 
-		it("withdrawVST(): borrower can't grief the baseRate and stop it decaying by issuing debt at higher frequency than the decay granularity", async () => {
+		it("withdrawU(): borrower can't grief the baseRate and stop it decaying by issuing debt at higher frequency than the decay granularity", async () => {
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
 			await openTrove({
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
@@ -2428,19 +2412,19 @@ contract("BorrowerOperations", async accounts => {
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
@@ -2461,10 +2445,10 @@ contract("BorrowerOperations", async accounts => {
 			th.fastForwardTime(30, web3.currentProvider)
 
 			// Borrower C triggers a fee, before decay interval has passed
-			await borrowerOperations.withdrawVST(ZERO_ADDRESS, th._100pct, dec(1, 18), C, C, {
+			await borrowerOperations.withdrawU(ZERO_ADDRESS, th._100pct, dec(1, 18), C, C, {
 				from: C,
 			})
-			await borrowerOperations.withdrawVST(erc20.address, th._100pct, dec(1, 18), C, C, {
+			await borrowerOperations.withdrawU(erc20.address, th._100pct, dec(1, 18), C, C, {
 				from: C,
 			})
 
@@ -2472,10 +2456,10 @@ contract("BorrowerOperations", async accounts => {
 			th.fastForwardTime(30, web3.currentProvider)
 
 			// Borrower C triggers another fee
-			await borrowerOperations.withdrawVST(ZERO_ADDRESS, th._100pct, dec(1, 18), C, C, {
+			await borrowerOperations.withdrawU(ZERO_ADDRESS, th._100pct, dec(1, 18), C, C, {
 				from: C,
 			})
-			await borrowerOperations.withdrawVST(erc20.address, th._100pct, dec(1, 18), C, C, {
+			await borrowerOperations.withdrawU(erc20.address, th._100pct, dec(1, 18), C, C, {
 				from: C,
 			})
 
@@ -2486,34 +2470,34 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(baseRate_2_Asset.lt(baseRate_1_Asset))
 		})
 
-		it("withdrawVST(): borrowing at non-zero base rate sends VST fee to VSTA staking contract", async () => {
-			// time fast-forwards 1 year, and multisig stakes 1 VSTA
+		it("withdrawU(): borrowing at non-zero base rate sends U fee to YOU staking contract", async () => {
+			// time fast-forwards 1 year, and multisig stakes 1 YOU
 			await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
 			await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
 			await vstaStaking.stake(dec(1, 18), { from: multisig })
 
-			// Check VSTA VST balance before == 0
-			const VSTAStaking_VSTBalance_Before = await vstToken.balanceOf(vstaStaking.address)
-			assert.equal(VSTAStaking_VSTBalance_Before, "0")
+			// Check YOU U balance before == 0
+			const YOUStaking_UBalance_Before = await vstToken.balanceOf(vstaStaking.address)
+			assert.equal(YOUStaking_UBalance_Before, "0")
 
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
 			await openTrove({
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
@@ -2525,25 +2509,25 @@ contract("BorrowerOperations", async accounts => {
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
@@ -2564,45 +2548,45 @@ contract("BorrowerOperations", async accounts => {
 			// 2 hours pass
 			th.fastForwardTime(7200, web3.currentProvider)
 
-			// D withdraws VST
-			await borrowerOperations.withdrawVST(ZERO_ADDRESS, th._100pct, dec(37, 18), C, C, {
+			// D withdraws U
+			await borrowerOperations.withdrawU(ZERO_ADDRESS, th._100pct, dec(37, 18), C, C, {
 				from: D,
 			})
-			await borrowerOperations.withdrawVST(erc20.address, th._100pct, dec(37, 18), C, C, {
+			await borrowerOperations.withdrawU(erc20.address, th._100pct, dec(37, 18), C, C, {
 				from: D,
 			})
 
-			// Check VSTA VST balance after has increased
-			const VSTAStaking_VSTBalance_After = await vstToken.balanceOf(vstaStaking.address)
-			assert.isTrue(VSTAStaking_VSTBalance_After.gt(VSTAStaking_VSTBalance_Before))
+			// Check YOU U balance after has increased
+			const YOUStaking_UBalance_After = await vstToken.balanceOf(vstaStaking.address)
+			assert.isTrue(YOUStaking_UBalance_After.gt(YOUStaking_UBalance_Before))
 		})
 
 		if (!withProxy) {
 			// TODO: use rawLogs instead of logs
-			it("withdrawVST(): borrowing at non-zero base records the (drawn debt + fee) on the Trove struct", async () => {
-				// time fast-forwards 1 year, and multisig stakes 1 VSTA
+			it("withdrawU(): borrowing at non-zero base records the (drawn debt + fee) on the Trove struct", async () => {
+				// time fast-forwards 1 year, and multisig stakes 1 YOU
 				await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
 				await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
 				await vstaStaking.stake(dec(1, 18), { from: multisig })
 
 				await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
 				await openTrove({
-					extraVSTAmount: toBN(dec(30, 18)),
+					extraUAmount: toBN(dec(30, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: A },
 				})
 				await openTrove({
-					extraVSTAmount: toBN(dec(40, 18)),
+					extraUAmount: toBN(dec(40, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: B },
 				})
 				await openTrove({
-					extraVSTAmount: toBN(dec(50, 18)),
+					extraUAmount: toBN(dec(50, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: C },
 				})
 				await openTrove({
-					extraVSTAmount: toBN(dec(50, 18)),
+					extraUAmount: toBN(dec(50, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: D },
 				})
@@ -2614,25 +2598,25 @@ contract("BorrowerOperations", async accounts => {
 				})
 				await openTrove({
 					asset: erc20.address,
-					extraVSTAmount: toBN(dec(30, 18)),
+					extraUAmount: toBN(dec(30, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: A },
 				})
 				await openTrove({
 					asset: erc20.address,
-					extraVSTAmount: toBN(dec(40, 18)),
+					extraUAmount: toBN(dec(40, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: B },
 				})
 				await openTrove({
 					asset: erc20.address,
-					extraVSTAmount: toBN(dec(50, 18)),
+					extraUAmount: toBN(dec(50, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: C },
 				})
 				await openTrove({
 					asset: erc20.address,
-					extraVSTAmount: toBN(dec(50, 18)),
+					extraUAmount: toBN(dec(50, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: D },
 				})
@@ -2655,9 +2639,9 @@ contract("BorrowerOperations", async accounts => {
 				// 2 hours pass
 				th.fastForwardTime(7200, web3.currentProvider)
 
-				// D withdraws VST
+				// D withdraws U
 				const withdrawal_D = toBN(dec(37, 18))
-				const withdrawalTx = await borrowerOperations.withdrawVST(
+				const withdrawalTx = await borrowerOperations.withdrawU(
 					ZERO_ADDRESS,
 					th._100pct,
 					toBN(dec(37, 18)),
@@ -2665,7 +2649,7 @@ contract("BorrowerOperations", async accounts => {
 					D,
 					{ from: D }
 				)
-				const withdrawalTx_Asset = await borrowerOperations.withdrawVST(
+				const withdrawalTx_Asset = await borrowerOperations.withdrawU(
 					erc20.address,
 					th._100pct,
 					toBN(dec(37, 18)),
@@ -2674,8 +2658,8 @@ contract("BorrowerOperations", async accounts => {
 					{ from: D }
 				)
 
-				const emittedFee = toBN(th.getVSTFeeFromVSTBorrowingEvent(withdrawalTx))
-				const emittedFee_Asset = toBN(th.getVSTFeeFromVSTBorrowingEvent(withdrawalTx_Asset))
+				const emittedFee = toBN(th.getUFeeFromUBorrowingEvent(withdrawalTx))
+				const emittedFee_Asset = toBN(th.getUFeeFromUBorrowingEvent(withdrawalTx_Asset))
 				assert.isTrue(emittedFee.gt(toBN("0")))
 				assert.isTrue(emittedFee_Asset.gt(toBN("0")))
 
@@ -2698,34 +2682,34 @@ contract("BorrowerOperations", async accounts => {
 			})
 		}
 
-		it("withdrawVST(): Borrowing at non-zero base rate increases the VSTA staking contract VST fees-per-unit-staked", async () => {
-			// time fast-forwards 1 year, and multisig stakes 1 VSTA
+		it("withdrawU(): Borrowing at non-zero base rate increases the YOU staking contract U fees-per-unit-staked", async () => {
+			// time fast-forwards 1 year, and multisig stakes 1 YOU
 			await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
 			await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
 			await vstaStaking.stake(dec(1, 18), { from: multisig })
 
-			// Check VSTA contract VST fees-per-unit-staked is zero
-			const F_VST_Before = await vstaStaking.F_VST()
-			assert.equal(F_VST_Before, "0")
+			// Check YOU contract U fees-per-unit-staked is zero
+			const F_U_Before = await vstaStaking.F_U()
+			assert.equal(F_U_Before, "0")
 
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
 			await openTrove({
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
@@ -2737,25 +2721,25 @@ contract("BorrowerOperations", async accounts => {
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
@@ -2776,52 +2760,47 @@ contract("BorrowerOperations", async accounts => {
 			// 2 hours pass
 			th.fastForwardTime(7200, web3.currentProvider)
 
-			// D withdraws VST
-			await borrowerOperations.withdrawVST(ZERO_ADDRESS, th._100pct, toBN(dec(37, 18)), D, D, {
+			// D withdraws U
+			await borrowerOperations.withdrawU(ZERO_ADDRESS, th._100pct, toBN(dec(37, 18)), D, D, {
 				from: D,
 			})
-			await borrowerOperations.withdrawVST(
-				erc20.address,
-				th._100pct,
-				toBN(dec(37, 18)),
-				D,
-				D,
-				{ from: D }
-			)
+			await borrowerOperations.withdrawU(erc20.address, th._100pct, toBN(dec(37, 18)), D, D, {
+				from: D,
+			})
 
-			// Check VSTA contract VST fees-per-unit-staked has increased
-			const F_VST_After = await vstaStaking.F_VST()
-			assert.isTrue(F_VST_After.gt(F_VST_Before))
+			// Check YOU contract U fees-per-unit-staked has increased
+			const F_U_After = await vstaStaking.F_U()
+			assert.isTrue(F_U_After.gt(F_U_Before))
 		})
 
-		it("withdrawVST(): Borrowing at non-zero base rate sends requested amount to the user", async () => {
-			// time fast-forwards 1 year, and multisig stakes 1 VSTA
+		it("withdrawU(): Borrowing at non-zero base rate sends requested amount to the user", async () => {
+			// time fast-forwards 1 year, and multisig stakes 1 YOU
 			await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
 			await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
 			await vstaStaking.stake(dec(1, 18), { from: multisig })
 
-			// Check VSTA Staking contract balance before == 0
-			const VSTAStaking_VSTBalance_Before = await vstToken.balanceOf(vstaStaking.address)
-			assert.equal(VSTAStaking_VSTBalance_Before, "0")
+			// Check YOU Staking contract balance before == 0
+			const YOUStaking_UBalance_Before = await vstToken.balanceOf(vstaStaking.address)
+			assert.equal(YOUStaking_UBalance_Before, "0")
 
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
 			await openTrove({
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
@@ -2833,25 +2812,25 @@ contract("BorrowerOperations", async accounts => {
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
@@ -2871,54 +2850,54 @@ contract("BorrowerOperations", async accounts => {
 			// 2 hours pass
 			th.fastForwardTime(7200, web3.currentProvider)
 
-			let D_VSTBalanceBefore = await vstToken.balanceOf(D)
+			let D_UBalanceBefore = await vstToken.balanceOf(D)
 
-			// D withdraws VST
-			const D_VSTRequest = toBN(dec(37, 18))
-			await borrowerOperations.withdrawVST(ZERO_ADDRESS, th._100pct, D_VSTRequest, D, D, {
+			// D withdraws U
+			const D_URequest = toBN(dec(37, 18))
+			await borrowerOperations.withdrawU(ZERO_ADDRESS, th._100pct, D_URequest, D, D, {
 				from: D,
 			})
 
-			// Check VSTA staking VST balance has increased
-			let VSTAStaking_VSTBalance_After = await vstToken.balanceOf(vstaStaking.address)
-			assert.isTrue(VSTAStaking_VSTBalance_After.gt(VSTAStaking_VSTBalance_Before))
+			// Check YOU staking U balance has increased
+			let YOUStaking_UBalance_After = await vstToken.balanceOf(vstaStaking.address)
+			assert.isTrue(YOUStaking_UBalance_After.gt(YOUStaking_UBalance_Before))
 
-			// Check D's VST balance now equals their initial balance plus request VST
-			let D_VSTBalanceAfter = await vstToken.balanceOf(D)
-			assert.isTrue(D_VSTBalanceAfter.eq(D_VSTBalanceBefore.add(D_VSTRequest)))
+			// Check D's U balance now equals their initial balance plus request U
+			let D_UBalanceAfter = await vstToken.balanceOf(D)
+			assert.isTrue(D_UBalanceAfter.eq(D_UBalanceBefore.add(D_URequest)))
 
 			//Asset:
-			D_VSTBalanceBefore = await vstToken.balanceOf(D)
-			await borrowerOperations.withdrawVST(erc20.address, th._100pct, D_VSTRequest, D, D, {
+			D_UBalanceBefore = await vstToken.balanceOf(D)
+			await borrowerOperations.withdrawU(erc20.address, th._100pct, D_URequest, D, D, {
 				from: D,
 			})
 
-			VSTAStaking_VSTBalance_After = await vstToken.balanceOf(vstaStaking.address)
-			assert.isTrue(VSTAStaking_VSTBalance_After.gt(VSTAStaking_VSTBalance_Before))
+			YOUStaking_UBalance_After = await vstToken.balanceOf(vstaStaking.address)
+			assert.isTrue(YOUStaking_UBalance_After.gt(YOUStaking_UBalance_Before))
 
-			D_VSTBalanceAfter = await vstToken.balanceOf(D)
-			assert.isTrue(D_VSTBalanceAfter.eq(D_VSTBalanceBefore.add(D_VSTRequest)))
+			D_UBalanceAfter = await vstToken.balanceOf(D)
+			assert.isTrue(D_UBalanceAfter.eq(D_UBalanceBefore.add(D_URequest)))
 		})
 
-		it("withdrawVST(): Borrowing at zero base rate changes VST fees-per-unit-staked", async () => {
+		it("withdrawU(): Borrowing at zero base rate changes U fees-per-unit-staked", async () => {
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
 			await openTrove({
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
@@ -2927,46 +2906,46 @@ contract("BorrowerOperations", async accounts => {
 			const baseRate_1 = await troveManager.baseRate(ZERO_ADDRESS)
 			assert.equal(baseRate_1, "0")
 
-			// A artificially receives VSTA, then stakes it
+			// A artificially receives YOU, then stakes it
 			await vstaToken.unprotectedMint(A, dec(100, 18))
 			await vstaStaking.stake(dec(100, 18), { from: A })
 
 			// 2 hours pass
 			th.fastForwardTime(7200, web3.currentProvider)
 
-			// Check VSTA VST balance before == 0
-			const F_VST_Before = await vstaStaking.F_VST()
-			assert.equal(F_VST_Before, "0")
+			// Check YOU U balance before == 0
+			const F_U_Before = await vstaStaking.F_U()
+			assert.equal(F_U_Before, "0")
 
-			// D withdraws VST
-			await borrowerOperations.withdrawVST(ZERO_ADDRESS, th._100pct, dec(37, 18), D, D, {
+			// D withdraws U
+			await borrowerOperations.withdrawU(ZERO_ADDRESS, th._100pct, dec(37, 18), D, D, {
 				from: D,
 			})
 
-			// Check VSTA VST balance after > 0
-			const F_VST_After = await vstaStaking.F_VST()
-			assert.isTrue(F_VST_After.gt("0"))
+			// Check YOU U balance after > 0
+			const F_U_After = await vstaStaking.F_U()
+			assert.isTrue(F_U_After.gt("0"))
 		})
 
-		it("withdrawVST(): Borrowing at zero base rate sends debt request to user", async () => {
+		it("withdrawU(): Borrowing at zero base rate sends debt request to user", async () => {
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
 			await openTrove({
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
@@ -2978,25 +2957,25 @@ contract("BorrowerOperations", async accounts => {
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
@@ -3010,28 +2989,28 @@ contract("BorrowerOperations", async accounts => {
 			// 2 hours pass
 			th.fastForwardTime(7200, web3.currentProvider)
 
-			let D_VSTBalanceBefore = await vstToken.balanceOf(D)
+			let D_UBalanceBefore = await vstToken.balanceOf(D)
 
-			// D withdraws VST
-			const D_VSTRequest = toBN(dec(37, 18))
-			await borrowerOperations.withdrawVST(ZERO_ADDRESS, th._100pct, dec(37, 18), D, D, {
+			// D withdraws U
+			const D_URequest = toBN(dec(37, 18))
+			await borrowerOperations.withdrawU(ZERO_ADDRESS, th._100pct, dec(37, 18), D, D, {
 				from: D,
 			})
 
-			let D_VSTBalanceAfter = await vstToken.balanceOf(D)
-			// Check D's trove debt == D's VST balance + liquidation reserve
-			assert.isTrue(D_VSTBalanceAfter.eq(D_VSTBalanceBefore.add(D_VSTRequest)))
+			let D_UBalanceAfter = await vstToken.balanceOf(D)
+			// Check D's trove debt == D's U balance + liquidation reserve
+			assert.isTrue(D_UBalanceAfter.eq(D_UBalanceBefore.add(D_URequest)))
 
-			D_VSTBalanceBefore = await vstToken.balanceOf(D)
-			await borrowerOperations.withdrawVST(erc20.address, th._100pct, dec(37, 18), D, D, {
+			D_UBalanceBefore = await vstToken.balanceOf(D)
+			await borrowerOperations.withdrawU(erc20.address, th._100pct, dec(37, 18), D, D, {
 				from: D,
 			})
 
-			D_VSTBalanceAfter = await vstToken.balanceOf(D)
-			assert.isTrue(D_VSTBalanceAfter.eq(D_VSTBalanceBefore.add(D_VSTRequest)))
+			D_UBalanceAfter = await vstToken.balanceOf(D)
+			assert.isTrue(D_UBalanceAfter.eq(D_UBalanceBefore.add(D_URequest)))
 		})
 
-		it("withdrawVST(): reverts when calling address does not have active trove", async () => {
+		it("withdrawU(): reverts when calling address does not have active trove", async () => {
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: alice } })
 			await openTrove({ ICR: toBN(dec(2, 18)), extraParams: { from: bob } })
 
@@ -3046,8 +3025,8 @@ contract("BorrowerOperations", async accounts => {
 				extraParams: { from: bob },
 			})
 
-			// Bob successfully withdraws VST
-			const txBob = await borrowerOperations.withdrawVST(
+			// Bob successfully withdraws U
+			const txBob = await borrowerOperations.withdrawU(
 				ZERO_ADDRESS,
 				th._100pct,
 				dec(100, 18),
@@ -3055,7 +3034,7 @@ contract("BorrowerOperations", async accounts => {
 				bob,
 				{ from: bob }
 			)
-			const txBob_Asset = await borrowerOperations.withdrawVST(
+			const txBob_Asset = await borrowerOperations.withdrawU(
 				erc20.address,
 				th._100pct,
 				dec(100, 18),
@@ -3066,9 +3045,9 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(txBob.receipt.status)
 			assert.isTrue(txBob_Asset.receipt.status)
 
-			// Carol with no active trove attempts to withdraw VST
+			// Carol with no active trove attempts to withdraw U
 			try {
-				const txCarol = await borrowerOperations.withdrawVST(
+				const txCarol = await borrowerOperations.withdrawU(
 					ZERO_ADDRESS,
 					th._100pct,
 					dec(100, 18),
@@ -3081,7 +3060,7 @@ contract("BorrowerOperations", async accounts => {
 				assert.include(err.message, "revert")
 			}
 			try {
-				const txCarol_Asset = await borrowerOperations.withdrawVST(
+				const txCarol_Asset = await borrowerOperations.withdrawU(
 					erc20.address,
 					th._100pct,
 					dec(100, 18),
@@ -3095,7 +3074,7 @@ contract("BorrowerOperations", async accounts => {
 			}
 		})
 
-		it("withdrawVST(): reverts when requested withdrawal amount is zero VST", async () => {
+		it("withdrawU(): reverts when requested withdrawal amount is zero U", async () => {
 			await openTrove({ ICR: toBN(dec(2, 18)), extraParams: { from: alice } })
 			await openTrove({ ICR: toBN(dec(2, 18)), extraParams: { from: bob } })
 			await openTrove({
@@ -3109,16 +3088,11 @@ contract("BorrowerOperations", async accounts => {
 				extraParams: { from: bob },
 			})
 
-			// Bob successfully withdraws 1e-18 VST
-			const txBob = await borrowerOperations.withdrawVST(
-				ZERO_ADDRESS,
-				th._100pct,
-				1,
-				bob,
-				bob,
-				{ from: bob }
-			)
-			const txBob_Asset = await borrowerOperations.withdrawVST(
+			// Bob successfully withdraws 1e-18 U
+			const txBob = await borrowerOperations.withdrawU(ZERO_ADDRESS, th._100pct, 1, bob, bob, {
+				from: bob,
+			})
+			const txBob_Asset = await borrowerOperations.withdrawU(
 				erc20.address,
 				th._100pct,
 				1,
@@ -3129,9 +3103,9 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(txBob.receipt.status)
 			assert.isTrue(txBob_Asset.receipt.status)
 
-			// Alice attempts to withdraw 0 VST
+			// Alice attempts to withdraw 0 U
 			try {
-				const txAlice = await borrowerOperations.withdrawVST(
+				const txAlice = await borrowerOperations.withdrawU(
 					ZERO_ADDRESS,
 					th._100pct,
 					0,
@@ -3144,7 +3118,7 @@ contract("BorrowerOperations", async accounts => {
 				assert.include(err.message, "revert")
 			}
 			try {
-				const txAlice_Asset = await borrowerOperations.withdrawVST(
+				const txAlice_Asset = await borrowerOperations.withdrawU(
 					erc20.address,
 					th._100pct,
 					0,
@@ -3158,7 +3132,7 @@ contract("BorrowerOperations", async accounts => {
 			}
 		})
 
-		it("withdrawVST(): reverts when system is in Recovery Mode", async () => {
+		it("withdrawU(): reverts when system is in Recovery Mode", async () => {
 			await openTrove({ ICR: toBN(dec(2, 18)), extraParams: { from: alice } })
 			await openTrove({ ICR: toBN(dec(2, 18)), extraParams: { from: bob } })
 			await openTrove({ ICR: toBN(dec(2, 18)), extraParams: { from: carol } })
@@ -3183,7 +3157,7 @@ contract("BorrowerOperations", async accounts => {
 			assert.isFalse(await th.checkRecoveryMode(contracts, erc20.address))
 
 			// Withdrawal possible when recoveryMode == false
-			const txAlice = await borrowerOperations.withdrawVST(
+			const txAlice = await borrowerOperations.withdrawU(
 				ZERO_ADDRESS,
 				th._100pct,
 				dec(100, 18),
@@ -3191,7 +3165,7 @@ contract("BorrowerOperations", async accounts => {
 				alice,
 				{ from: alice }
 			)
-			const txAlice_Asset = await borrowerOperations.withdrawVST(
+			const txAlice_Asset = await borrowerOperations.withdrawU(
 				erc20.address,
 				th._100pct,
 				dec(100, 18),
@@ -3207,9 +3181,9 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(await th.checkRecoveryMode(contracts))
 			assert.isTrue(await th.checkRecoveryMode(contracts, erc20.address))
 
-			//Check VST withdrawal impossible when recoveryMode == true
+			//Check U withdrawal impossible when recoveryMode == true
 			try {
-				const txBob = await borrowerOperations.withdrawVST(
+				const txBob = await borrowerOperations.withdrawU(
 					ZERO_ADDRESS,
 					th._100pct,
 					1,
@@ -3223,7 +3197,7 @@ contract("BorrowerOperations", async accounts => {
 			}
 
 			try {
-				const txBob_Asset = await borrowerOperations.withdrawVST(
+				const txBob_Asset = await borrowerOperations.withdrawU(
 					erc20.address,
 					th._100pct,
 					1,
@@ -3237,7 +3211,7 @@ contract("BorrowerOperations", async accounts => {
 			}
 		})
 
-		it("withdrawVST(): reverts when withdrawal would bring the trove's ICR < MCR", async () => {
+		it("withdrawU(): reverts when withdrawal would bring the trove's ICR < MCR", async () => {
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: alice } })
 			await openTrove({ ICR: toBN(dec(11, 17)), extraParams: { from: bob } })
 
@@ -3252,9 +3226,9 @@ contract("BorrowerOperations", async accounts => {
 				extraParams: { from: bob },
 			})
 
-			// Bob tries to withdraw VST that would bring his ICR < MCR
+			// Bob tries to withdraw U that would bring his ICR < MCR
 			try {
-				const txBob = await borrowerOperations.withdrawVST(
+				const txBob = await borrowerOperations.withdrawU(
 					ZERO_ADDRESS,
 					th._100pct,
 					1,
@@ -3268,7 +3242,7 @@ contract("BorrowerOperations", async accounts => {
 			}
 
 			try {
-				const txBob_Asset = await borrowerOperations.withdrawVST(
+				const txBob_Asset = await borrowerOperations.withdrawU(
 					erc20.address,
 					th._100pct,
 					1,
@@ -3282,7 +3256,7 @@ contract("BorrowerOperations", async accounts => {
 			}
 		})
 
-		it("withdrawVST(): reverts when a withdrawal would cause the TCR of the system to fall below the CCR", async () => {
+		it("withdrawU(): reverts when a withdrawal would cause the TCR of the system to fall below the CCR", async () => {
 			await priceFeed.setPrice(dec(100, 18))
 			const price = await priceFeed.getPrice()
 
@@ -3306,10 +3280,10 @@ contract("BorrowerOperations", async accounts => {
 			assert.equal(TCR, "1500000000000000000")
 			assert.equal(TCR_Asset, "1500000000000000000")
 
-			// Bob attempts to withdraw 1 VST.
+			// Bob attempts to withdraw 1 U.
 			// System TCR would be: ((3+3) * 100 ) / (200+201) = 600/401 = 149.62%, i.e. below CCR of 150%.
 			try {
-				const txBob = await borrowerOperations.withdrawVST(
+				const txBob = await borrowerOperations.withdrawU(
 					ZERO_ADDRESS,
 					th._100pct,
 					dec(1, 18),
@@ -3323,7 +3297,7 @@ contract("BorrowerOperations", async accounts => {
 			}
 
 			try {
-				const txBob_Asset = await borrowerOperations.withdrawVST(
+				const txBob_Asset = await borrowerOperations.withdrawU(
 					erc20.address,
 					th._100pct,
 					dec(1, 18),
@@ -3337,7 +3311,7 @@ contract("BorrowerOperations", async accounts => {
 			}
 		})
 
-		it("withdrawVST(): reverts if system is in Recovery Mode", async () => {
+		it("withdrawU(): reverts if system is in Recovery Mode", async () => {
 			// --- SETUP ---
 			await openTrove({ ICR: toBN(dec(15, 17)), extraParams: { from: alice } })
 			await openTrove({ ICR: toBN(dec(15, 17)), extraParams: { from: bob } })
@@ -3355,13 +3329,13 @@ contract("BorrowerOperations", async accounts => {
 
 			// --- TEST ---
 
-			// price drops to 1ETH:150VST, reducing TCR below 150%
+			// price drops to 1ETH:150U, reducing TCR below 150%
 			await priceFeed.setPrice("150000000000000000000")
 			assert.isTrue((await th.getTCR(contracts)).lt(toBN(dec(15, 17))))
 			assert.isTrue((await th.getTCR(contracts, erc20.address)).lt(toBN(dec(15, 17))))
 
 			try {
-				const txData = await borrowerOperations.withdrawVST(
+				const txData = await borrowerOperations.withdrawU(
 					ZERO_ADDRESS,
 					th._100pct,
 					"200",
@@ -3375,7 +3349,7 @@ contract("BorrowerOperations", async accounts => {
 			}
 
 			try {
-				const txData = await borrowerOperations.withdrawVST(
+				const txData = await borrowerOperations.withdrawU(
 					erc20.address,
 					th._100pct,
 					"200",
@@ -3389,7 +3363,7 @@ contract("BorrowerOperations", async accounts => {
 			}
 		})
 
-		it("withdrawVST(): increases the Trove's VST debt by the correct amount", async () => {
+		it("withdrawU(): increases the Trove's U debt by the correct amount", async () => {
 			await openTrove({ ICR: toBN(dec(2, 18)), extraParams: { from: alice } })
 			await openTrove({
 				asset: erc20.address,
@@ -3403,7 +3377,7 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(aliceDebtBefore.gt(toBN(0)))
 			assert.isTrue(aliceDebtBefore_Asset.gt(toBN(0)))
 
-			await borrowerOperations.withdrawVST(
+			await borrowerOperations.withdrawU(
 				ZERO_ADDRESS,
 				th._100pct,
 				await getNetBorrowingAmount(100, ZERO_ADDRESS),
@@ -3411,7 +3385,7 @@ contract("BorrowerOperations", async accounts => {
 				alice,
 				{ from: alice }
 			)
-			await borrowerOperations.withdrawVST(
+			await borrowerOperations.withdrawU(
 				erc20.address,
 				th._100pct,
 				await getNetBorrowingAmount(100, ZERO_ADDRESS),
@@ -3427,7 +3401,7 @@ contract("BorrowerOperations", async accounts => {
 			th.assertIsApproximatelyEqual(aliceDebtAfter_Asset, aliceDebtBefore.add(toBN(100)))
 		})
 
-		it("withdrawVST(): increases VST debt in ActivePool by correct amount", async () => {
+		it("withdrawU(): increases U debt in ActivePool by correct amount", async () => {
 			await openTrove({
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice, value: toBN(dec(100, "ether")) },
@@ -3445,12 +3419,12 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(aliceDebtBefore_Asset.gt(toBN(0)))
 
 			// check before
-			const activePool_VST_Before = await activePool.getVSTDebt(ZERO_ADDRESS)
-			const activePool_VST_Before_Asset = await activePool.getVSTDebt(erc20.address)
-			assert.isTrue(activePool_VST_Before.eq(aliceDebtBefore))
-			assert.isTrue(activePool_VST_Before_Asset.eq(aliceDebtBefore_Asset))
+			const activePool_U_Before = await activePool.getUDebt(ZERO_ADDRESS)
+			const activePool_U_Before_Asset = await activePool.getUDebt(erc20.address)
+			assert.isTrue(activePool_U_Before.eq(aliceDebtBefore))
+			assert.isTrue(activePool_U_Before_Asset.eq(aliceDebtBefore_Asset))
 
-			await borrowerOperations.withdrawVST(
+			await borrowerOperations.withdrawU(
 				ZERO_ADDRESS,
 				th._100pct,
 				await getNetBorrowingAmount(dec(10000, 18), ZERO_ADDRESS),
@@ -3458,7 +3432,7 @@ contract("BorrowerOperations", async accounts => {
 				alice,
 				{ from: alice }
 			)
-			await borrowerOperations.withdrawVST(
+			await borrowerOperations.withdrawU(
 				erc20.address,
 				th._100pct,
 				await getNetBorrowingAmount(dec(10000, 18), erc20.address),
@@ -3468,19 +3442,19 @@ contract("BorrowerOperations", async accounts => {
 			)
 
 			// check after
-			const activePool_VST_After = await activePool.getVSTDebt(ZERO_ADDRESS)
-			const activePool_VST_After_Asset = await activePool.getVSTDebt(erc20.address)
+			const activePool_U_After = await activePool.getUDebt(ZERO_ADDRESS)
+			const activePool_U_After_Asset = await activePool.getUDebt(erc20.address)
 			th.assertIsApproximatelyEqual(
-				activePool_VST_After,
-				activePool_VST_Before.add(toBN(dec(10000, 18)))
+				activePool_U_After,
+				activePool_U_Before.add(toBN(dec(10000, 18)))
 			)
 			th.assertIsApproximatelyEqual(
-				activePool_VST_After_Asset,
-				activePool_VST_Before_Asset.add(toBN(dec(10000, 18)))
+				activePool_U_After_Asset,
+				activePool_U_Before_Asset.add(toBN(dec(10000, 18)))
 			)
 		})
 
-		it("withdrawVST(): increases user VSTToken balance by correct amount", async () => {
+		it("withdrawU(): increases user UToken balance by correct amount", async () => {
 			await openTrove({ extraParams: { value: toBN(dec(100, "ether")), from: alice } })
 			await openTrove({
 				asset: erc20.address,
@@ -3489,10 +3463,10 @@ contract("BorrowerOperations", async accounts => {
 			})
 
 			// check before
-			let alice_VSTTokenBalance_Before = await vstToken.balanceOf(alice)
-			assert.isTrue(alice_VSTTokenBalance_Before.gt(toBN("0")))
+			let alice_UTokenBalance_Before = await vstToken.balanceOf(alice)
+			assert.isTrue(alice_UTokenBalance_Before.gt(toBN("0")))
 
-			await borrowerOperations.withdrawVST(
+			await borrowerOperations.withdrawU(
 				ZERO_ADDRESS,
 				th._100pct,
 				dec(10000, 18),
@@ -3501,13 +3475,13 @@ contract("BorrowerOperations", async accounts => {
 				{ from: alice }
 			)
 
-			let alice_VSTTokenBalance_After = await vstToken.balanceOf(alice)
+			let alice_UTokenBalance_After = await vstToken.balanceOf(alice)
 			assert.isTrue(
-				alice_VSTTokenBalance_After.eq(alice_VSTTokenBalance_Before.add(toBN(dec(10000, 18))))
+				alice_UTokenBalance_After.eq(alice_UTokenBalance_Before.add(toBN(dec(10000, 18))))
 			)
-			alice_VSTTokenBalance_Before = await vstToken.balanceOf(alice)
+			alice_UTokenBalance_Before = await vstToken.balanceOf(alice)
 
-			await borrowerOperations.withdrawVST(
+			await borrowerOperations.withdrawU(
 				erc20.address,
 				th._100pct,
 				dec(10000, 18),
@@ -3516,14 +3490,14 @@ contract("BorrowerOperations", async accounts => {
 				{ from: alice }
 			)
 
-			alice_VSTTokenBalance_After = await vstToken.balanceOf(alice)
+			alice_UTokenBalance_After = await vstToken.balanceOf(alice)
 			assert.isTrue(
-				alice_VSTTokenBalance_After.eq(alice_VSTTokenBalance_Before.add(toBN(dec(10000, 18))))
+				alice_UTokenBalance_After.eq(alice_UTokenBalance_Before.add(toBN(dec(10000, 18))))
 			)
 		})
 
-		// --- repayVST() ---
-		it("repayVST(): reverts when repayment would leave trove with ICR < MCR", async () => {
+		// --- repayU() ---
+		it("repayU(): reverts when repayment would leave trove with ICR < MCR", async () => {
 			// alice creates a Trove and adds first collateral
 			await openTrove({ ICR: toBN(dec(2, 18)), extraParams: { from: alice } })
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: bob } })
@@ -3553,22 +3527,22 @@ contract("BorrowerOperations", async accounts => {
 				(await troveManager.getCurrentICR(erc20.address, alice, price)).lt(toBN(dec(110, 16)))
 			)
 
-			const VSTRepayment = 1 // 1 wei repayment
+			const URepayment = 1 // 1 wei repayment
 
 			await assertRevert(
-				borrowerOperations.repayVST(ZERO_ADDRESS, VSTRepayment, alice, alice, { from: alice }),
+				borrowerOperations.repayU(ZERO_ADDRESS, URepayment, alice, alice, { from: alice }),
 				"BorrowerOps: An operation that would result in ICR < MCR is not permitted"
 			)
 			await assertRevert(
-				borrowerOperations.repayVST(erc20.address, VSTRepayment, alice, alice, {
+				borrowerOperations.repayU(erc20.address, URepayment, alice, alice, {
 					from: alice,
 				}),
 				"BorrowerOps: An operation that would result in ICR < MCR is not permitted"
 			)
 		})
 
-		it("repayVST(): Succeeds when it would leave trove with net debt >= minimum net debt", async () => {
-			// Make the VST request 2 wei above min net debt to correct for floor division, and make net debt = min net debt + 1 wei
+		it("repayU(): Succeeds when it would leave trove with net debt >= minimum net debt", async () => {
+			// Make the U request 2 wei above min net debt to correct for floor division, and make net debt = min net debt + 1 wei
 			await borrowerOperations.openTrove(
 				ZERO_ADDRESS,
 				0,
@@ -3589,8 +3563,8 @@ contract("BorrowerOperations", async accounts => {
 				{ from: A }
 			)
 
-			const repayTxA = await borrowerOperations.repayVST(ZERO_ADDRESS, 1, A, A, { from: A })
-			const repayTxA_Asset = await borrowerOperations.repayVST(erc20.address, 1, A, A, {
+			const repayTxA = await borrowerOperations.repayU(ZERO_ADDRESS, 1, A, A, { from: A })
+			const repayTxA_Asset = await borrowerOperations.repayU(erc20.address, 1, A, A, {
 				from: A,
 			})
 			assert.isTrue(repayTxA.receipt.status)
@@ -3610,10 +3584,10 @@ contract("BorrowerOperations", async accounts => {
 				{ from: B }
 			)
 
-			const repayTxB = await borrowerOperations.repayVST(ZERO_ADDRESS, dec(19, 25), B, B, {
+			const repayTxB = await borrowerOperations.repayU(ZERO_ADDRESS, dec(19, 25), B, B, {
 				from: B,
 			})
-			const repayTxB_Asset = await borrowerOperations.repayVST(
+			const repayTxB_Asset = await borrowerOperations.repayU(
 				erc20.address,
 				dec(19, 25),
 				B,
@@ -3624,8 +3598,8 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(repayTxB_Asset.receipt.status)
 		})
 
-		it("repayVST(): reverts when it would leave trove with net debt < minimum net debt", async () => {
-			// Make the VST request 2 wei above min net debt to correct for floor division, and make net debt = min net debt + 1 wei
+		it("repayU(): reverts when it would leave trove with net debt < minimum net debt", async () => {
+			// Make the U request 2 wei above min net debt to correct for floor division, and make net debt = min net debt + 1 wei
 			await borrowerOperations.openTrove(
 				ZERO_ADDRESS,
 				0,
@@ -3645,8 +3619,8 @@ contract("BorrowerOperations", async accounts => {
 				{ from: A }
 			)
 
-			const repayTxAPromise = borrowerOperations.repayVST(ZERO_ADDRESS, 2, A, A, { from: A })
-			const repayTxAPromise_Asset = borrowerOperations.repayVST(erc20.address, 2, A, A, {
+			const repayTxAPromise = borrowerOperations.repayU(ZERO_ADDRESS, 2, A, A, { from: A })
+			const repayTxAPromise_Asset = borrowerOperations.repayU(erc20.address, 2, A, A, {
 				from: A,
 			})
 			await assertRevert(
@@ -3659,35 +3633,35 @@ contract("BorrowerOperations", async accounts => {
 			)
 		})
 
-		it("repayVST(): reverts when calling address does not have active trove", async () => {
+		it("repayU(): reverts when calling address does not have active trove", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
-			// Bob successfully repays some VST
-			const txBob = await borrowerOperations.repayVST(ZERO_ADDRESS, dec(10, 18), bob, bob, {
+			// Bob successfully repays some U
+			const txBob = await borrowerOperations.repayU(ZERO_ADDRESS, dec(10, 18), bob, bob, {
 				from: bob,
 			})
-			const txBob_Asset = await borrowerOperations.repayVST(
+			const txBob_Asset = await borrowerOperations.repayU(
 				erc20.address,
 				dec(10, 18),
 				bob,
@@ -3697,9 +3671,9 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(txBob.receipt.status)
 			assert.isTrue(txBob_Asset.receipt.status)
 
-			// Carol with no active trove attempts to withdrawVST
+			// Carol with no active trove attempts to withdrawU
 			try {
-				const txCarol = await borrowerOperations.repayVST(
+				const txCarol = await borrowerOperations.repayU(
 					ZERO_ADDRESS,
 					dec(10, 18),
 					carol,
@@ -3712,7 +3686,7 @@ contract("BorrowerOperations", async accounts => {
 			}
 
 			try {
-				const txCarol_Asset = await borrowerOperations.repayVST(
+				const txCarol_Asset = await borrowerOperations.repayU(
 					erc20.address,
 					dec(10, 18),
 					carol,
@@ -3725,38 +3699,38 @@ contract("BorrowerOperations", async accounts => {
 			}
 		})
 
-		it("repayVST(): reverts when attempted repayment is > the debt of the trove", async () => {
+		it("repayU(): reverts when attempted repayment is > the debt of the trove", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
 			const aliceDebt = await getTroveEntireDebt(alice)
 			const aliceDebt_Asset = await getTroveEntireDebt(alice, erc20.address)
 
-			// Bob successfully repays some VST
-			const txBob = await borrowerOperations.repayVST(ZERO_ADDRESS, dec(10, 18), bob, bob, {
+			// Bob successfully repays some U
+			const txBob = await borrowerOperations.repayU(ZERO_ADDRESS, dec(10, 18), bob, bob, {
 				from: bob,
 			})
-			const txBob_Asset = await borrowerOperations.repayVST(
+			const txBob_Asset = await borrowerOperations.repayU(
 				erc20.address,
 				dec(10, 18),
 				bob,
@@ -3768,7 +3742,7 @@ contract("BorrowerOperations", async accounts => {
 
 			// Alice attempts to repay more than her debt
 			try {
-				const txAlice = await borrowerOperations.repayVST(
+				const txAlice = await borrowerOperations.repayU(
 					ZERO_ADDRESS,
 					aliceDebt.add(toBN(dec(1, 18))),
 					alice,
@@ -3781,7 +3755,7 @@ contract("BorrowerOperations", async accounts => {
 			}
 
 			try {
-				const txAlice_Asset = await borrowerOperations.repayVST(
+				const txAlice_Asset = await borrowerOperations.repayU(
 					erc20.address,
 					aliceDebt_Asset.add(toBN(dec(1, 18))),
 					alice,
@@ -3794,28 +3768,28 @@ contract("BorrowerOperations", async accounts => {
 			}
 		})
 
-		//withdrawVST: reduces VST debt in Trove
-		it("repayVST(): reduces the Trove's VST debt by the correct amount", async () => {
+		//withdrawU: reduces U debt in Trove
+		it("repayU(): reduces the Trove's U debt by the correct amount", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
@@ -3824,14 +3798,14 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(aliceDebtBefore.gt(toBN("0")))
 			assert.isTrue(aliceDebtBefore_Asset.gt(toBN("0")))
 
-			await borrowerOperations.repayVST(
+			await borrowerOperations.repayU(
 				ZERO_ADDRESS,
 				aliceDebtBefore.div(toBN(10)),
 				alice,
 				alice,
 				{ from: alice }
 			) // Repays 1/10 her debt
-			await borrowerOperations.repayVST(
+			await borrowerOperations.repayU(
 				erc20.address,
 				aliceDebtBefore_Asset.div(toBN(10)),
 				alice,
@@ -3851,27 +3825,27 @@ contract("BorrowerOperations", async accounts => {
 			) // check 9/10 debt remaining
 		})
 
-		it("repayVST(): decreases VST debt in ActivePool by correct amount", async () => {
+		it("repayU(): decreases U debt in ActivePool by correct amount", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
@@ -3881,19 +3855,19 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(aliceDebtBefore_Asset.gt(toBN("0")))
 
 			// Check before
-			const activePool_VST_Before = await activePool.getVSTDebt(ZERO_ADDRESS)
-			const activePool_VST_Before_Asset = await activePool.getVSTDebt(erc20.address)
-			assert.isTrue(activePool_VST_Before.gt(toBN("0")))
-			assert.isTrue(activePool_VST_Before_Asset.gt(toBN("0")))
+			const activePool_U_Before = await activePool.getUDebt(ZERO_ADDRESS)
+			const activePool_U_Before_Asset = await activePool.getUDebt(erc20.address)
+			assert.isTrue(activePool_U_Before.gt(toBN("0")))
+			assert.isTrue(activePool_U_Before_Asset.gt(toBN("0")))
 
-			await borrowerOperations.repayVST(
+			await borrowerOperations.repayU(
 				ZERO_ADDRESS,
 				aliceDebtBefore.div(toBN(10)),
 				alice,
 				alice,
 				{ from: alice }
 			) // Repays 1/10 her debt
-			await borrowerOperations.repayVST(
+			await borrowerOperations.repayU(
 				erc20.address,
 				aliceDebtBefore_Asset.div(toBN(10)),
 				alice,
@@ -3902,39 +3876,39 @@ contract("BorrowerOperations", async accounts => {
 			) // Repays 1/10 her debt
 
 			// check after
-			const activePool_VST_After = await activePool.getVSTDebt(ZERO_ADDRESS)
-			const activePool_VST_After_Asset = await activePool.getVSTDebt(erc20.address)
+			const activePool_U_After = await activePool.getUDebt(ZERO_ADDRESS)
+			const activePool_U_After_Asset = await activePool.getUDebt(erc20.address)
 			th.assertIsApproximatelyEqual(
-				activePool_VST_After,
-				activePool_VST_Before.sub(aliceDebtBefore.div(toBN(10)))
+				activePool_U_After,
+				activePool_U_Before.sub(aliceDebtBefore.div(toBN(10)))
 			)
 			th.assertIsApproximatelyEqual(
-				activePool_VST_After_Asset,
-				activePool_VST_Before_Asset.sub(aliceDebtBefore_Asset.div(toBN(10)))
+				activePool_U_After_Asset,
+				activePool_U_Before_Asset.sub(aliceDebtBefore_Asset.div(toBN(10)))
 			)
 		})
 
-		it("repayVST(): decreases user VSTToken balance by correct amount", async () => {
+		it("repayU(): decreases user UToken balance by correct amount", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
@@ -3943,10 +3917,10 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(aliceDebtBefore.gt(toBN("0")))
 			assert.isTrue(aliceDebtBefore_Asset.gt(toBN("0")))
 
-			let alice_VSTTokenBalance_Before = await vstToken.balanceOf(alice)
-			assert.isTrue(alice_VSTTokenBalance_Before.gt(toBN("0")))
+			let alice_UTokenBalance_Before = await vstToken.balanceOf(alice)
+			assert.isTrue(alice_UTokenBalance_Before.gt(toBN("0")))
 
-			await borrowerOperations.repayVST(
+			await borrowerOperations.repayU(
 				ZERO_ADDRESS,
 				aliceDebtBefore.div(toBN(10)),
 				alice,
@@ -3954,14 +3928,14 @@ contract("BorrowerOperations", async accounts => {
 				{ from: alice }
 			) // Repays 1/10 her debt
 
-			let alice_VSTTokenBalance_After = await vstToken.balanceOf(alice)
+			let alice_UTokenBalance_After = await vstToken.balanceOf(alice)
 			th.assertIsApproximatelyEqual(
-				alice_VSTTokenBalance_After,
-				alice_VSTTokenBalance_Before.sub(aliceDebtBefore.div(toBN(10)))
+				alice_UTokenBalance_After,
+				alice_UTokenBalance_Before.sub(aliceDebtBefore.div(toBN(10)))
 			)
-			alice_VSTTokenBalance_Before = await vstToken.balanceOf(alice)
+			alice_UTokenBalance_Before = await vstToken.balanceOf(alice)
 
-			await borrowerOperations.repayVST(
+			await borrowerOperations.repayU(
 				erc20.address,
 				aliceDebtBefore_Asset.div(toBN(10)),
 				alice,
@@ -3969,34 +3943,34 @@ contract("BorrowerOperations", async accounts => {
 				{ from: alice }
 			) // Repays 1/10 her debt
 
-			alice_VSTTokenBalance_After = await vstToken.balanceOf(alice)
+			alice_UTokenBalance_After = await vstToken.balanceOf(alice)
 			th.assertIsApproximatelyEqual(
-				alice_VSTTokenBalance_After,
-				alice_VSTTokenBalance_Before.sub(aliceDebtBefore_Asset.div(toBN(10)))
+				alice_UTokenBalance_After,
+				alice_UTokenBalance_Before.sub(aliceDebtBefore_Asset.div(toBN(10)))
 			)
 		})
 
-		it("repayVST(): can repay debt in Recovery Mode", async () => {
+		it("repayU(): can repay debt in Recovery Mode", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
@@ -4014,14 +3988,14 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(await th.checkRecoveryMode(contracts))
 			assert.isTrue(await th.checkRecoveryMode(contracts, erc20.address))
 
-			const tx = await borrowerOperations.repayVST(
+			const tx = await borrowerOperations.repayU(
 				ZERO_ADDRESS,
 				aliceDebtBefore.div(toBN(10)),
 				alice,
 				alice,
 				{ from: alice }
 			)
-			const tx_Asset = await borrowerOperations.repayVST(
+			const tx_Asset = await borrowerOperations.repayU(
 				erc20.address,
 				aliceDebtBefore_Asset.div(toBN(10)),
 				alice,
@@ -4041,27 +4015,27 @@ contract("BorrowerOperations", async accounts => {
 			)
 		})
 
-		it("repayVST(): Reverts if borrower has insufficient VST balance to cover his debt repayment", async () => {
+		it("repayU(): Reverts if borrower has insufficient U balance to cover his debt repayment", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
@@ -4069,23 +4043,19 @@ contract("BorrowerOperations", async accounts => {
 			const bobBalBefore = await vstToken.balanceOf(B)
 			assert.isTrue(bobBalBefore.gt(toBN("0")))
 
-			// Bob transfers all but 5 of his VST to Carol
+			// Bob transfers all but 5 of his U to Carol
 			await vstToken.transfer(C, bobBalBefore.sub(toBN(dec(5, 18))), { from: B })
 
-			//Confirm B's VST balance has decreased to 5 VST
+			//Confirm B's U balance has decreased to 5 U
 			const bobBalAfter = await vstToken.balanceOf(B)
 
 			assert.isTrue(bobBalAfter.eq(toBN(dec(5, 18))))
 
-			// Bob tries to repay 6 VST
-			const repayVSTPromise_B = borrowerOperations.repayVST(
-				ZERO_ADDRESS,
-				toBN(dec(6, 18)),
-				B,
-				B,
-				{ from: B }
-			)
-			const repayVSTPromise_B_Asset = borrowerOperations.repayVST(
+			// Bob tries to repay 6 U
+			const repayUPromise_B = borrowerOperations.repayU(ZERO_ADDRESS, toBN(dec(6, 18)), B, B, {
+				from: B,
+			})
+			const repayUPromise_B_Asset = borrowerOperations.repayU(
 				erc20.address,
 				toBN(dec(6, 18)),
 				B,
@@ -4093,10 +4063,10 @@ contract("BorrowerOperations", async accounts => {
 				{ from: B }
 			)
 
-			await assertRevert(repayVSTPromise_B, "Caller doesnt have enough VST to make repayment")
+			await assertRevert(repayUPromise_B, "Caller doesnt have enough U to make repayment")
 			await assertRevert(
-				repayVSTPromise_B_Asset,
-				"Caller doesnt have enough VST to make repayment"
+				repayUPromise_B_Asset,
+				"Caller doesnt have enough U to make repayment"
 			)
 		})
 
@@ -4131,7 +4101,7 @@ contract("BorrowerOperations", async accounts => {
 				(await troveManager.getCurrentICR(erc20.address, alice, price)).lt(toBN(dec(110, 16)))
 			)
 
-			const VSTRepayment = 1 // 1 wei repayment
+			const URepayment = 1 // 1 wei repayment
 			const collTopUp = 1
 
 			await assertRevert(
@@ -4140,7 +4110,7 @@ contract("BorrowerOperations", async accounts => {
 					0,
 					th._100pct,
 					0,
-					VSTRepayment,
+					URepayment,
 					false,
 					alice,
 					alice,
@@ -4154,7 +4124,7 @@ contract("BorrowerOperations", async accounts => {
 					0,
 					th._100pct,
 					0,
-					VSTRepayment,
+					URepayment,
 					false,
 					alice,
 					alice,
@@ -4166,13 +4136,13 @@ contract("BorrowerOperations", async accounts => {
 
 		it("adjustTrove(): reverts if max fee < 0.5% in Normal mode", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
@@ -4263,13 +4233,13 @@ contract("BorrowerOperations", async accounts => {
 			})
 
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
@@ -4341,27 +4311,27 @@ contract("BorrowerOperations", async accounts => {
 		it("adjustTrove(): decays a non-zero base rate", async () => {
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
 			await openTrove({
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: E },
 			})
@@ -4373,31 +4343,31 @@ contract("BorrowerOperations", async accounts => {
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: E },
 			})
@@ -4484,17 +4454,17 @@ contract("BorrowerOperations", async accounts => {
 		it("adjustTrove(): doesn't decay a non-zero base rate when user issues 0 debt", async () => {
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
 			await openTrove({
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
@@ -4506,19 +4476,19 @@ contract("BorrowerOperations", async accounts => {
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
@@ -4532,13 +4502,13 @@ contract("BorrowerOperations", async accounts => {
 
 			// D opens trove
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
@@ -4578,25 +4548,25 @@ contract("BorrowerOperations", async accounts => {
 
 		it("adjustTrove(): doesn't change base rate if it is already zero", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: E },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: E },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
@@ -4675,17 +4645,17 @@ contract("BorrowerOperations", async accounts => {
 		it("adjustTrove(): lastFeeOpTime doesn't update if less time than decay interval has passed since the last fee operation", async () => {
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
 			await openTrove({
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
@@ -4697,19 +4667,19 @@ contract("BorrowerOperations", async accounts => {
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
@@ -4808,17 +4778,17 @@ contract("BorrowerOperations", async accounts => {
 		it("adjustTrove(): borrower can't grief the baseRate and stop it decaying by issuing debt at higher frequency than the decay granularity", async () => {
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
 			await openTrove({
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
@@ -4865,29 +4835,29 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(baseRate_2.lt(baseRate_1))
 		})
 
-		it("adjustTrove(): borrowing at non-zero base rate sends VST fee to VSTA staking contract", async () => {
-			// time fast-forwards 1 year, and multisig stakes 1 VSTA
+		it("adjustTrove(): borrowing at non-zero base rate sends U fee to YOU staking contract", async () => {
+			// time fast-forwards 1 year, and multisig stakes 1 YOU
 			await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
 			await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
 			await vstaStaking.stake(dec(1, 18), { from: multisig })
 
-			// Check VSTA VST balance before == 0
-			const VSTAStaking_VSTBalance_Before = await vstToken.balanceOf(vstaStaking.address)
-			assert.equal(VSTAStaking_VSTBalance_Before, "0")
+			// Check YOU U balance before == 0
+			const YOUStaking_UBalance_Before = await vstToken.balanceOf(vstaStaking.address)
+			assert.equal(YOUStaking_UBalance_Before, "0")
 
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
 			await openTrove({
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
@@ -4899,19 +4869,19 @@ contract("BorrowerOperations", async accounts => {
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
@@ -4935,48 +4905,48 @@ contract("BorrowerOperations", async accounts => {
 
 			// D adjusts trove
 			await openTrove({
-				extraVSTAmount: toBN(dec(37, 18)),
+				extraUAmount: toBN(dec(37, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(37, 18)),
+				extraUAmount: toBN(dec(37, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 
-			// Check VSTA VST balance after has increased
-			const VSTAStaking_VSTBalance_After = await vstToken.balanceOf(vstaStaking.address)
-			assert.isTrue(VSTAStaking_VSTBalance_After.gt(VSTAStaking_VSTBalance_Before))
+			// Check YOU U balance after has increased
+			const YOUStaking_UBalance_After = await vstToken.balanceOf(vstaStaking.address)
+			assert.isTrue(YOUStaking_UBalance_After.gt(YOUStaking_UBalance_Before))
 		})
 
 		if (!withProxy) {
 			// TODO: use rawLogs instead of logs
 			it("adjustTrove(): borrowing at non-zero base records the (drawn debt + fee) on the Trove struct", async () => {
-				// time fast-forwards 1 year, and multisig stakes 1 VSTA
+				// time fast-forwards 1 year, and multisig stakes 1 YOU
 				await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
 				await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
 				await vstaStaking.stake(dec(1, 18), { from: multisig })
 
 				await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
 				await openTrove({
-					extraVSTAmount: toBN(dec(30, 18)),
+					extraUAmount: toBN(dec(30, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: A },
 				})
 				await openTrove({
-					extraVSTAmount: toBN(dec(40, 18)),
+					extraUAmount: toBN(dec(40, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: B },
 				})
 				await openTrove({
-					extraVSTAmount: toBN(dec(50, 18)),
+					extraUAmount: toBN(dec(50, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: C },
 				})
 				await openTrove({
-					extraVSTAmount: toBN(dec(50, 18)),
+					extraUAmount: toBN(dec(50, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: D },
 				})
@@ -4988,25 +4958,25 @@ contract("BorrowerOperations", async accounts => {
 				})
 				await openTrove({
 					asset: erc20.address,
-					extraVSTAmount: toBN(dec(30, 18)),
+					extraUAmount: toBN(dec(30, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: A },
 				})
 				await openTrove({
 					asset: erc20.address,
-					extraVSTAmount: toBN(dec(40, 18)),
+					extraUAmount: toBN(dec(40, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: B },
 				})
 				await openTrove({
 					asset: erc20.address,
-					extraVSTAmount: toBN(dec(50, 18)),
+					extraUAmount: toBN(dec(50, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: C },
 				})
 				await openTrove({
 					asset: erc20.address,
-					extraVSTAmount: toBN(dec(50, 18)),
+					extraUAmount: toBN(dec(50, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: D },
 				})
@@ -5031,7 +5001,7 @@ contract("BorrowerOperations", async accounts => {
 
 				const withdrawal_D = toBN(dec(37, 18))
 
-				// D withdraws VST
+				// D withdraws U
 				const adjustmentTx = await borrowerOperations.adjustTrove(
 					ZERO_ADDRESS,
 					0,
@@ -5055,10 +5025,10 @@ contract("BorrowerOperations", async accounts => {
 					{ from: D }
 				)
 
-				const emittedFee = toBN(th.getVSTFeeFromVSTBorrowingEvent(adjustmentTx))
+				const emittedFee = toBN(th.getUFeeFromUBorrowingEvent(adjustmentTx))
 				assert.isTrue(emittedFee.gt(toBN("0")))
 
-				const emittedFee_Asset = toBN(th.getVSTFeeFromVSTBorrowingEvent(adjustmentTx_Asset))
+				const emittedFee_Asset = toBN(th.getUFeeFromUBorrowingEvent(adjustmentTx_Asset))
 				assert.isTrue(emittedFee_Asset.gt(toBN("0")))
 
 				const D_newDebt = (await troveManager.Troves(D, ZERO_ADDRESS))[th.TROVE_DEBT_INDEX]
@@ -5074,34 +5044,34 @@ contract("BorrowerOperations", async accounts => {
 			})
 		}
 
-		it("adjustTrove(): Borrowing at non-zero base rate increases the VSTA staking contract VST fees-per-unit-staked", async () => {
-			// time fast-forwards 1 year, and multisig stakes 1 VSTA
+		it("adjustTrove(): Borrowing at non-zero base rate increases the YOU staking contract U fees-per-unit-staked", async () => {
+			// time fast-forwards 1 year, and multisig stakes 1 YOU
 			await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
 			await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
 			await vstaStaking.stake(dec(1, 18), { from: multisig })
 
-			// Check VSTA contract VST fees-per-unit-staked is zero
-			const F_VST_Before = await vstaStaking.F_VST()
-			assert.equal(F_VST_Before, "0")
+			// Check YOU contract U fees-per-unit-staked is zero
+			const F_U_Before = await vstaStaking.F_U()
+			assert.equal(F_U_Before, "0")
 
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
 			await openTrove({
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
@@ -5113,25 +5083,25 @@ contract("BorrowerOperations", async accounts => {
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
@@ -5166,8 +5136,8 @@ contract("BorrowerOperations", async accounts => {
 				{ from: D }
 			)
 
-			const F_VST_After = await vstaStaking.F_VST()
-			assert.isTrue(F_VST_After.gt(F_VST_Before))
+			const F_U_After = await vstaStaking.F_U()
+			assert.isTrue(F_U_After.gt(F_U_Before))
 
 			await borrowerOperations.adjustTrove(
 				erc20.address,
@@ -5181,38 +5151,38 @@ contract("BorrowerOperations", async accounts => {
 				{ from: D }
 			)
 
-			const F_VST_After_Asset = await vstaStaking.F_VST()
-			assert.isTrue(F_VST_After_Asset.gt(F_VST_After))
+			const F_U_After_Asset = await vstaStaking.F_U()
+			assert.isTrue(F_U_After_Asset.gt(F_U_After))
 		})
 
 		it("adjustTrove(): Borrowing at non-zero base rate sends requested amount to the user", async () => {
-			// time fast-forwards 1 year, and multisig stakes 1 VSTA
+			// time fast-forwards 1 year, and multisig stakes 1 YOU
 			await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
 			await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
 			await vstaStaking.stake(dec(1, 18), { from: multisig })
 
-			// Check VSTA Staking contract balance before == 0
-			const VSTAStaking_VSTBalance_Before = await vstToken.balanceOf(vstaStaking.address)
-			assert.equal(VSTAStaking_VSTBalance_Before, "0")
+			// Check YOU Staking contract balance before == 0
+			const YOUStaking_UBalance_Before = await vstToken.balanceOf(vstaStaking.address)
+			assert.equal(YOUStaking_UBalance_Before, "0")
 
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
 			await openTrove({
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
@@ -5224,30 +5194,30 @@ contract("BorrowerOperations", async accounts => {
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 
-			const D_VSTBalanceBefore = await vstToken.balanceOf(D)
+			const D_UBalanceBefore = await vstToken.balanceOf(D)
 
 			// Artificially make baseRate 5%
 			await troveManager.setBaseRate(ZERO_ADDRESS, dec(5, 16))
@@ -5267,67 +5237,67 @@ contract("BorrowerOperations", async accounts => {
 			th.fastForwardTime(7200, web3.currentProvider)
 
 			// D adjusts trove
-			const VSTRequest_D = toBN(dec(40, 18))
+			const URequest_D = toBN(dec(40, 18))
 			await borrowerOperations.adjustTrove(
 				ZERO_ADDRESS,
 				0,
 				th._100pct,
 				0,
-				VSTRequest_D,
+				URequest_D,
 				true,
 				D,
 				D,
 				{ from: D }
 			)
 
-			// Check VSTA staking VST balance has increased
-			const VSTAStaking_VSTBalance_After = await vstToken.balanceOf(vstaStaking.address)
-			assert.isTrue(VSTAStaking_VSTBalance_After.gt(VSTAStaking_VSTBalance_Before))
+			// Check YOU staking U balance has increased
+			const YOUStaking_UBalance_After = await vstToken.balanceOf(vstaStaking.address)
+			assert.isTrue(YOUStaking_UBalance_After.gt(YOUStaking_UBalance_Before))
 
-			// Check D's VST balance has increased by their requested VST
-			const D_VSTBalanceAfter = await vstToken.balanceOf(D)
-			assert.isTrue(D_VSTBalanceAfter.eq(D_VSTBalanceBefore.add(VSTRequest_D)))
+			// Check D's U balance has increased by their requested U
+			const D_UBalanceAfter = await vstToken.balanceOf(D)
+			assert.isTrue(D_UBalanceAfter.eq(D_UBalanceBefore.add(URequest_D)))
 
 			await borrowerOperations.adjustTrove(
 				erc20.address,
 				0,
 				th._100pct,
 				0,
-				VSTRequest_D,
+				URequest_D,
 				true,
 				D,
 				D,
 				{ from: D }
 			)
 
-			// Check VSTA staking VST balance has increased
-			const VSTAStaking_VSTBalance_After_Asset = await vstToken.balanceOf(vstaStaking.address)
-			assert.isTrue(VSTAStaking_VSTBalance_After_Asset.gt(VSTAStaking_VSTBalance_After))
+			// Check YOU staking U balance has increased
+			const YOUStaking_UBalance_After_Asset = await vstToken.balanceOf(vstaStaking.address)
+			assert.isTrue(YOUStaking_UBalance_After_Asset.gt(YOUStaking_UBalance_After))
 
-			// Check D's VST balance has increased by their requested VST
-			const D_VSTBalanceAfter_Asset = await vstToken.balanceOf(D)
-			assert.isTrue(D_VSTBalanceAfter_Asset.eq(D_VSTBalanceAfter.add(VSTRequest_D)))
+			// Check D's U balance has increased by their requested U
+			const D_UBalanceAfter_Asset = await vstToken.balanceOf(D)
+			assert.isTrue(D_UBalanceAfter_Asset.eq(D_UBalanceAfter.add(URequest_D)))
 		})
 
-		it("adjustTrove(): Borrowing at zero base rate changes VST balance of VSTA staking contract", async () => {
+		it("adjustTrove(): Borrowing at zero base rate changes U balance of YOU staking contract", async () => {
 			await openTrove({ ICR: toBN(dec(10, 18)), extraParams: { from: whale } })
 			await openTrove({
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
@@ -5339,25 +5309,25 @@ contract("BorrowerOperations", async accounts => {
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(30, 18)),
+				extraUAmount: toBN(dec(30, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40, 18)),
+				extraUAmount: toBN(dec(40, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(50, 18)),
+				extraUAmount: toBN(dec(50, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
@@ -5372,9 +5342,9 @@ contract("BorrowerOperations", async accounts => {
 			// 2 hours pass
 			th.fastForwardTime(7200, web3.currentProvider)
 
-			// Check staking VST balance before > 0
-			const VSTAStaking_VSTBalance_Before = await vstToken.balanceOf(vstaStaking.address)
-			assert.isTrue(VSTAStaking_VSTBalance_Before.gt(toBN("0")))
+			// Check staking U balance before > 0
+			const YOUStaking_UBalance_Before = await vstToken.balanceOf(vstaStaking.address)
+			assert.isTrue(YOUStaking_UBalance_Before.gt(toBN("0")))
 
 			// D adjusts trove
 			await borrowerOperations.adjustTrove(
@@ -5388,8 +5358,8 @@ contract("BorrowerOperations", async accounts => {
 				D,
 				{ from: D }
 			)
-			const VSTAStaking_VSTBalance_After = await vstToken.balanceOf(vstaStaking.address)
-			assert.isTrue(VSTAStaking_VSTBalance_After.gt(VSTAStaking_VSTBalance_Before))
+			const YOUStaking_UBalance_After = await vstToken.balanceOf(vstaStaking.address)
+			assert.isTrue(YOUStaking_UBalance_After.gt(YOUStaking_UBalance_Before))
 
 			await borrowerOperations.adjustTrove(
 				erc20.address,
@@ -5402,33 +5372,33 @@ contract("BorrowerOperations", async accounts => {
 				D,
 				{ from: D }
 			)
-			const VSTAStaking_VSTBalance_After_Asset = await vstToken.balanceOf(vstaStaking.address)
-			assert.isTrue(VSTAStaking_VSTBalance_After_Asset.gt(VSTAStaking_VSTBalance_After))
+			const YOUStaking_UBalance_After_Asset = await vstToken.balanceOf(vstaStaking.address)
+			assert.isTrue(YOUStaking_UBalance_After_Asset.gt(YOUStaking_UBalance_After))
 		})
 
-		it("adjustTrove(): Borrowing at zero base rate changes VSTA staking contract VST fees-per-unit-staked", async () => {
+		it("adjustTrove(): Borrowing at zero base rate changes YOU staking contract U fees-per-unit-staked", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: whale, value: toBN(dec(100, "ether")) },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
@@ -5436,31 +5406,31 @@ contract("BorrowerOperations", async accounts => {
 			await openTrove({
 				asset: erc20.address,
 				assetSent: toBN(dec(100, "ether")),
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
@@ -5475,13 +5445,13 @@ contract("BorrowerOperations", async accounts => {
 			// 2 hours pass
 			th.fastForwardTime(7200, web3.currentProvider)
 
-			// A artificially receives VSTA, then stakes it
+			// A artificially receives YOU, then stakes it
 			await vstaToken.unprotectedMint(A, dec(100, 18))
 			await vstaStaking.stake(dec(100, 18), { from: A })
 
-			// Check staking VST balance before == 0
-			const F_VST_Before = await vstaStaking.F_VST()
-			assert.isTrue(F_VST_Before.eq(toBN("0")))
+			// Check staking U balance before == 0
+			const F_U_Before = await vstaStaking.F_U()
+			assert.isTrue(F_U_Before.eq(toBN("0")))
 
 			// D adjusts trove
 			await borrowerOperations.adjustTrove(
@@ -5495,8 +5465,8 @@ contract("BorrowerOperations", async accounts => {
 				D,
 				{ from: D }
 			)
-			const F_VST_After = await vstaStaking.F_VST()
-			assert.isTrue(F_VST_After.gt(F_VST_Before))
+			const F_U_After = await vstaStaking.F_U()
+			assert.isTrue(F_U_After.gt(F_U_Before))
 
 			await borrowerOperations.adjustTrove(
 				erc20.address,
@@ -5510,33 +5480,33 @@ contract("BorrowerOperations", async accounts => {
 				{ from: D }
 			)
 
-			const F_VST_After_Asset = await vstaStaking.F_VST()
-			assert.isTrue(F_VST_After_Asset.gt(F_VST_After))
+			const F_U_After_Asset = await vstaStaking.F_U()
+			assert.isTrue(F_U_After_Asset.gt(F_U_After))
 		})
 
-		it("adjustTrove(): Borrowing at zero base rate sends total requested VST to the user", async () => {
+		it("adjustTrove(): Borrowing at zero base rate sends total requested U to the user", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: whale, value: toBN(dec(100, "ether")) },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
@@ -5544,36 +5514,36 @@ contract("BorrowerOperations", async accounts => {
 			await openTrove({
 				asset: erc20.address,
 				assetSent: toBN(dec(100, "ether")),
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 
-			const D_VSTBalBefore = await vstToken.balanceOf(D)
+			const D_UBalBefore = await vstToken.balanceOf(D)
 			// Check baseRate is zero
 			const baseRate_1 = await troveManager.baseRate(ZERO_ADDRESS)
 			assert.equal(baseRate_1, "0")
@@ -5585,63 +5555,63 @@ contract("BorrowerOperations", async accounts => {
 			th.fastForwardTime(7200, web3.currentProvider)
 
 			// D adjusts trove
-			const VSTRequest_D = toBN(dec(40, 18))
+			const URequest_D = toBN(dec(40, 18))
 			await borrowerOperations.adjustTrove(
 				ZERO_ADDRESS,
 				0,
 				th._100pct,
 				0,
-				VSTRequest_D,
+				URequest_D,
 				true,
 				D,
 				D,
 				{ from: D }
 			)
 
-			const VSTBalanceAfter = await vstToken.balanceOf(D)
-			assert.isTrue(VSTBalanceAfter.eq(D_VSTBalBefore.add(VSTRequest_D)))
+			const UBalanceAfter = await vstToken.balanceOf(D)
+			assert.isTrue(UBalanceAfter.eq(D_UBalBefore.add(URequest_D)))
 
 			await borrowerOperations.adjustTrove(
 				erc20.address,
 				0,
 				th._100pct,
 				0,
-				VSTRequest_D,
+				URequest_D,
 				true,
 				D,
 				D,
 				{ from: D }
 			)
-			const VSTBalanceAfter_Asset = await vstToken.balanceOf(D)
-			assert.isTrue(VSTBalanceAfter_Asset.eq(VSTBalanceAfter.add(VSTRequest_D)))
+			const UBalanceAfter_Asset = await vstToken.balanceOf(D)
+			assert.isTrue(UBalanceAfter_Asset.eq(UBalanceAfter.add(URequest_D)))
 		})
 
 		it("adjustTrove(): reverts when calling address has no active trove", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
 
-			// Alice coll and debt increase(+1 ETH, +50VST)
+			// Alice coll and debt increase(+1 ETH, +50U)
 			await borrowerOperations.adjustTrove(
 				ZERO_ADDRESS,
 				0,
@@ -5702,25 +5672,25 @@ contract("BorrowerOperations", async accounts => {
 
 		it("adjustTrove(): reverts in Recovery Mode when the adjustment would reduce the TCR", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
@@ -5870,25 +5840,25 @@ contract("BorrowerOperations", async accounts => {
 
 		it("adjustTrove(): collateral withdrawal reverts in Recovery Mode", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
@@ -5935,25 +5905,25 @@ contract("BorrowerOperations", async accounts => {
 
 		it("adjustTrove(): debt increase that would leave ICR < 150% reverts in Recovery Mode", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
@@ -6028,25 +5998,25 @@ contract("BorrowerOperations", async accounts => {
 
 		it("adjustTrove(): debt increase that would reduce the ICR reverts in Recovery Mode", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(3, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(3, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
@@ -6188,25 +6158,25 @@ contract("BorrowerOperations", async accounts => {
 
 		it("adjustTrove(): A trove with ICR < CCR in Recovery Mode can adjust their trove to ICR > CCR", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
@@ -6286,25 +6256,25 @@ contract("BorrowerOperations", async accounts => {
 
 		it("adjustTrove(): A trove with ICR < CCR in Recovery Mode can adjust their trove to ICR > CCR But collateral is blocked from minting, then unblock it", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
@@ -6420,25 +6390,25 @@ contract("BorrowerOperations", async accounts => {
 
 		it("adjustTrove(): A trove with ICR > CCR in Recovery Mode can improve their ICR", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(3, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(3, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
@@ -6518,25 +6488,25 @@ contract("BorrowerOperations", async accounts => {
 
 		it("adjustTrove(): debt increase in Recovery Mode charges no fee", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(200000, 18)),
+				extraUAmount: toBN(dec(200000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(200000, 18)),
+				extraUAmount: toBN(dec(200000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
@@ -6549,12 +6519,12 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(await th.checkRecoveryMode(contracts))
 			assert.isTrue(await th.checkRecoveryMode(contracts, erc20.address))
 
-			// B stakes VSTA
+			// B stakes YOU
 			await vstaToken.unprotectedMint(bob, dec(100, 18))
 			await vstaStaking.stake(dec(100, 18), { from: bob })
 
-			const VSTAStakingVSTBalanceBefore = await vstToken.balanceOf(vstaStaking.address)
-			assert.isTrue(VSTAStakingVSTBalanceBefore.gt(toBN("0")))
+			const YOUStakingUBalanceBefore = await vstToken.balanceOf(vstaStaking.address)
+			assert.isTrue(YOUStakingUBalanceBefore.gt(toBN("0")))
 
 			const txAlice = await borrowerOperations.adjustTrove(
 				ZERO_ADDRESS,
@@ -6584,12 +6554,12 @@ contract("BorrowerOperations", async accounts => {
 
 			// Check emitted fee = 0
 			const emittedFee = toBN(
-				await th.getEventArgByName(txAlice, "VSTBorrowingFeePaid", "_VSTFee")
+				await th.getEventArgByName(txAlice, "UBorrowingFeePaid", "_UFee")
 			)
 			assert.isTrue(emittedFee.eq(toBN("0")))
 
 			const emittedFee_Asset = toBN(
-				await th.getEventArgByName(txAlice_Asset, "VSTBorrowingFeePaid", "_VSTFee")
+				await th.getEventArgByName(txAlice_Asset, "UBorrowingFeePaid", "_UFee")
 			)
 			assert.isTrue(emittedFee_Asset.eq(toBN("0")))
 
@@ -6597,11 +6567,8 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(await th.checkRecoveryMode(contracts, erc20.address))
 
 			// Check no fee was sent to staking contract
-			const VSTAStakingVSTBalanceAfter = await vstToken.balanceOf(vstaStaking.address)
-			assert.equal(
-				VSTAStakingVSTBalanceAfter.toString(),
-				VSTAStakingVSTBalanceBefore.toString()
-			)
+			const YOUStakingUBalanceAfter = await vstToken.balanceOf(vstaStaking.address)
+			assert.equal(YOUStakingUBalanceAfter.toString(), YOUStakingUBalanceBefore.toString())
 		})
 
 		it("adjustTrove(): reverts when change would cause the TCR of the system to fall below the CCR", async () => {
@@ -6667,7 +6634,7 @@ contract("BorrowerOperations", async accounts => {
 			}
 		})
 
-		it("adjustTrove(): reverts when VST repaid is > debt of the trove", async () => {
+		it("adjustTrove(): reverts when U repaid is > debt of the trove", async () => {
 			await openTrove({ ICR: toBN(dec(2, 18)), extraParams: { from: alice } })
 			const bobOpenTx = (
 				await openTrove({ ICR: toBN(dec(2, 18)), extraParams: { from: bob } })
@@ -6692,19 +6659,19 @@ contract("BorrowerOperations", async accounts => {
 			const bobDebt_Asset = await getTroveEntireDebt(bob, erc20.address)
 			assert.isTrue(bobDebt_Asset.gt(toBN("0")))
 
-			const bobFee = toBN(await th.getEventArgByIndex(bobOpenTx, "VSTBorrowingFeePaid", 2))
+			const bobFee = toBN(await th.getEventArgByIndex(bobOpenTx, "UBorrowingFeePaid", 2))
 			assert.isTrue(bobFee.gt(toBN("0")))
 
 			const bobFee_Asset = toBN(
-				await th.getEventArgByIndex(bobOpenTx_Asset, "VSTBorrowingFeePaid", 2)
+				await th.getEventArgByIndex(bobOpenTx_Asset, "UBorrowingFeePaid", 2)
 			)
 			assert.isTrue(bobFee_Asset.gt(toBN("0")))
 
-			// Alice transfers VST to bob to compensate borrowing fees
+			// Alice transfers U to bob to compensate borrowing fees
 			await vstToken.transfer(bob, bobFee, { from: alice })
 
 			const remainingDebt = (await troveManager.getTroveDebt(ZERO_ADDRESS, bob)).sub(
-				VST_GAS_COMPENSATION
+				U_GAS_COMPENSATION
 			)
 
 			// Bob attempts an adjustment that would repay 1 wei more than his debt
@@ -6723,11 +6690,11 @@ contract("BorrowerOperations", async accounts => {
 				"revert"
 			)
 
-			// Alice transfers VST to bob to compensate borrowing fees
+			// Alice transfers U to bob to compensate borrowing fees
 			await vstToken.transfer(bob, bobFee_Asset, { from: alice })
 
 			const remainingDebt_Asset = (await troveManager.getTroveDebt(erc20.address, bob)).sub(
-				VST_GAS_COMPENSATION_ERC20
+				U_GAS_COMPENSATION_ERC20
 			)
 
 			// Bob attempts an adjustment that would repay 1 wei more than his debt
@@ -6808,13 +6775,13 @@ contract("BorrowerOperations", async accounts => {
 
 		it("adjustTrove(): reverts when change would cause the ICR of the trove to fall below the MCR", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(100, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(100, 18)),
 				extraParams: { from: whale },
 			})
@@ -6822,30 +6789,30 @@ contract("BorrowerOperations", async accounts => {
 			await priceFeed.setPrice(dec(100, 18))
 
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(11, 17)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(11, 17)),
 				extraParams: { from: bob },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(11, 17)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(11, 17)),
 				extraParams: { from: bob },
 			})
 
-			// Bob attempts to increase debt by 100 VST and 1 ether, i.e. a change that constitutes a 100% ratio of coll:debt.
+			// Bob attempts to increase debt by 100 U and 1 ether, i.e. a change that constitutes a 100% ratio of coll:debt.
 			// Since his ICR prior is 110%, this change would reduce his ICR below MCR.
 			try {
 				const txBob = await borrowerOperations.adjustTrove(
@@ -6883,13 +6850,13 @@ contract("BorrowerOperations", async accounts => {
 
 		it("adjustTrove(): With 0 coll change, doesnt change borrower's coll or ActivePool coll", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
@@ -6906,7 +6873,7 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(aliceCollBefore_Asset.gt(toBN("0")))
 			assert.isTrue(aliceCollBefore_Asset.eq(activePoolCollBefore_Asset))
 
-			// Alice adjusts trove. No coll change, and a debt increase (+50VST)
+			// Alice adjusts trove. No coll change, and a debt increase (+50U)
 			await borrowerOperations.adjustTrove(
 				ZERO_ADDRESS,
 				0,
@@ -6945,23 +6912,23 @@ contract("BorrowerOperations", async accounts => {
 
 		it("adjustTrove(): With 0 debt change, doesnt change borrower's debt or ActivePool debt", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 
 			const aliceDebtBefore = await getTroveEntireDebt(alice)
-			const activePoolDebtBefore = await activePool.getVSTDebt(ZERO_ADDRESS)
+			const activePoolDebtBefore = await activePool.getUDebt(ZERO_ADDRESS)
 
 			const aliceDebtBefore_Asset = await getTroveEntireDebt(alice, erc20.address)
-			const activePoolDebtBefore_Asset = await activePool.getVSTDebt(erc20.address)
+			const activePoolDebtBefore_Asset = await activePool.getUDebt(erc20.address)
 
 			assert.isTrue(aliceDebtBefore.gt(toBN("0")))
 			assert.isTrue(aliceDebtBefore.eq(activePoolDebtBefore))
@@ -6994,10 +6961,10 @@ contract("BorrowerOperations", async accounts => {
 			)
 
 			const aliceDebtAfter = await getTroveEntireDebt(alice)
-			const activePoolDebtAfter = await activePool.getVSTDebt(ZERO_ADDRESS)
+			const activePoolDebtAfter = await activePool.getUDebt(ZERO_ADDRESS)
 
 			const aliceDebtAfter_Asset = await getTroveEntireDebt(alice, erc20.address)
-			const activePoolDebtAfter_Asset = await activePool.getVSTDebt(erc20.address)
+			const activePoolDebtAfter_Asset = await activePool.getUDebt(erc20.address)
 
 			assert.isTrue(aliceDebtAfter.eq(aliceDebtBefore))
 			assert.isTrue(activePoolDebtAfter.eq(activePoolDebtBefore))
@@ -7008,25 +6975,25 @@ contract("BorrowerOperations", async accounts => {
 
 		it("adjustTrove(): updates borrower's debt and coll with an increase in both", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
@@ -7041,7 +7008,7 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(debtBefore_Asset.gt(toBN("0")))
 			assert.isTrue(collBefore_Asset.gt(toBN("0")))
 
-			// Alice adjusts trove. Coll and debt increase(+1 ETH, +50VST)
+			// Alice adjusts trove. Coll and debt increase(+1 ETH, +50U)
 			await borrowerOperations.adjustTrove(
 				ZERO_ADDRESS,
 				0,
@@ -7088,25 +7055,25 @@ contract("BorrowerOperations", async accounts => {
 
 		it("adjustTrove(): updates borrower's debt and coll with a decrease in both", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
@@ -7121,7 +7088,7 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(debtBefore_Asset.gt(toBN("0")))
 			assert.isTrue(collBefore_Asset.gt(toBN("0")))
 
-			// Alice adjusts trove coll and debt decrease (-0.5 ETH, -50VST)
+			// Alice adjusts trove coll and debt decrease (-0.5 ETH, -50U)
 			await borrowerOperations.adjustTrove(
 				ZERO_ADDRESS,
 				0,
@@ -7160,25 +7127,25 @@ contract("BorrowerOperations", async accounts => {
 
 		it("adjustTrove(): updates borrower's  debt and coll with coll increase, debt decrease", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
@@ -7193,7 +7160,7 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(debtBefore_Asset.gt(toBN("0")))
 			assert.isTrue(collBefore_Asset.gt(toBN("0")))
 
-			// Alice adjusts trove - coll increase and debt decrease (+0.5 ETH, -50VST)
+			// Alice adjusts trove - coll increase and debt decrease (+0.5 ETH, -50U)
 			await borrowerOperations.adjustTrove(
 				ZERO_ADDRESS,
 				0,
@@ -7238,25 +7205,25 @@ contract("BorrowerOperations", async accounts => {
 
 		it("adjustTrove(): updates borrower's debt and coll with coll decrease, debt increase", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
@@ -7271,7 +7238,7 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(debtBefore_Asset.gt(toBN("0")))
 			assert.isTrue(collBefore_Asset.gt(toBN("0")))
 
-			// Alice adjusts trove - coll decrease and debt increase (0.1 ETH, 10VST)
+			// Alice adjusts trove - coll decrease and debt increase (0.1 ETH, 10U)
 			await borrowerOperations.adjustTrove(
 				ZERO_ADDRESS,
 				0,
@@ -7317,25 +7284,25 @@ contract("BorrowerOperations", async accounts => {
 
 		it("adjustTrove(): updates borrower's stake and totalStakes with a coll increase", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
@@ -7350,7 +7317,7 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(stakeBefore_Asset.gt(toBN("0")))
 			assert.isTrue(totalStakesBefore_Asset.gt(toBN("0")))
 
-			// Alice adjusts trove - coll and debt increase (+1 ETH, +50 VST)
+			// Alice adjusts trove - coll and debt increase (+1 ETH, +50 U)
 			await borrowerOperations.adjustTrove(
 				ZERO_ADDRESS,
 				0,
@@ -7390,25 +7357,25 @@ contract("BorrowerOperations", async accounts => {
 
 		it("adjustTrove():  updates borrower's stake and totalStakes with a coll decrease", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
@@ -7461,33 +7428,33 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(totalStakesAfter_Asset.eq(totalStakesBefore_Asset.sub(toBN(dec(5, 17)))))
 		})
 
-		it("adjustTrove(): changes VSTToken balance by the requested decrease", async () => {
+		it("adjustTrove(): changes UToken balance by the requested decrease", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
 
-			const alice_VSTTokenBalance_Before = await vstToken.balanceOf(alice)
-			assert.isTrue(alice_VSTTokenBalance_Before.gt(toBN("0")))
+			const alice_UTokenBalance_Before = await vstToken.balanceOf(alice)
+			assert.isTrue(alice_UTokenBalance_Before.gt(toBN("0")))
 
 			// Alice adjusts trove - coll decrease and debt decrease
 			await borrowerOperations.adjustTrove(
@@ -7503,9 +7470,9 @@ contract("BorrowerOperations", async accounts => {
 			)
 
 			// check after
-			const alice_VSTTokenBalance_After = await vstToken.balanceOf(alice)
+			const alice_UTokenBalance_After = await vstToken.balanceOf(alice)
 			assert.isTrue(
-				alice_VSTTokenBalance_After.eq(alice_VSTTokenBalance_Before.sub(toBN(dec(10, 18))))
+				alice_UTokenBalance_After.eq(alice_UTokenBalance_Before.sub(toBN(dec(10, 18))))
 			)
 
 			await borrowerOperations.adjustTrove(
@@ -7521,41 +7488,39 @@ contract("BorrowerOperations", async accounts => {
 			)
 
 			// check after
-			const alice_VSTTokenBalance_After_Asset = await vstToken.balanceOf(alice)
+			const alice_UTokenBalance_After_Asset = await vstToken.balanceOf(alice)
 			assert.isTrue(
-				alice_VSTTokenBalance_After_Asset.eq(
-					alice_VSTTokenBalance_After.sub(toBN(dec(10, 18)))
-				)
+				alice_UTokenBalance_After_Asset.eq(alice_UTokenBalance_After.sub(toBN(dec(10, 18))))
 			)
 		})
 
-		it("adjustTrove(): changes VSTToken balance by the requested increase", async () => {
+		it("adjustTrove(): changes UToken balance by the requested increase", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
 
-			const alice_VSTTokenBalance_Before = await vstToken.balanceOf(alice)
-			assert.isTrue(alice_VSTTokenBalance_Before.gt(toBN("0")))
+			const alice_UTokenBalance_Before = await vstToken.balanceOf(alice)
+			assert.isTrue(alice_UTokenBalance_Before.gt(toBN("0")))
 
 			// Alice adjusts trove - coll increase and debt increase
 			await borrowerOperations.adjustTrove(
@@ -7571,9 +7536,9 @@ contract("BorrowerOperations", async accounts => {
 			)
 
 			// check after
-			const alice_VSTTokenBalance_After = await vstToken.balanceOf(alice)
+			const alice_UTokenBalance_After = await vstToken.balanceOf(alice)
 			assert.isTrue(
-				alice_VSTTokenBalance_After.eq(alice_VSTTokenBalance_Before.add(toBN(dec(100, 18))))
+				alice_UTokenBalance_After.eq(alice_UTokenBalance_Before.add(toBN(dec(100, 18))))
 			)
 
 			await borrowerOperations.adjustTrove(
@@ -7589,35 +7554,33 @@ contract("BorrowerOperations", async accounts => {
 			)
 
 			// check after
-			const alice_VSTTokenBalance_After_Asset = await vstToken.balanceOf(alice)
+			const alice_UTokenBalance_After_Asset = await vstToken.balanceOf(alice)
 			assert.isTrue(
-				alice_VSTTokenBalance_After_Asset.eq(
-					alice_VSTTokenBalance_After.add(toBN(dec(100, 18)))
-				)
+				alice_UTokenBalance_After_Asset.eq(alice_UTokenBalance_After.add(toBN(dec(100, 18))))
 			)
 		})
 
 		it("adjustTrove(): Changes the activePool ETH and raw ether balance by the requested decrease", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
@@ -7675,25 +7638,25 @@ contract("BorrowerOperations", async accounts => {
 
 		it("adjustTrove(): Changes the activePool ETH and raw ether balance by the amount of ETH sent", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
@@ -7749,36 +7712,36 @@ contract("BorrowerOperations", async accounts => {
 			)
 		})
 
-		it("adjustTrove(): Changes the VST debt in ActivePool by requested decrease", async () => {
+		it("adjustTrove(): Changes the U debt in ActivePool by requested decrease", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
 
-			const activePooL_VSTDebt_Before = await activePool.getVSTDebt(ZERO_ADDRESS)
-			assert.isTrue(activePooL_VSTDebt_Before.gt(toBN("0")))
+			const activePooL_UDebt_Before = await activePool.getUDebt(ZERO_ADDRESS)
+			assert.isTrue(activePooL_UDebt_Before.gt(toBN("0")))
 
-			const activePooL_VSTDebt_Before_Asset = await activePool.getVSTDebt(erc20.address)
-			assert.isTrue(activePooL_VSTDebt_Before_Asset.gt(toBN("0")))
+			const activePooL_UDebt_Before_Asset = await activePool.getUDebt(erc20.address)
+			assert.isTrue(activePooL_UDebt_Before_Asset.gt(toBN("0")))
 
 			// Alice adjusts trove - coll increase and debt decrease
 			await borrowerOperations.adjustTrove(
@@ -7804,49 +7767,45 @@ contract("BorrowerOperations", async accounts => {
 				{ from: alice }
 			)
 
-			const activePooL_VSTDebt_After = await activePool.getVSTDebt(ZERO_ADDRESS)
-			assert.isTrue(
-				activePooL_VSTDebt_After.eq(activePooL_VSTDebt_Before.sub(toBN(dec(30, 18))))
-			)
+			const activePooL_UDebt_After = await activePool.getUDebt(ZERO_ADDRESS)
+			assert.isTrue(activePooL_UDebt_After.eq(activePooL_UDebt_Before.sub(toBN(dec(30, 18)))))
 
-			const activePooL_VSTDebt_After_Asset = await activePool.getVSTDebt(erc20.address)
+			const activePooL_UDebt_After_Asset = await activePool.getUDebt(erc20.address)
 			assert.isTrue(
-				activePooL_VSTDebt_After_Asset.eq(
-					activePooL_VSTDebt_Before_Asset.sub(toBN(dec(30, 18)))
-				)
+				activePooL_UDebt_After_Asset.eq(activePooL_UDebt_Before_Asset.sub(toBN(dec(30, 18))))
 			)
 		})
 
-		it("adjustTrove(): Changes the VST debt in ActivePool by requested increase", async () => {
+		it("adjustTrove(): Changes the U debt in ActivePool by requested increase", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
 
-			const activePooL_VSTDebt_Before = await activePool.getVSTDebt(ZERO_ADDRESS)
-			assert.isTrue(activePooL_VSTDebt_Before.gt(toBN("0")))
+			const activePooL_UDebt_Before = await activePool.getUDebt(ZERO_ADDRESS)
+			assert.isTrue(activePooL_UDebt_Before.gt(toBN("0")))
 
-			const activePooL_VSTDebt_Before_Asset = await activePool.getVSTDebt(erc20.address)
-			assert.isTrue(activePooL_VSTDebt_Before_Asset.gt(toBN("0")))
+			const activePooL_UDebt_Before_Asset = await activePool.getUDebt(erc20.address)
+			assert.isTrue(activePooL_UDebt_Before_Asset.gt(toBN("0")))
 
 			// Alice adjusts trove - coll increase and debt increase
 			await borrowerOperations.adjustTrove(
@@ -7872,40 +7831,40 @@ contract("BorrowerOperations", async accounts => {
 				{ from: alice }
 			)
 
-			const activePooL_VSTDebt_After = await activePool.getVSTDebt(ZERO_ADDRESS)
+			const activePooL_UDebt_After = await activePool.getUDebt(ZERO_ADDRESS)
 			th.assertIsApproximatelyEqual(
-				activePooL_VSTDebt_After,
-				activePooL_VSTDebt_Before.add(toBN(dec(100, 18)))
+				activePooL_UDebt_After,
+				activePooL_UDebt_Before.add(toBN(dec(100, 18)))
 			)
 
-			const activePooL_VSTDebt_After_Asset = await activePool.getVSTDebt(erc20.address)
+			const activePooL_UDebt_After_Asset = await activePool.getUDebt(erc20.address)
 			th.assertIsApproximatelyEqual(
-				activePooL_VSTDebt_After_Asset,
-				activePooL_VSTDebt_Before_Asset.add(toBN(dec(100, 18)))
+				activePooL_UDebt_After_Asset,
+				activePooL_UDebt_Before_Asset.add(toBN(dec(100, 18)))
 			)
 		})
 
 		it("adjustTrove(): new coll = 0 and new debt = 0 is not allowed, as gas compensation still counts toward ICR", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
@@ -7959,25 +7918,25 @@ contract("BorrowerOperations", async accounts => {
 
 		it("adjustTrove(): Reverts if requested debt increase and amount is zero", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
@@ -8006,25 +7965,25 @@ contract("BorrowerOperations", async accounts => {
 
 		it("adjustTrove(): Reverts if requested coll withdrawal and ether is sent", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
@@ -8061,13 +8020,13 @@ contract("BorrowerOperations", async accounts => {
 
 		it("adjustTrove(): Reverts if it’s zero adjustment", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
@@ -8105,25 +8064,25 @@ contract("BorrowerOperations", async accounts => {
 
 		it("adjustTrove(): Reverts if requested coll withdrawal is greater than trove's collateral", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
@@ -8187,34 +8146,34 @@ contract("BorrowerOperations", async accounts => {
 			)
 		})
 
-		it("adjustTrove(): Reverts if borrower has insufficient VST balance to cover his debt repayment", async () => {
+		it("adjustTrove(): Reverts if borrower has insufficient U balance to cover his debt repayment", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 
 			const bobDebt = await getTroveEntireDebt(B)
 
-			// Bob transfers some VST to carol
+			// Bob transfers some U to carol
 			await vstToken.transfer(C, dec(10, 18), { from: B })
 
-			//Confirm B's VST balance is less than 50 VST
-			const B_VSTBal = await vstToken.balanceOf(B)
-			assert.isTrue(B_VSTBal.lt(bobDebt))
+			//Confirm B's U balance is less than 50 U
+			const B_UBal = await vstToken.balanceOf(B)
+			assert.isTrue(B_UBal.lt(bobDebt))
 
-			const repayVSTPromise_B = borrowerOperations.adjustTrove(
+			const repayUPromise_B = borrowerOperations.adjustTrove(
 				ZERO_ADDRESS,
 				0,
 				th._100pct,
@@ -8227,12 +8186,12 @@ contract("BorrowerOperations", async accounts => {
 			)
 
 			// B attempts to repay all his debt
-			await assertRevert(repayVSTPromise_B, "revert")
+			await assertRevert(repayUPromise_B, "revert")
 
-			await vstToken.transfer(C, B_VSTBal, { from: B })
+			await vstToken.transfer(C, B_UBal, { from: B })
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: B },
 			})
@@ -8241,10 +8200,10 @@ contract("BorrowerOperations", async accounts => {
 
 			await vstToken.transfer(C, dec(10, 18), { from: B })
 
-			const B_VSTBal_Asset = await vstToken.balanceOf(B)
-			assert.isTrue(B_VSTBal_Asset.lt(bobDebt_Asset))
+			const B_UBal_Asset = await vstToken.balanceOf(B)
+			assert.isTrue(B_UBal_Asset.lt(bobDebt_Asset))
 
-			const repayVSTPromise_B_Asset = borrowerOperations.adjustTrove(
+			const repayUPromise_B_Asset = borrowerOperations.adjustTrove(
 				erc20.address,
 				0,
 				th._100pct,
@@ -8256,7 +8215,7 @@ contract("BorrowerOperations", async accounts => {
 				{ from: B }
 			)
 
-			await assertRevert(repayVSTPromise_B_Asset, "revert")
+			await assertRevert(repayUPromise_B_Asset, "revert")
 		})
 
 		// --- Internal _adjustTrove() ---
@@ -8265,25 +8224,25 @@ contract("BorrowerOperations", async accounts => {
 			// no need to test this with proxies
 			it("Internal _adjustTrove(): reverts when op is a withdrawal and _borrower param is not the msg.sender", async () => {
 				await openTrove({
-					extraVSTAmount: toBN(dec(10000, 18)),
+					extraUAmount: toBN(dec(10000, 18)),
 					ICR: toBN(dec(10, 18)),
 					extraParams: { from: whale },
 				})
 				await openTrove({
-					extraVSTAmount: toBN(dec(10000, 18)),
+					extraUAmount: toBN(dec(10000, 18)),
 					ICR: toBN(dec(10, 18)),
 					extraParams: { from: bob },
 				})
 
 				await openTrove({
 					asset: erc20.address,
-					extraVSTAmount: toBN(dec(10000, 18)),
+					extraUAmount: toBN(dec(10000, 18)),
 					ICR: toBN(dec(10, 18)),
 					extraParams: { from: whale },
 				})
 				await openTrove({
 					asset: erc20.address,
-					extraVSTAmount: toBN(dec(10000, 18)),
+					extraUAmount: toBN(dec(10000, 18)),
 					ICR: toBN(dec(10, 18)),
 					extraParams: { from: bob },
 				})
@@ -8388,7 +8347,7 @@ contract("BorrowerOperations", async accounts => {
 			await openTrove({ ICR: toBN(dec(300, 16)), extraParams: { from: alice } })
 			await openTrove({
 				ICR: toBN(dec(120, 16)),
-				extraVSTAmount: toBN(dec(300, 18)),
+				extraUAmount: toBN(dec(300, 18)),
 				extraParams: { from: bob },
 			})
 
@@ -8400,7 +8359,7 @@ contract("BorrowerOperations", async accounts => {
 			await openTrove({
 				asset: erc20.address,
 				ICR: toBN(dec(120, 16)),
-				extraVSTAmount: toBN(dec(300, 18)),
+				extraUAmount: toBN(dec(300, 18)),
 				extraParams: { from: bob },
 			})
 
@@ -8427,25 +8386,25 @@ contract("BorrowerOperations", async accounts => {
 
 		it("closeTrove(): reverts when calling address does not have active trove", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: bob },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: bob },
 			})
@@ -8467,41 +8426,41 @@ contract("BorrowerOperations", async accounts => {
 
 		it("closeTrove(): reverts when system is in Recovery Mode", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(100000, 18)),
+				extraUAmount: toBN(dec(100000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: carol },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(100000, 18)),
+				extraUAmount: toBN(dec(100000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: carol },
 			})
 
-			// Alice transfers her VST to Bob and Carol so they can cover fees
+			// Alice transfers her U to Bob and Carol so they can cover fees
 			const aliceBal = await vstToken.balanceOf(alice)
 			await vstToken.transfer(bob, aliceBal.div(toBN(2)), { from: alice })
 			await vstToken.transfer(carol, aliceBal.div(toBN(2)), { from: alice })
@@ -8535,13 +8494,13 @@ contract("BorrowerOperations", async accounts => {
 
 		it("closeTrove(): reverts when trove is the only one in the system", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(100000, 18)),
+				extraUAmount: toBN(dec(100000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(100000, 18)),
+				extraUAmount: toBN(dec(100000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
@@ -8549,7 +8508,7 @@ contract("BorrowerOperations", async accounts => {
 			// Artificially mint to Alice so she has enough to close her trove
 			await vstToken.unprotectedMint(alice, dec(100000, 18))
 
-			// Check she has more VST than her trove debt
+			// Check she has more U than her trove debt
 			const aliceBal = await vstToken.balanceOf(alice)
 			const aliceDebt = await getTroveEntireDebt(alice)
 			assert.isTrue(aliceBal.gt(aliceDebt))
@@ -8574,39 +8533,39 @@ contract("BorrowerOperations", async accounts => {
 
 		it("closeTrove(): reduces a Trove's collateral to zero", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: dennis },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: dennis },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 
 			const aliceCollBefore = await getTroveEntireColl(alice)
-			const dennisVST = await vstToken.balanceOf(dennis)
+			const dennisU = await vstToken.balanceOf(dennis)
 			assert.isTrue(aliceCollBefore.gt(toBN("0")))
-			assert.isTrue(dennisVST.gt(toBN("0")))
+			assert.isTrue(dennisU.gt(toBN("0")))
 
 			const aliceCollBefore_Asset = await getTroveEntireColl(alice, erc20.address)
 			assert.isTrue(aliceCollBefore_Asset.gt(toBN("0")))
 
 			// To compensate borrowing fees
-			await vstToken.transfer(alice, dennisVST.div(toBN(2)), { from: dennis })
+			await vstToken.transfer(alice, dennisU.div(toBN(2)), { from: dennis })
 
 			// Alice attempts to close trove
 			await borrowerOperations.closeTrove(ZERO_ADDRESS, { from: alice })
@@ -8620,38 +8579,38 @@ contract("BorrowerOperations", async accounts => {
 
 		it("closeTrove(): reduces a Trove's debt to zero", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: dennis },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: dennis },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 
 			const aliceDebtBefore = await getTroveEntireColl(alice)
 			const aliceDebtBefore_Asset = await getTroveEntireColl(alice, erc20.address)
-			const dennisVST = await vstToken.balanceOf(dennis)
+			const dennisU = await vstToken.balanceOf(dennis)
 			assert.isTrue(aliceDebtBefore.gt(toBN("0")))
 			assert.isTrue(aliceDebtBefore_Asset.gt(toBN("0")))
-			assert.isTrue(dennisVST.gt(toBN("0")))
+			assert.isTrue(dennisU.gt(toBN("0")))
 
 			// To compensate borrowing fees
-			await vstToken.transfer(alice, dennisVST.div(toBN(2)), { from: dennis })
+			await vstToken.transfer(alice, dennisU.div(toBN(2)), { from: dennis })
 
 			// Alice attempts to close trove
 			await borrowerOperations.closeTrove(ZERO_ADDRESS, { from: alice })
@@ -8665,25 +8624,25 @@ contract("BorrowerOperations", async accounts => {
 
 		it("closeTrove(): sets Trove's stake to zero", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: dennis },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: dennis },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
@@ -8694,11 +8653,11 @@ contract("BorrowerOperations", async accounts => {
 			const aliceStakeBefore_Asset = await getTroveStake(alice, erc20.address)
 			assert.isTrue(aliceStakeBefore_Asset.gt(toBN("0")))
 
-			const dennisVST = await vstToken.balanceOf(dennis)
-			assert.isTrue(dennisVST.gt(toBN("0")))
+			const dennisU = await vstToken.balanceOf(dennis)
+			assert.isTrue(dennisU.gt(toBN("0")))
 
 			// To compensate borrowing fees
-			await vstToken.transfer(alice, dennisVST.div(toBN(2)), { from: dennis })
+			await vstToken.transfer(alice, dennisU.div(toBN(2)), { from: dennis })
 
 			// Alice attempts to close trove
 			await borrowerOperations.closeTrove(ZERO_ADDRESS, { from: alice })
@@ -8714,25 +8673,25 @@ contract("BorrowerOperations", async accounts => {
 		it("closeTrove(): zero's the troves reward snapshots", async () => {
 			// Dennis opens trove and transfers tokens to alice
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: dennis },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: dennis },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
@@ -8751,25 +8710,25 @@ contract("BorrowerOperations", async accounts => {
 
 			// Alice and Carol open troves
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: carol },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: carol },
 			})
@@ -8779,18 +8738,18 @@ contract("BorrowerOperations", async accounts => {
 
 			// Get Alice's pending reward snapshots
 			const L_ETH_A_Snapshot = (await troveManager.rewardSnapshots(alice, ZERO_ADDRESS))[0]
-			const L_VSTDebt_A_Snapshot = (await troveManager.rewardSnapshots(alice, ZERO_ADDRESS))[1]
+			const L_UDebt_A_Snapshot = (await troveManager.rewardSnapshots(alice, ZERO_ADDRESS))[1]
 			assert.isTrue(L_ETH_A_Snapshot.gt(toBN("0")))
-			assert.isTrue(L_VSTDebt_A_Snapshot.gt(toBN("0")))
+			assert.isTrue(L_UDebt_A_Snapshot.gt(toBN("0")))
 
 			const L_ETH_A_Snapshot_Asset = (
 				await troveManager.rewardSnapshots(alice, erc20.address)
 			)[0]
-			const L_VSTDebt_A_Snapshot_Asset = (
+			const L_UDebt_A_Snapshot_Asset = (
 				await troveManager.rewardSnapshots(alice, erc20.address)
 			)[1]
 			assert.isTrue(L_ETH_A_Snapshot_Asset.gt(toBN("0")))
-			assert.isTrue(L_VSTDebt_A_Snapshot_Asset.gt(toBN("0")))
+			assert.isTrue(L_UDebt_A_Snapshot_Asset.gt(toBN("0")))
 
 			// Liquidate Carol
 			await troveManager.liquidate(ZERO_ADDRESS, carol)
@@ -8802,22 +8761,22 @@ contract("BorrowerOperations", async accounts => {
 			const L_ETH_Snapshot_A_AfterLiquidation = (
 				await troveManager.rewardSnapshots(alice, ZERO_ADDRESS)
 			)[0]
-			const L_VSTDebt_Snapshot_A_AfterLiquidation = (
+			const L_UDebt_Snapshot_A_AfterLiquidation = (
 				await troveManager.rewardSnapshots(alice, ZERO_ADDRESS)
 			)[1]
 
 			const L_ETH_Snapshot_A_AfterLiquidation_Asset = (
 				await troveManager.rewardSnapshots(alice, erc20.address)
 			)[0]
-			const L_VSTDebt_Snapshot_A_AfterLiquidation_Asset = (
+			const L_UDebt_Snapshot_A_AfterLiquidation_Asset = (
 				await troveManager.rewardSnapshots(alice, erc20.address)
 			)[1]
 
 			assert.isTrue(L_ETH_Snapshot_A_AfterLiquidation.gt(toBN("0")))
-			assert.isTrue(L_VSTDebt_Snapshot_A_AfterLiquidation.gt(toBN("0")))
+			assert.isTrue(L_UDebt_Snapshot_A_AfterLiquidation.gt(toBN("0")))
 
 			assert.isTrue(L_ETH_Snapshot_A_AfterLiquidation_Asset.gt(toBN("0")))
-			assert.isTrue(L_VSTDebt_Snapshot_A_AfterLiquidation_Asset.gt(toBN("0")))
+			assert.isTrue(L_UDebt_Snapshot_A_AfterLiquidation_Asset.gt(toBN("0")))
 
 			// to compensate borrowing fees
 			await vstToken.transfer(alice, await vstToken.balanceOf(dennis), { from: dennis })
@@ -8832,45 +8791,45 @@ contract("BorrowerOperations", async accounts => {
 			const L_ETH_Snapshot_A_afterAliceCloses = (
 				await troveManager.rewardSnapshots(alice, ZERO_ADDRESS)
 			)[0]
-			const L_VSTDebt_Snapshot_A_afterAliceCloses = (
+			const L_UDebt_Snapshot_A_afterAliceCloses = (
 				await troveManager.rewardSnapshots(alice, ZERO_ADDRESS)
 			)[1]
 
 			assert.equal(L_ETH_Snapshot_A_afterAliceCloses, "0")
-			assert.equal(L_VSTDebt_Snapshot_A_afterAliceCloses, "0")
+			assert.equal(L_UDebt_Snapshot_A_afterAliceCloses, "0")
 
 			const L_ETH_Snapshot_A_afterAliceCloses_Asset = (
 				await troveManager.rewardSnapshots(alice, erc20.address)
 			)[0]
-			const L_VSTDebt_Snapshot_A_afterAliceCloses_Asset = (
+			const L_UDebt_Snapshot_A_afterAliceCloses_Asset = (
 				await troveManager.rewardSnapshots(alice, erc20.address)
 			)[1]
 
 			assert.equal(L_ETH_Snapshot_A_afterAliceCloses_Asset, "0")
-			assert.equal(L_VSTDebt_Snapshot_A_afterAliceCloses_Asset, "0")
+			assert.equal(L_UDebt_Snapshot_A_afterAliceCloses_Asset, "0")
 		})
 
 		it("closeTrove(): sets trove's status to closed and removes it from sorted troves list", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: dennis },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: dennis },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
@@ -8912,25 +8871,25 @@ contract("BorrowerOperations", async accounts => {
 
 		it("closeTrove(): reduces ActivePool ETH and raw ether by correct amount", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: dennis },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: dennis },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
@@ -8982,25 +8941,25 @@ contract("BorrowerOperations", async accounts => {
 
 		it("closeTrove(): reduces ActivePool debt by correct amount", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: dennis },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: dennis },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
@@ -9016,8 +8975,8 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(aliceDebt_Asset.gt("0"))
 
 			// Check before
-			const activePool_Debt_before = await activePool.getVSTDebt(ZERO_ADDRESS)
-			const activePool_Debt_before_Asset = await activePool.getVSTDebt(erc20.address)
+			const activePool_Debt_before = await activePool.getUDebt(ZERO_ADDRESS)
+			const activePool_Debt_before_Asset = await activePool.getUDebt(erc20.address)
 
 			assert.isTrue(activePool_Debt_before.eq(aliceDebt.add(dennisDebt)))
 			assert.isTrue(activePool_Debt_before.gt(toBN("0")))
@@ -9032,46 +8991,44 @@ contract("BorrowerOperations", async accounts => {
 			await borrowerOperations.closeTrove(erc20.address, { from: alice })
 
 			// Check after
-			const activePool_Debt_After = (await activePool.getVSTDebt(ZERO_ADDRESS)).toString()
+			const activePool_Debt_After = (await activePool.getUDebt(ZERO_ADDRESS)).toString()
 			th.assertIsApproximatelyEqual(activePool_Debt_After, dennisDebt)
-			const activePool_Debt_After_Asset = (
-				await activePool.getVSTDebt(erc20.address)
-			).toString()
+			const activePool_Debt_After_Asset = (await activePool.getUDebt(erc20.address)).toString()
 			th.assertIsApproximatelyEqual(activePool_Debt_After_Asset, dennisDebt_Asset)
 		})
 
 		it("closeTrove(): updates the the total stakes", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: dennis },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: dennis },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
@@ -9127,24 +9084,24 @@ contract("BorrowerOperations", async accounts => {
 			// TODO: wrap web3.eth.getBalance to be able to go through proxies
 			it("closeTrove(): sends the correct amount of ETH to the user", async () => {
 				await openTrove({
-					extraVSTAmount: toBN(dec(10000, 18)),
+					extraUAmount: toBN(dec(10000, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: dennis },
 				})
 				await openTrove({
-					extraVSTAmount: toBN(dec(10000, 18)),
+					extraUAmount: toBN(dec(10000, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: alice },
 				})
 				await openTrove({
 					asset: erc20.address,
-					extraVSTAmount: toBN(dec(10000, 18)),
+					extraUAmount: toBN(dec(10000, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: dennis },
 				})
 				await openTrove({
 					asset: erc20.address,
-					extraVSTAmount: toBN(dec(10000, 18)),
+					extraUAmount: toBN(dec(10000, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: alice },
 				})
@@ -9176,27 +9133,27 @@ contract("BorrowerOperations", async accounts => {
 			})
 		}
 
-		it("closeTrove(): subtracts the debt of the closed Trove from the Borrower's VSTToken balance", async () => {
+		it("closeTrove(): subtracts the debt of the closed Trove from the Borrower's UToken balance", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: dennis },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: dennis },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
@@ -9210,68 +9167,68 @@ contract("BorrowerOperations", async accounts => {
 			// to compensate borrowing fees
 			await vstToken.transfer(alice, await vstToken.balanceOf(dennis), { from: dennis })
 
-			const alice_VSTBalance_Before = await vstToken.balanceOf(alice)
-			assert.isTrue(alice_VSTBalance_Before.gt(toBN("0")))
+			const alice_UBalance_Before = await vstToken.balanceOf(alice)
+			assert.isTrue(alice_UBalance_Before.gt(toBN("0")))
 
 			// close trove
 			await borrowerOperations.closeTrove(ZERO_ADDRESS, { from: alice })
 			await borrowerOperations.closeTrove(erc20.address, { from: alice })
 
-			// check alice VST balance after
-			const alice_VSTBalance_After = await vstToken.balanceOf(alice)
-			const debtValue = aliceDebt.sub(VST_GAS_COMPENSATION)
-			const debtValueERC20 = aliceDebt.sub(VST_GAS_COMPENSATION_ERC20)
+			// check alice U balance after
+			const alice_UBalance_After = await vstToken.balanceOf(alice)
+			const debtValue = aliceDebt.sub(U_GAS_COMPENSATION)
+			const debtValueERC20 = aliceDebt.sub(U_GAS_COMPENSATION_ERC20)
 			th.assertIsApproximatelyEqual(
-				alice_VSTBalance_After,
-				alice_VSTBalance_Before.sub(debtValue.add(debtValueERC20))
+				alice_UBalance_After,
+				alice_UBalance_Before.sub(debtValue.add(debtValueERC20))
 			)
 		})
 
 		it("closeTrove(): applies pending rewards", async () => {
 			// --- SETUP ---
 			await openTrove({
-				extraVSTAmount: toBN(dec(1000000, 18)),
+				extraUAmount: toBN(dec(1000000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(1000000, 18)),
+				extraUAmount: toBN(dec(1000000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 
 			await openTrove({
-				extraVSTAmount: toBN(dec(15000, 18)),
+				extraUAmount: toBN(dec(15000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: carol },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(15000, 18)),
+				extraUAmount: toBN(dec(15000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: carol },
 			})
@@ -9282,7 +9239,7 @@ contract("BorrowerOperations", async accounts => {
 
 			// --- TEST ---
 
-			// price drops to 1ETH:100VST, reducing Carol's ICR below MCR
+			// price drops to 1ETH:100U, reducing Carol's ICR below MCR
 			await priceFeed.setPrice(dec(100, 18))
 			const price = await priceFeed.getPrice()
 
@@ -9299,13 +9256,13 @@ contract("BorrowerOperations", async accounts => {
 
 			// Dennis opens a new Trove
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: carol },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: carol },
 			})
@@ -9316,59 +9273,56 @@ contract("BorrowerOperations", async accounts => {
 				ZERO_ADDRESS
 			)
 			const alice_ETHrewardSnapshot_Before = alice_rewardSnapshot_Before[0]
-			const alice_VSTDebtRewardSnapshot_Before = alice_rewardSnapshot_Before[1]
+			const alice_UDebtRewardSnapshot_Before = alice_rewardSnapshot_Before[1]
 
 			const alice_rewardSnapshot_Before_Asset = await troveManager.rewardSnapshots(
 				alice,
 				erc20.address
 			)
 			const alice_ETHrewardSnapshot_Before_Asset = alice_rewardSnapshot_Before_Asset[0]
-			const alice_VSTDebtRewardSnapshot_Before_Asset = alice_rewardSnapshot_Before_Asset[1]
+			const alice_UDebtRewardSnapshot_Before_Asset = alice_rewardSnapshot_Before_Asset[1]
 
 			const bob_rewardSnapshot_Before = await troveManager.rewardSnapshots(bob, ZERO_ADDRESS)
 			const bob_ETHrewardSnapshot_Before = bob_rewardSnapshot_Before[0]
-			const bob_VSTDebtRewardSnapshot_Before = bob_rewardSnapshot_Before[1]
+			const bob_UDebtRewardSnapshot_Before = bob_rewardSnapshot_Before[1]
 
 			const bob_rewardSnapshot_Before_Asset = await troveManager.rewardSnapshots(
 				bob,
 				erc20.address
 			)
 			const bob_ETHrewardSnapshot_Before_Asset = bob_rewardSnapshot_Before_Asset[0]
-			const bob_VSTDebtRewardSnapshot_Before_Asset = bob_rewardSnapshot_Before_Asset[1]
+			const bob_UDebtRewardSnapshot_Before_Asset = bob_rewardSnapshot_Before_Asset[1]
 
 			assert.equal(alice_ETHrewardSnapshot_Before, 0)
-			assert.equal(alice_VSTDebtRewardSnapshot_Before, 0)
+			assert.equal(alice_UDebtRewardSnapshot_Before, 0)
 			assert.equal(bob_ETHrewardSnapshot_Before, 0)
-			assert.equal(bob_VSTDebtRewardSnapshot_Before, 0)
+			assert.equal(bob_UDebtRewardSnapshot_Before, 0)
 
 			assert.equal(alice_ETHrewardSnapshot_Before_Asset, 0)
-			assert.equal(alice_VSTDebtRewardSnapshot_Before_Asset, 0)
+			assert.equal(alice_UDebtRewardSnapshot_Before_Asset, 0)
 			assert.equal(bob_ETHrewardSnapshot_Before_Asset, 0)
-			assert.equal(bob_VSTDebtRewardSnapshot_Before_Asset, 0)
+			assert.equal(bob_UDebtRewardSnapshot_Before_Asset, 0)
 
 			const defaultPool_ETH = await defaultPool.getAssetBalance(ZERO_ADDRESS)
-			const defaultPooL_VSTDebt = await defaultPool.getVSTDebt(ZERO_ADDRESS)
+			const defaultPooL_UDebt = await defaultPool.getUDebt(ZERO_ADDRESS)
 
 			const defaultPool_ETH_Asset = await defaultPool.getAssetBalance(erc20.address)
-			const defaultPooL_VSTDebt_Asset = await defaultPool.getVSTDebt(erc20.address)
+			const defaultPooL_UDebt_Asset = await defaultPool.getUDebt(erc20.address)
 
 			// Carol's liquidated coll (1 ETH) and drawn debt should have entered the Default Pool
 			assert.isAtMost(th.getDifference(defaultPool_ETH, liquidatedColl_C), 100)
-			assert.isAtMost(th.getDifference(defaultPooL_VSTDebt, liquidatedDebt_C), 100)
+			assert.isAtMost(th.getDifference(defaultPooL_UDebt, liquidatedDebt_C), 100)
 
 			assert.isAtMost(th.getDifference(defaultPool_ETH_Asset, liquidatedColl_C_Asset), 100)
-			assert.isAtMost(th.getDifference(defaultPooL_VSTDebt_Asset, liquidatedDebt_C_Asset), 100)
+			assert.isAtMost(th.getDifference(defaultPooL_UDebt_Asset, liquidatedDebt_C_Asset), 100)
 
 			const pendingCollReward_A = await troveManager.getPendingAssetReward(ZERO_ADDRESS, alice)
-			const pendingDebtReward_A = await troveManager.getPendingVSTDebtReward(
-				ZERO_ADDRESS,
-				alice
-			)
+			const pendingDebtReward_A = await troveManager.getPendingUDebtReward(ZERO_ADDRESS, alice)
 			const pendingCollReward_A_Asset = await troveManager.getPendingAssetReward(
 				erc20.address,
 				alice
 			)
-			const pendingDebtReward_A_Asset = await troveManager.getPendingVSTDebtReward(
+			const pendingDebtReward_A_Asset = await troveManager.getPendingUDebtReward(
 				erc20.address,
 				alice
 			)
@@ -9382,12 +9336,12 @@ contract("BorrowerOperations", async accounts => {
 			await borrowerOperations.closeTrove(erc20.address, { from: alice })
 
 			const defaultPool_ETH_afterAliceCloses = await defaultPool.getAssetBalance(ZERO_ADDRESS)
-			const defaultPooL_VSTDebt_afterAliceCloses = await defaultPool.getVSTDebt(ZERO_ADDRESS)
+			const defaultPooL_UDebt_afterAliceCloses = await defaultPool.getUDebt(ZERO_ADDRESS)
 
 			const defaultPool_ETH_afterAliceCloses_Asset = await defaultPool.getAssetBalance(
 				erc20.address
 			)
-			const defaultPooL_VSTDebt_afterAliceCloses_Asset = await defaultPool.getVSTDebt(
+			const defaultPooL_UDebt_afterAliceCloses_Asset = await defaultPool.getUDebt(
 				erc20.address
 			)
 
@@ -9400,8 +9354,8 @@ contract("BorrowerOperations", async accounts => {
 			)
 			assert.isAtMost(
 				th.getDifference(
-					defaultPooL_VSTDebt_afterAliceCloses,
-					defaultPooL_VSTDebt.sub(pendingDebtReward_A)
+					defaultPooL_UDebt_afterAliceCloses,
+					defaultPooL_UDebt.sub(pendingDebtReward_A)
 				),
 				1000
 			)
@@ -9415,8 +9369,8 @@ contract("BorrowerOperations", async accounts => {
 			)
 			assert.isAtMost(
 				th.getDifference(
-					defaultPooL_VSTDebt_afterAliceCloses_Asset,
-					defaultPooL_VSTDebt.sub(pendingDebtReward_A_Asset)
+					defaultPooL_UDebt_afterAliceCloses_Asset,
+					defaultPooL_UDebt.sub(pendingDebtReward_A_Asset)
 				),
 				1000
 			)
@@ -9450,71 +9404,69 @@ contract("BorrowerOperations", async accounts => {
 			await borrowerOperations.closeTrove(erc20.address, { from: bob })
 
 			const defaultPool_ETH_afterBobCloses = await defaultPool.getAssetBalance(ZERO_ADDRESS)
-			const defaultPooL_VSTDebt_afterBobCloses = await defaultPool.getVSTDebt(ZERO_ADDRESS)
+			const defaultPooL_UDebt_afterBobCloses = await defaultPool.getUDebt(ZERO_ADDRESS)
 
 			const defaultPool_ETH_afterBobCloses_Asset = await defaultPool.getAssetBalance(
 				erc20.address
 			)
-			const defaultPooL_VSTDebt_afterBobCloses_Asset = await defaultPool.getVSTDebt(
-				erc20.address
-			)
+			const defaultPooL_UDebt_afterBobCloses_Asset = await defaultPool.getUDebt(erc20.address)
 
 			assert.isAtMost(th.getDifference(defaultPool_ETH_afterBobCloses, 0), 100000)
-			assert.isAtMost(th.getDifference(defaultPooL_VSTDebt_afterBobCloses, 0), 100000)
+			assert.isAtMost(th.getDifference(defaultPooL_UDebt_afterBobCloses, 0), 100000)
 
 			assert.isAtMost(th.getDifference(defaultPool_ETH_afterBobCloses_Asset, 0), 100000)
-			assert.isAtMost(th.getDifference(defaultPooL_VSTDebt_afterBobCloses_Asset, 0), 100000)
+			assert.isAtMost(th.getDifference(defaultPooL_UDebt_afterBobCloses_Asset, 0), 100000)
 		})
 
-		it("closeTrove(): reverts if borrower has insufficient VST balance to repay his entire debt", async () => {
+		it("closeTrove(): reverts if borrower has insufficient U balance to repay his entire debt", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(15000, 18)),
+				extraUAmount: toBN(dec(15000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(15000, 18)),
+				extraUAmount: toBN(dec(15000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 
-			//Confirm Bob's VST balance is less than his trove debt
-			const B_VSTBal = await vstToken.balanceOf(B)
+			//Confirm Bob's U balance is less than his trove debt
+			const B_UBal = await vstToken.balanceOf(B)
 			const B_troveDebt = await getTroveEntireDebt(B)
 
-			assert.isTrue(B_VSTBal.lt(B_troveDebt))
+			assert.isTrue(B_UBal.lt(B_troveDebt))
 
 			const closeTrovePromise_B = borrowerOperations.closeTrove(ZERO_ADDRESS, { from: B })
 			await assertRevert(
 				closeTrovePromise_B,
-				"BorrowerOps: Caller doesnt have enough VST to make repayment"
+				"BorrowerOps: Caller doesnt have enough U to make repayment"
 			)
 
-			await vstToken.transfer(C, await B_VSTBal, { from: B })
+			await vstToken.transfer(C, await B_UBal, { from: B })
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 
-			const B_VSTBal_Asset = await vstToken.balanceOf(B)
+			const B_UBal_Asset = await vstToken.balanceOf(B)
 			const B_troveDebt_Asset = await getTroveEntireDebt(B, erc20.address)
 
-			assert.isTrue(B_VSTBal_Asset.lt(B_troveDebt_Asset))
+			assert.isTrue(B_UBal_Asset.lt(B_troveDebt_Asset))
 
 			const closeTrovePromise_B_Asset = borrowerOperations.closeTrove(erc20.address, {
 				from: B,
 			})
 			await assertRevert(
 				closeTrovePromise_B_Asset,
-				"BorrowerOps: Caller doesnt have enough VST to make repayment"
+				"BorrowerOps: Caller doesnt have enough U to make repayment"
 			)
 		})
 
@@ -9525,21 +9477,21 @@ contract("BorrowerOperations", async accounts => {
 			it("openTrove(): emits a TroveUpdated event with the correct collateral and debt", async () => {
 				const txA = (
 					await openTrove({
-						extraVSTAmount: toBN(dec(15000, 18)),
+						extraUAmount: toBN(dec(15000, 18)),
 						ICR: toBN(dec(2, 18)),
 						extraParams: { from: A },
 					})
 				).tx
 				const txB = (
 					await openTrove({
-						extraVSTAmount: toBN(dec(5000, 18)),
+						extraUAmount: toBN(dec(5000, 18)),
 						ICR: toBN(dec(2, 18)),
 						extraParams: { from: B },
 					})
 				).tx
 				const txC = (
 					await openTrove({
-						extraVSTAmount: toBN(dec(3000, 18)),
+						extraUAmount: toBN(dec(3000, 18)),
 						ICR: toBN(dec(2, 18)),
 						extraParams: { from: C },
 					})
@@ -9548,7 +9500,7 @@ contract("BorrowerOperations", async accounts => {
 				const txA_Asset = (
 					await openTrove({
 						asset: erc20.address,
-						extraVSTAmount: toBN(dec(15000, 18)),
+						extraUAmount: toBN(dec(15000, 18)),
 						ICR: toBN(dec(2, 18)),
 						extraParams: { from: A },
 					})
@@ -9556,7 +9508,7 @@ contract("BorrowerOperations", async accounts => {
 				const txB_Asset = (
 					await openTrove({
 						asset: erc20.address,
-						extraVSTAmount: toBN(dec(5000, 18)),
+						extraUAmount: toBN(dec(5000, 18)),
 						ICR: toBN(dec(2, 18)),
 						extraParams: { from: B },
 					})
@@ -9564,7 +9516,7 @@ contract("BorrowerOperations", async accounts => {
 				const txC_Asset = (
 					await openTrove({
 						asset: erc20.address,
-						extraVSTAmount: toBN(dec(3000, 18)),
+						extraUAmount: toBN(dec(3000, 18)),
 						ICR: toBN(dec(2, 18)),
 						extraParams: { from: C },
 					})
@@ -9628,14 +9580,14 @@ contract("BorrowerOperations", async accounts => {
 
 				const txD = (
 					await openTrove({
-						extraVSTAmount: toBN(dec(5000, 18)),
+						extraUAmount: toBN(dec(5000, 18)),
 						ICR: toBN(dec(2, 18)),
 						extraParams: { from: D },
 					})
 				).tx
 				const txE = (
 					await openTrove({
-						extraVSTAmount: toBN(dec(3000, 18)),
+						extraUAmount: toBN(dec(3000, 18)),
 						ICR: toBN(dec(2, 18)),
 						extraParams: { from: E },
 					})
@@ -9644,7 +9596,7 @@ contract("BorrowerOperations", async accounts => {
 				const txD_Asset = (
 					await openTrove({
 						asset: erc20.address,
-						extraVSTAmount: toBN(dec(5000, 18)),
+						extraUAmount: toBN(dec(5000, 18)),
 						ICR: toBN(dec(2, 18)),
 						extraParams: { from: D },
 					})
@@ -9652,7 +9604,7 @@ contract("BorrowerOperations", async accounts => {
 				const txE_Asset = (
 					await openTrove({
 						asset: erc20.address,
-						extraVSTAmount: toBN(dec(3000, 18)),
+						extraUAmount: toBN(dec(3000, 18)),
 						ICR: toBN(dec(2, 18)),
 						extraParams: { from: E },
 					})
@@ -9810,47 +9762,47 @@ contract("BorrowerOperations", async accounts => {
 
 		it("openTrove(): decays a non-zero base rate", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(30000, 18)),
+				extraUAmount: toBN(dec(30000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(30000, 18)),
+				extraUAmount: toBN(dec(30000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
@@ -9872,13 +9824,13 @@ contract("BorrowerOperations", async accounts => {
 
 			// D opens trove
 			await openTrove({
-				extraVSTAmount: toBN(dec(37, 18)),
+				extraUAmount: toBN(dec(37, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(37, 18)),
+				extraUAmount: toBN(dec(37, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
@@ -9894,13 +9846,13 @@ contract("BorrowerOperations", async accounts => {
 
 			// E opens trove
 			await openTrove({
-				extraVSTAmount: toBN(dec(12, 18)),
+				extraUAmount: toBN(dec(12, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: E },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(12, 18)),
+				extraUAmount: toBN(dec(12, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: E },
 			})
@@ -9914,47 +9866,47 @@ contract("BorrowerOperations", async accounts => {
 
 		it("openTrove(): doesn't change base rate if it is already zero", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(30000, 18)),
+				extraUAmount: toBN(dec(30000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(30000, 18)),
+				extraUAmount: toBN(dec(30000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
@@ -9971,13 +9923,13 @@ contract("BorrowerOperations", async accounts => {
 
 			// D opens trove
 			await openTrove({
-				extraVSTAmount: toBN(dec(37, 18)),
+				extraUAmount: toBN(dec(37, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(37, 18)),
+				extraUAmount: toBN(dec(37, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
@@ -9993,13 +9945,13 @@ contract("BorrowerOperations", async accounts => {
 
 			// E opens trove
 			await openTrove({
-				extraVSTAmount: toBN(dec(12, 18)),
+				extraUAmount: toBN(dec(12, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: E },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(12, 18)),
+				extraUAmount: toBN(dec(12, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: E },
 			})
@@ -10013,47 +9965,47 @@ contract("BorrowerOperations", async accounts => {
 
 		it("openTrove(): lastFeeOpTime doesn't update if less time than decay interval has passed since the last fee operation", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(30000, 18)),
+				extraUAmount: toBN(dec(30000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(30000, 18)),
+				extraUAmount: toBN(dec(30000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
@@ -10076,13 +10028,13 @@ contract("BorrowerOperations", async accounts => {
 
 			// Borrower D triggers a fee
 			await openTrove({
-				extraVSTAmount: toBN(dec(1, 18)),
+				extraUAmount: toBN(dec(1, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(1, 18)),
+				extraUAmount: toBN(dec(1, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
@@ -10105,13 +10057,13 @@ contract("BorrowerOperations", async accounts => {
 
 			// Borrower E triggers a fee
 			await openTrove({
-				extraVSTAmount: toBN(dec(1, 18)),
+				extraUAmount: toBN(dec(1, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: E },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(1, 18)),
+				extraUAmount: toBN(dec(1, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: E },
 			})
@@ -10309,36 +10261,36 @@ contract("BorrowerOperations", async accounts => {
 
 		it("openTrove(): reverts if fee exceeds max fee percentage", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(30000, 18)),
+				extraUAmount: toBN(dec(30000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(30000, 18)),
+				extraUAmount: toBN(dec(30000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
@@ -10463,36 +10415,36 @@ contract("BorrowerOperations", async accounts => {
 
 		it("openTrove(): succeeds when fee is less than max fee percentage", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(30000, 18)),
+				extraUAmount: toBN(dec(30000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(30000, 18)),
+				extraUAmount: toBN(dec(30000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
@@ -10647,47 +10599,47 @@ contract("BorrowerOperations", async accounts => {
 
 		it("openTrove(): borrower can't grief the baseRate and stop it decaying by issuing debt at higher frequency than the decay granularity", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(30000, 18)),
+				extraUAmount: toBN(dec(30000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(30000, 18)),
+				extraUAmount: toBN(dec(30000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
@@ -10712,13 +10664,13 @@ contract("BorrowerOperations", async accounts => {
 			// Assume Borrower also owns accounts D and E
 			// Borrower triggers a fee, before decay interval has passed
 			await openTrove({
-				extraVSTAmount: toBN(dec(1, 18)),
+				extraUAmount: toBN(dec(1, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(1, 18)),
+				extraUAmount: toBN(dec(1, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
@@ -10728,13 +10680,13 @@ contract("BorrowerOperations", async accounts => {
 
 			// Borrower triggers another fee
 			await openTrove({
-				extraVSTAmount: toBN(dec(1, 18)),
+				extraUAmount: toBN(dec(1, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: E },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(1, 18)),
+				extraUAmount: toBN(dec(1, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: E },
 			})
@@ -10747,58 +10699,58 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(baseRate_2_Asset.lt(baseRate_1_Asset))
 		})
 
-		it("openTrove(): borrowing at non-zero base rate sends VST fee to VSTA staking contract", async () => {
-			// time fast-forwards 1 year, and multisig stakes 1 VSTA
+		it("openTrove(): borrowing at non-zero base rate sends U fee to YOU staking contract", async () => {
+			// time fast-forwards 1 year, and multisig stakes 1 YOU
 			await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
 			await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
 			await vstaStaking.stake(dec(1, 18), { from: multisig })
 
-			// Check VSTA VST balance before == 0
-			const VSTAStaking_VSTBalance_Before = await vstToken.balanceOf(vstaStaking.address)
-			assert.equal(VSTAStaking_VSTBalance_Before, "0")
+			// Check YOU U balance before == 0
+			const YOUStaking_UBalance_Before = await vstToken.balanceOf(vstaStaking.address)
+			assert.equal(YOUStaking_UBalance_Before, "0")
 
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(30000, 18)),
+				extraUAmount: toBN(dec(30000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(30000, 18)),
+				extraUAmount: toBN(dec(30000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
@@ -10822,72 +10774,72 @@ contract("BorrowerOperations", async accounts => {
 
 			// D opens trove
 			await openTrove({
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 
-			// Check VSTA VST balance after has increased
-			const VSTAStaking_VSTBalance_After = await vstToken.balanceOf(vstaStaking.address)
-			assert.isTrue(VSTAStaking_VSTBalance_After.gt(VSTAStaking_VSTBalance_Before))
+			// Check YOU U balance after has increased
+			const YOUStaking_UBalance_After = await vstToken.balanceOf(vstaStaking.address)
+			assert.isTrue(YOUStaking_UBalance_After.gt(YOUStaking_UBalance_Before))
 		})
 
 		if (!withProxy) {
 			// TODO: use rawLogs instead of logs
 			it("openTrove(): borrowing at non-zero base records the (drawn debt + fee  + liq. reserve) on the Trove struct", async () => {
-				// time fast-forwards 1 year, and multisig stakes 1 VSTA
+				// time fast-forwards 1 year, and multisig stakes 1 YOU
 				await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
 				await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
 				await vstaStaking.stake(dec(1, 18), { from: multisig })
 
 				await openTrove({
-					extraVSTAmount: toBN(dec(10000, 18)),
+					extraUAmount: toBN(dec(10000, 18)),
 					ICR: toBN(dec(10, 18)),
 					extraParams: { from: whale },
 				})
 				await openTrove({
-					extraVSTAmount: toBN(dec(20000, 18)),
+					extraUAmount: toBN(dec(20000, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: A },
 				})
 				await openTrove({
-					extraVSTAmount: toBN(dec(30000, 18)),
+					extraUAmount: toBN(dec(30000, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: B },
 				})
 				await openTrove({
-					extraVSTAmount: toBN(dec(40000, 18)),
+					extraUAmount: toBN(dec(40000, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: C },
 				})
 
 				await openTrove({
 					asset: erc20.address,
-					extraVSTAmount: toBN(dec(10000, 18)),
+					extraUAmount: toBN(dec(10000, 18)),
 					ICR: toBN(dec(10, 18)),
 					extraParams: { from: whale },
 				})
 				await openTrove({
 					asset: erc20.address,
-					extraVSTAmount: toBN(dec(20000, 18)),
+					extraUAmount: toBN(dec(20000, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: A },
 				})
 				await openTrove({
 					asset: erc20.address,
-					extraVSTAmount: toBN(dec(30000, 18)),
+					extraUAmount: toBN(dec(30000, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: B },
 				})
 				await openTrove({
 					asset: erc20.address,
-					extraVSTAmount: toBN(dec(40000, 18)),
+					extraUAmount: toBN(dec(40000, 18)),
 					ICR: toBN(dec(2, 18)),
 					extraParams: { from: C },
 				})
@@ -10909,14 +10861,14 @@ contract("BorrowerOperations", async accounts => {
 				// 2 hours pass
 				th.fastForwardTime(7200, web3.currentProvider)
 
-				const D_VSTRequest = toBN(dec(20000, 18))
+				const D_URequest = toBN(dec(20000, 18))
 
-				// D withdraws VST
+				// D withdraws U
 				const openTroveTx = await borrowerOperations.openTrove(
 					ZERO_ADDRESS,
 					0,
 					th._100pct,
-					D_VSTRequest,
+					D_URequest,
 					ZERO_ADDRESS,
 					ZERO_ADDRESS,
 					{ from: D, value: dec(200, "ether") }
@@ -10925,16 +10877,16 @@ contract("BorrowerOperations", async accounts => {
 					erc20.address,
 					dec(200, "ether"),
 					th._100pct,
-					D_VSTRequest,
+					D_URequest,
 					ZERO_ADDRESS,
 					ZERO_ADDRESS,
 					{ from: D }
 				)
 
-				const emittedFee = toBN(th.getVSTFeeFromVSTBorrowingEvent(openTroveTx))
+				const emittedFee = toBN(th.getUFeeFromUBorrowingEvent(openTroveTx))
 				assert.isTrue(toBN(emittedFee).gt(toBN("0")))
 
-				const emittedFee_Asset = toBN(th.getVSTFeeFromVSTBorrowingEvent(openTroveTx_Asset))
+				const emittedFee_Asset = toBN(th.getUFeeFromUBorrowingEvent(openTroveTx_Asset))
 				assert.isTrue(toBN(emittedFee_Asset).gt(toBN("0")))
 
 				const newDebt = (await troveManager.Troves(D, ZERO_ADDRESS))[th.TROVE_DEBT_INDEX]
@@ -10945,69 +10897,69 @@ contract("BorrowerOperations", async accounts => {
 				// Check debt on Trove struct equals drawn debt plus emitted fee
 				th.assertIsApproximatelyEqual(
 					newDebt,
-					D_VSTRequest.add(emittedFee).add(VST_GAS_COMPENSATION),
+					D_URequest.add(emittedFee).add(U_GAS_COMPENSATION),
 					100000
 				)
 				th.assertIsApproximatelyEqual(
 					newDebt_Asset,
-					D_VSTRequest.add(emittedFee_Asset).add(VST_GAS_COMPENSATION_ERC20),
+					D_URequest.add(emittedFee_Asset).add(U_GAS_COMPENSATION_ERC20),
 					100000
 				)
 			})
 		}
 
-		it("openTrove(): Borrowing at non-zero base rate increases the VSTA staking contract VST fees-per-unit-staked", async () => {
-			// time fast-forwards 1 year, and multisig stakes 1 VSTA
+		it("openTrove(): Borrowing at non-zero base rate increases the YOU staking contract U fees-per-unit-staked", async () => {
+			// time fast-forwards 1 year, and multisig stakes 1 YOU
 			await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
 			await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
 			await vstaStaking.stake(dec(1, 18), { from: multisig })
 
-			// Check VSTA contract VST fees-per-unit-staked is zero
-			const F_VST_Before = await vstaStaking.F_VST()
-			assert.equal(F_VST_Before, "0")
+			// Check YOU contract U fees-per-unit-staked is zero
+			const F_U_Before = await vstaStaking.F_U()
+			assert.equal(F_U_Before, "0")
 
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(30000, 18)),
+				extraUAmount: toBN(dec(30000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(30000, 18)),
+				extraUAmount: toBN(dec(30000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
@@ -11028,74 +10980,74 @@ contract("BorrowerOperations", async accounts => {
 
 			// D opens trove
 			await openTrove({
-				extraVSTAmount: toBN(dec(37, 18)),
+				extraUAmount: toBN(dec(37, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(37, 18)),
+				extraUAmount: toBN(dec(37, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 
-			// Check VSTA contract VST fees-per-unit-staked has increased
-			const F_VST_After = await vstaStaking.F_VST()
-			assert.isTrue(F_VST_After.gt(F_VST_Before))
+			// Check YOU contract U fees-per-unit-staked has increased
+			const F_U_After = await vstaStaking.F_U()
+			assert.isTrue(F_U_After.gt(F_U_Before))
 		})
 
 		it("openTrove(): Borrowing at non-zero base rate sends requested amount to the user", async () => {
-			// time fast-forwards 1 year, and multisig stakes 1 VSTA
+			// time fast-forwards 1 year, and multisig stakes 1 YOU
 			await th.fastForwardTime(timeValues.SECONDS_IN_ONE_YEAR, web3.currentProvider)
 			await vstaToken.approve(vstaStaking.address, dec(1, 18), { from: multisig })
 			await vstaStaking.stake(dec(1, 18), { from: multisig })
 
-			// Check VSTA Staking contract balance before == 0
-			const VSTAStaking_VSTBalance_Before = await vstToken.balanceOf(vstaStaking.address)
-			assert.equal(VSTAStaking_VSTBalance_Before, "0")
+			// Check YOU Staking contract balance before == 0
+			const YOUStaking_UBalance_Before = await vstToken.balanceOf(vstaStaking.address)
+			assert.equal(YOUStaking_UBalance_Before, "0")
 
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(30000, 18)),
+				extraUAmount: toBN(dec(30000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(20000, 18)),
+				extraUAmount: toBN(dec(20000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(30000, 18)),
+				extraUAmount: toBN(dec(30000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(40000, 18)),
+				extraUAmount: toBN(dec(40000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
@@ -11118,8 +11070,8 @@ contract("BorrowerOperations", async accounts => {
 			th.fastForwardTime(7200, web3.currentProvider)
 
 			// D opens trove
-			const VSTRequest_D = toBN(dec(40000, 18))
-			await borrowerOperations.openTrove(ZERO_ADDRESS, 0, th._100pct, VSTRequest_D, D, D, {
+			const URequest_D = toBN(dec(40000, 18))
+			await borrowerOperations.openTrove(ZERO_ADDRESS, 0, th._100pct, URequest_D, D, D, {
 				from: D,
 				value: dec(500, "ether"),
 			})
@@ -11127,53 +11079,53 @@ contract("BorrowerOperations", async accounts => {
 				erc20.address,
 				dec(500, "ether"),
 				th._100pct,
-				VSTRequest_D,
+				URequest_D,
 				D,
 				D,
 				{ from: D }
 			)
 
-			// Check VSTA staking VST balance has increased
-			const VSTAStaking_VSTBalance_After = await vstToken.balanceOf(vstaStaking.address)
-			assert.isTrue(VSTAStaking_VSTBalance_After.gt(VSTAStaking_VSTBalance_Before))
+			// Check YOU staking U balance has increased
+			const YOUStaking_UBalance_After = await vstToken.balanceOf(vstaStaking.address)
+			assert.isTrue(YOUStaking_UBalance_After.gt(YOUStaking_UBalance_Before))
 
-			// Check D's VST balance now equals their requested VST
-			const VSTBalance_D = await vstToken.balanceOf(D)
-			assert.isTrue(VSTRequest_D.mul(toBN(2)).eq(VSTBalance_D))
+			// Check D's U balance now equals their requested U
+			const UBalance_D = await vstToken.balanceOf(D)
+			assert.isTrue(URequest_D.mul(toBN(2)).eq(UBalance_D))
 		})
 
-		it("openTrove(): Borrowing at zero base rate changes the VSTA staking contract VST fees-per-unit-staked", async () => {
+		it("openTrove(): Borrowing at zero base rate changes the YOU staking contract U fees-per-unit-staked", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: C },
 			})
@@ -11188,63 +11140,63 @@ contract("BorrowerOperations", async accounts => {
 			// 2 hours pass
 			th.fastForwardTime(7200, web3.currentProvider)
 
-			// Check VST reward per VSTA staked == 0
-			const F_VST_Before = await vstaStaking.F_VST()
-			assert.equal(F_VST_Before, "0")
+			// Check U reward per YOU staked == 0
+			const F_U_Before = await vstaStaking.F_U()
+			assert.equal(F_U_Before, "0")
 
-			// A stakes VSTA
+			// A stakes YOU
 			await vstaToken.unprotectedMint(A, dec(100, 18))
 			await vstaStaking.stake(dec(100, 18), { from: A })
 
 			// D opens trove
 			await openTrove({
-				extraVSTAmount: toBN(dec(37, 18)),
+				extraUAmount: toBN(dec(37, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(37, 18)),
+				extraUAmount: toBN(dec(37, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: D },
 			})
 
-			// Check VST reward per VSTA staked > 0
-			const F_VST_After = await vstaStaking.F_VST()
-			assert.isTrue(F_VST_After.gt(toBN("0")))
+			// Check U reward per YOU staked > 0
+			const F_U_After = await vstaStaking.F_U()
+			assert.isTrue(F_U_After.gt(toBN("0")))
 		})
 
 		it("openTrove(): Borrowing at zero base rate charges minimum fee", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: A },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: B },
 			})
 
-			const VSTRequest = toBN(dec(10000, 18))
+			const URequest = toBN(dec(10000, 18))
 			const txC = await borrowerOperations.openTrove(
 				ZERO_ADDRESS,
 				0,
 				th._100pct,
-				VSTRequest,
+				URequest,
 				ZERO_ADDRESS,
 				ZERO_ADDRESS,
 				{ value: dec(100, "ether"), from: C }
@@ -11253,45 +11205,43 @@ contract("BorrowerOperations", async accounts => {
 				erc20.address,
 				dec(100, "ether"),
 				th._100pct,
-				VSTRequest,
+				URequest,
 				ZERO_ADDRESS,
 				ZERO_ADDRESS,
 				{ from: C }
 			)
-			const _VSTFee = toBN(th.getEventArgByName(txC, "VSTBorrowingFeePaid", "_VSTFee"))
-			const _VSTFee_Asset = toBN(
-				th.getEventArgByName(txC_Asset, "VSTBorrowingFeePaid", "_VSTFee")
-			)
+			const _UFee = toBN(th.getEventArgByName(txC, "UBorrowingFeePaid", "_UFee"))
+			const _UFee_Asset = toBN(th.getEventArgByName(txC_Asset, "UBorrowingFeePaid", "_UFee"))
 
-			const expectedFee = BORROWING_FEE_FLOOR.mul(toBN(VSTRequest)).div(toBN(dec(1, 18)))
-			const expectedFee_Asset = BORROWING_FEE_FLOOR_ERC20.mul(toBN(VSTRequest)).div(
+			const expectedFee = BORROWING_FEE_FLOOR.mul(toBN(URequest)).div(toBN(dec(1, 18)))
+			const expectedFee_Asset = BORROWING_FEE_FLOOR_ERC20.mul(toBN(URequest)).div(
 				toBN(dec(1, 18))
 			)
-			assert.isTrue(_VSTFee.eq(expectedFee))
-			assert.isTrue(_VSTFee_Asset.eq(expectedFee_Asset))
+			assert.isTrue(_UFee.eq(expectedFee))
+			assert.isTrue(_UFee_Asset.eq(expectedFee_Asset))
 		})
 
 		it("openTrove(): reverts when system is in Recovery Mode and ICR < CCR", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
@@ -11308,7 +11258,7 @@ contract("BorrowerOperations", async accounts => {
 			// Bob tries to open a trove with 149% ICR during Recovery Mode
 			try {
 				const txBob = await openTrove({
-					extraVSTAmount: toBN(dec(5000, 18)),
+					extraUAmount: toBN(dec(5000, 18)),
 					ICR: toBN(dec(149, 16)),
 					extraParams: { from: alice },
 				})
@@ -11321,7 +11271,7 @@ contract("BorrowerOperations", async accounts => {
 			try {
 				const txBob_Asset = await openTrove({
 					asset: erc20.address,
-					extraVSTAmount: toBN(dec(5000, 18)),
+					extraUAmount: toBN(dec(5000, 18)),
 					ICR: toBN(dec(149, 16)),
 					extraParams: { from: alice },
 				})
@@ -11333,25 +11283,25 @@ contract("BorrowerOperations", async accounts => {
 
 		it("openTrove(): reverts when trove ICR < MCR", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
@@ -11363,7 +11313,7 @@ contract("BorrowerOperations", async accounts => {
 			try {
 				const txBob = (
 					await openTrove({
-						extraVSTAmount: toBN(dec(5000, 18)),
+						extraUAmount: toBN(dec(5000, 18)),
 						ICR: toBN(dec(109, 16)),
 						extraParams: { from: bob },
 					})
@@ -11377,7 +11327,7 @@ contract("BorrowerOperations", async accounts => {
 				const txBob = (
 					await openTrove({
 						asset: erc20.address,
-						extraVSTAmount: toBN(dec(5000, 18)),
+						extraUAmount: toBN(dec(5000, 18)),
 						ICR: toBN(dec(109, 16)),
 						extraParams: { from: bob },
 					})
@@ -11396,7 +11346,7 @@ contract("BorrowerOperations", async accounts => {
 			// Bob attempts to open a 109% ICR trove in Recovery Mode
 			try {
 				const txBob = await openTrove({
-					extraVSTAmount: toBN(dec(5000, 18)),
+					extraUAmount: toBN(dec(5000, 18)),
 					ICR: toBN(dec(109, 16)),
 					extraParams: { from: bob },
 				})
@@ -11408,7 +11358,7 @@ contract("BorrowerOperations", async accounts => {
 			try {
 				const txBob = await openTrove({
 					asset: erc20.address,
-					extraVSTAmount: toBN(dec(5000, 18)),
+					extraUAmount: toBN(dec(5000, 18)),
 					ICR: toBN(dec(109, 16)),
 					extraParams: { from: bob },
 				})
@@ -11423,13 +11373,13 @@ contract("BorrowerOperations", async accounts => {
 
 			// Alice creates trove with 150% ICR.  System TCR = 150%.
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(15, 17)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(15, 17)),
 				extraParams: { from: alice },
 			})
@@ -11444,7 +11394,7 @@ contract("BorrowerOperations", async accounts => {
 			// System TCR would fall below 150%
 			try {
 				const txBob = await openTrove({
-					extraVSTAmount: toBN(dec(5000, 18)),
+					extraUAmount: toBN(dec(5000, 18)),
 					ICR: toBN(dec(149, 16)),
 					extraParams: { from: bob },
 				})
@@ -11456,7 +11406,7 @@ contract("BorrowerOperations", async accounts => {
 			try {
 				const txBob = await openTrove({
 					asset: erc20.address,
-					extraVSTAmount: toBN(dec(5000, 18)),
+					extraUAmount: toBN(dec(5000, 18)),
 					ICR: toBN(dec(149, 16)),
 					extraParams: { from: bob },
 				})
@@ -11468,43 +11418,43 @@ contract("BorrowerOperations", async accounts => {
 
 		it("openTrove(): reverts if trove is already active", async () => {
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(15, 17)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(15, 17)),
 				extraParams: { from: bob },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(10, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(15, 17)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(15, 17)),
 				extraParams: { from: bob },
 			})
 
 			try {
 				const txB_1 = await openTrove({
-					extraVSTAmount: toBN(dec(5000, 18)),
+					extraUAmount: toBN(dec(5000, 18)),
 					ICR: toBN(dec(3, 18)),
 					extraParams: { from: bob },
 				})
@@ -11516,7 +11466,7 @@ contract("BorrowerOperations", async accounts => {
 			try {
 				const txB_1 = await openTrove({
 					asset: erc20.address,
-					extraVSTAmount: toBN(dec(5000, 18)),
+					extraUAmount: toBN(dec(5000, 18)),
 					ICR: toBN(dec(3, 18)),
 					extraParams: { from: bob },
 				})
@@ -11548,25 +11498,25 @@ contract("BorrowerOperations", async accounts => {
 			// --- SETUP ---
 			//  Alice and Bob add coll and withdraw such  that the TCR is ~150%
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(15, 17)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(15, 17)),
 				extraParams: { from: bob },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(15, 17)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(15, 17)),
 				extraParams: { from: bob },
 			})
@@ -11577,7 +11527,7 @@ contract("BorrowerOperations", async accounts => {
 			const TCR_Asset = (await th.getTCR(contracts, erc20.address)).toString()
 			assert.equal(TCR_Asset, "1500000000000000000")
 
-			// price drops to 1ETH:100VST, reducing TCR below 150%
+			// price drops to 1ETH:100U, reducing TCR below 150%
 			await priceFeed.setPrice("100000000000000000000")
 			const price = await priceFeed.getPrice()
 
@@ -11587,7 +11537,7 @@ contract("BorrowerOperations", async accounts => {
 			// Carol opens at 150% ICR in Recovery Mode
 			const txCarol = (
 				await openTrove({
-					extraVSTAmount: toBN(dec(5000, 18)),
+					extraUAmount: toBN(dec(5000, 18)),
 					ICR: toBN(dec(15, 17)),
 					extraParams: { from: carol },
 				})
@@ -11595,7 +11545,7 @@ contract("BorrowerOperations", async accounts => {
 			const txCarol_Asset = (
 				await openTrove({
 					asset: erc20.address,
-					extraVSTAmount: toBN(dec(5000, 18)),
+					extraUAmount: toBN(dec(5000, 18)),
 					ICR: toBN(dec(15, 17)),
 					extraParams: { from: carol },
 				})
@@ -11622,25 +11572,25 @@ contract("BorrowerOperations", async accounts => {
 			// --- SETUP ---
 			//  Alice and Bob add coll and withdraw such  that the TCR is ~150%
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(15, 17)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(15, 17)),
 				extraParams: { from: bob },
 			})
 
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(15, 17)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(15, 17)),
 				extraParams: { from: bob },
 			})
@@ -11651,7 +11601,7 @@ contract("BorrowerOperations", async accounts => {
 			const TCR_Asset = (await th.getTCR(contracts, erc20.address)).toString()
 			assert.equal(TCR_Asset, "1500000000000000000")
 
-			// price drops to 1ETH:100VST, reducing TCR below 150%
+			// price drops to 1ETH:100U, reducing TCR below 150%
 			await priceFeed.setPrice("100000000000000000000")
 
 			assert.isTrue(await th.checkRecoveryMode(contracts))
@@ -11702,8 +11652,8 @@ contract("BorrowerOperations", async accounts => {
 			// check non-existent status
 			assert.equal(status_Before_Asset, 0)
 
-			const VSTRequest = MIN_NET_DEBT
-			const VSTRequestERC20 = MIN_NET_DEBT_ERC20
+			const URequest = MIN_NET_DEBT
+			const URequestERC20 = MIN_NET_DEBT_ERC20
 			borrowerOperations.openTrove(ZERO_ADDRESS, 0, th._100pct, MIN_NET_DEBT, carol, carol, {
 				from: alice,
 				value: dec(100, "ether"),
@@ -11718,14 +11668,14 @@ contract("BorrowerOperations", async accounts => {
 				{ from: alice }
 			)
 
-			// Get the expected debt based on the VST request (adding fee and liq. reserve on top)
-			const expectedDebt = VSTRequest.add(
-				await troveManager.getBorrowingFee(ZERO_ADDRESS, VSTRequest)
-			).add(VST_GAS_COMPENSATION)
+			// Get the expected debt based on the U request (adding fee and liq. reserve on top)
+			const expectedDebt = URequest.add(
+				await troveManager.getBorrowingFee(ZERO_ADDRESS, URequest)
+			).add(U_GAS_COMPENSATION)
 
-			const expectedDebt_Asset = VSTRequestERC20.add(
-				await troveManager.getBorrowingFee(erc20.address, VSTRequestERC20)
-			).add(VST_GAS_COMPENSATION_ERC20)
+			const expectedDebt_Asset = URequestERC20.add(
+				await troveManager.getBorrowingFee(erc20.address, URequestERC20)
+			).add(U_GAS_COMPENSATION_ERC20)
 
 			const debt_After = await getTroveEntireDebt(alice)
 			const coll_After = await getTroveEntireColl(alice)
@@ -11761,13 +11711,13 @@ contract("BorrowerOperations", async accounts => {
 			assert.equal(TroveOwnersCount_Before_Asset, "0")
 
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(15, 17)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(15, 17)),
 				extraParams: { from: alice },
 			})
@@ -11795,13 +11745,13 @@ contract("BorrowerOperations", async accounts => {
 			assert.equal(totalStakesBefore_Asset, "0")
 
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
@@ -11839,13 +11789,13 @@ contract("BorrowerOperations", async accounts => {
 			assert.equal(listIsEmpty_Before_Asset, true)
 
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
@@ -11876,13 +11826,13 @@ contract("BorrowerOperations", async accounts => {
 			assert.equal(activePool_RawEther_Before_Asset, 0)
 
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
@@ -11902,116 +11852,116 @@ contract("BorrowerOperations", async accounts => {
 			)
 		})
 
-		it("openTrove(): records up-to-date initial snapshots of L_ETH and L_VSTDebt", async () => {
+		it("openTrove(): records up-to-date initial snapshots of L_ETH and L_UDebt", async () => {
 			// --- SETUP ---
 
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: carol },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: carol },
 			})
 
 			// --- TEST ---
 
-			// price drops to 1ETH:100VST, reducing Carol's ICR below MCR
+			// price drops to 1ETH:100U, reducing Carol's ICR below MCR
 			await priceFeed.setPrice(dec(100, 18))
 
-			// close Carol's Trove, liquidating her 1 ether and 180VST.
+			// close Carol's Trove, liquidating her 1 ether and 180U.
 			await troveManager.liquidate(ZERO_ADDRESS, carol, { from: owner })
 			await troveManager.liquidate(erc20.address, carol, { from: owner })
 
 			/* with total stakes = 10 ether, after liquidation, L_ETH should equal 1/10 ether per-ether-staked,
-		   and L_VST should equal 18 VST per-ether-staked. */
+		   and L_U should equal 18 U per-ether-staked. */
 
 			const L_ETH = await troveManager.L_ASSETS(ZERO_ADDRESS)
-			const L_VST = await troveManager.L_VSTDebts(ZERO_ADDRESS)
+			const L_U = await troveManager.L_UDebts(ZERO_ADDRESS)
 
 			const L_Asset = await troveManager.L_ASSETS(erc20.address)
-			const L_VST_Asset = await troveManager.L_VSTDebts(erc20.address)
+			const L_U_Asset = await troveManager.L_UDebts(erc20.address)
 
 			assert.isTrue(L_ETH.gt(toBN("0")))
-			assert.isTrue(L_VST.gt(toBN("0")))
+			assert.isTrue(L_U.gt(toBN("0")))
 			assert.isTrue(L_Asset.gt(toBN("0")))
-			assert.isTrue(L_VST_Asset.gt(toBN("0")))
+			assert.isTrue(L_U_Asset.gt(toBN("0")))
 
 			// Bob opens trove
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
 
-			// Check Bob's snapshots of L_ETH and L_VST equal the respective current values
+			// Check Bob's snapshots of L_ETH and L_U equal the respective current values
 			const bob_rewardSnapshot = await troveManager.rewardSnapshots(bob, ZERO_ADDRESS)
 			const bob_ETHrewardSnapshot = bob_rewardSnapshot[0]
-			const bob_VSTDebtRewardSnapshot = bob_rewardSnapshot[1]
+			const bob_UDebtRewardSnapshot = bob_rewardSnapshot[1]
 
 			const bob_rewardSnapshot_Asset = await troveManager.rewardSnapshots(bob, erc20.address)
 			const bob_ETHrewardSnapshot_Asset = bob_rewardSnapshot_Asset[0]
-			const bob_VSTDebtRewardSnapshot_Asset = bob_rewardSnapshot_Asset[1]
+			const bob_UDebtRewardSnapshot_Asset = bob_rewardSnapshot_Asset[1]
 
 			assert.isAtMost(th.getDifference(bob_ETHrewardSnapshot, L_ETH), 1000)
-			assert.isAtMost(th.getDifference(bob_VSTDebtRewardSnapshot, L_VST), 1000)
+			assert.isAtMost(th.getDifference(bob_UDebtRewardSnapshot, L_U), 1000)
 
 			assert.isAtMost(th.getDifference(bob_ETHrewardSnapshot, L_Asset), 1000)
-			assert.isAtMost(th.getDifference(bob_VSTDebtRewardSnapshot, L_VST_Asset), 1000)
+			assert.isAtMost(th.getDifference(bob_UDebtRewardSnapshot, L_U_Asset), 1000)
 		})
 
 		it("openTrove(): allows a user to open a Trove, then close it, then re-open it", async () => {
 			// Open Troves
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: carol },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: whale },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: carol },
 			})
@@ -12049,13 +11999,13 @@ contract("BorrowerOperations", async accounts => {
 
 			// Re-open Trove
 			await openTrove({
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(5000, 18)),
+				extraUAmount: toBN(dec(5000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
@@ -12072,7 +12022,7 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(await sortedTroves.contains(erc20.address, alice))
 		})
 
-		it("openTrove(): increases the Trove's VST debt by the correct amount", async () => {
+		it("openTrove(): increases the Trove's U debt by the correct amount", async () => {
 			// check before
 			const alice_Trove_Before = await troveManager.Troves(alice, ZERO_ADDRESS)
 			const debt_Before = alice_Trove_Before[th.TROVE_DEBT_INDEX]
@@ -12086,7 +12036,7 @@ contract("BorrowerOperations", async accounts => {
 				ZERO_ADDRESS,
 				0,
 				th._100pct,
-				await getOpenTroveVSTAmount(dec(10000, 18), ZERO_ADDRESS),
+				await getOpenTroveUAmount(dec(10000, 18), ZERO_ADDRESS),
 				alice,
 				alice,
 				{ from: alice, value: dec(100, "ether") }
@@ -12095,7 +12045,7 @@ contract("BorrowerOperations", async accounts => {
 				erc20.address,
 				dec(100, "ether"),
 				th._100pct,
-				await getOpenTroveVSTAmount(dec(10000, 18), ZERO_ADDRESS),
+				await getOpenTroveUAmount(dec(10000, 18), ZERO_ADDRESS),
 				alice,
 				alice,
 				{ from: alice }
@@ -12111,20 +12061,20 @@ contract("BorrowerOperations", async accounts => {
 			th.assertIsApproximatelyEqual(debt_After_Asset, dec(10000, 18), 10000)
 		})
 
-		it("openTrove(): increases VST debt in ActivePool by the debt of the trove", async () => {
-			const activePooL_VSTDebt_Before = await activePool.getVSTDebt(ZERO_ADDRESS)
-			const activePooL_VSTDebt_Before_Asset = await activePool.getVSTDebt(erc20.address)
-			assert.equal(activePooL_VSTDebt_Before, 0)
-			assert.equal(activePooL_VSTDebt_Before_Asset, 0)
+		it("openTrove(): increases U debt in ActivePool by the debt of the trove", async () => {
+			const activePooL_UDebt_Before = await activePool.getUDebt(ZERO_ADDRESS)
+			const activePooL_UDebt_Before_Asset = await activePool.getUDebt(erc20.address)
+			assert.equal(activePooL_UDebt_Before, 0)
+			assert.equal(activePooL_UDebt_Before_Asset, 0)
 
 			await openTrove({
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
 			await openTrove({
 				asset: erc20.address,
-				extraVSTAmount: toBN(dec(10000, 18)),
+				extraUAmount: toBN(dec(10000, 18)),
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: alice },
 			})
@@ -12133,16 +12083,16 @@ contract("BorrowerOperations", async accounts => {
 			assert.isTrue(aliceDebt.gt(toBN("0")))
 			assert.isTrue(aliceDebt_Asset.gt(toBN("0")))
 
-			const activePooL_VSTDebt_After = await activePool.getVSTDebt(ZERO_ADDRESS)
-			const activePooL_VSTDebt_After_Asset = await activePool.getVSTDebt(erc20.address)
-			assert.isTrue(activePooL_VSTDebt_After.eq(aliceDebt))
-			assert.isTrue(activePooL_VSTDebt_After_Asset.eq(aliceDebt_Asset))
+			const activePooL_UDebt_After = await activePool.getUDebt(ZERO_ADDRESS)
+			const activePooL_UDebt_After_Asset = await activePool.getUDebt(erc20.address)
+			assert.isTrue(activePooL_UDebt_After.eq(aliceDebt))
+			assert.isTrue(activePooL_UDebt_After_Asset.eq(aliceDebt_Asset))
 		})
 
-		it("openTrove(): increases user VSTToken balance by correct amount", async () => {
+		it("openTrove(): increases user UToken balance by correct amount", async () => {
 			// check before
-			const alice_VSTTokenBalance_Before = await vstToken.balanceOf(alice)
-			assert.equal(alice_VSTTokenBalance_Before, 0)
+			const alice_UTokenBalance_Before = await vstToken.balanceOf(alice)
+			assert.equal(alice_UTokenBalance_Before, 0)
 			const troveColl = dec(100, "ether")
 
 			await borrowerOperations.openTrove(
@@ -12165,8 +12115,8 @@ contract("BorrowerOperations", async accounts => {
 			)
 
 			// check after
-			const alice_VSTTokenBalance_After = await vstToken.balanceOf(alice)
-			assert.equal(alice_VSTTokenBalance_After, dec(20000, 18))
+			const alice_UTokenBalance_After = await vstToken.balanceOf(alice)
+			assert.equal(alice_UTokenBalance_After, dec(20000, 18))
 		})
 
 		//  --- getNewICRFromTroveChange - (external wrapper in Tester contract calls internal function) ---
@@ -12376,30 +12326,30 @@ contract("BorrowerOperations", async accounts => {
 		it("getCompositeDebt(): returns debt + gas comp", async () => {
 			assert.equal(
 				await borrowerOperations.getCompositeDebt(ZERO_ADDRESS, "0"),
-				VST_GAS_COMPENSATION.toString()
+				U_GAS_COMPENSATION.toString()
 			)
 
 			th.assertIsApproximatelyEqual(
 				await borrowerOperations.getCompositeDebt(ZERO_ADDRESS, dec(90, 18)),
-				VST_GAS_COMPENSATION.add(toBN(dec(90, 18)))
+				U_GAS_COMPENSATION.add(toBN(dec(90, 18)))
 			)
 			th.assertIsApproximatelyEqual(
 				await borrowerOperations.getCompositeDebt(ZERO_ADDRESS, dec(24423422357345049, 12)),
-				VST_GAS_COMPENSATION.add(toBN(dec(24423422357345049, 12)))
+				U_GAS_COMPENSATION.add(toBN(dec(24423422357345049, 12)))
 			)
 
 			assert.equal(
 				await borrowerOperations.getCompositeDebt(erc20.address, "0"),
-				VST_GAS_COMPENSATION_ERC20.toString()
+				U_GAS_COMPENSATION_ERC20.toString()
 			)
 
 			th.assertIsApproximatelyEqual(
 				await borrowerOperations.getCompositeDebt(erc20.address, dec(90, 18)),
-				VST_GAS_COMPENSATION_ERC20.add(toBN(dec(90, 18)))
+				U_GAS_COMPENSATION_ERC20.add(toBN(dec(90, 18)))
 			)
 			th.assertIsApproximatelyEqual(
 				await borrowerOperations.getCompositeDebt(erc20.address, dec(24423422357345049, 12)),
-				VST_GAS_COMPENSATION_ERC20.add(toBN(dec(24423422357345049, 12)))
+				U_GAS_COMPENSATION_ERC20.add(toBN(dec(24423422357345049, 12)))
 			)
 		})
 
@@ -12411,14 +12361,14 @@ contract("BorrowerOperations", async accounts => {
 				// --- SETUP --- Create a Liquity instance with an Active Pool and pending rewards (Default Pool)
 				const troveColl = toBN(dec(1000, "ether"))
 				const troveTotalDebt = toBN(dec(100000, 18))
-				const troveVSTAmount = await getOpenTroveVSTAmount(troveTotalDebt, ZERO_ADDRESS)
-				const troveVSTAmount_Asset = await getOpenTroveVSTAmount(troveTotalDebt, erc20.address)
+				const troveUAmount = await getOpenTroveUAmount(troveTotalDebt, ZERO_ADDRESS)
+				const troveUAmount_Asset = await getOpenTroveUAmount(troveTotalDebt, erc20.address)
 
 				await borrowerOperations.openTrove(
 					ZERO_ADDRESS,
 					troveColl,
 					th._100pct,
-					troveVSTAmount,
+					troveUAmount,
 					alice,
 					alice,
 					{ from: alice, value: troveColl }
@@ -12427,7 +12377,7 @@ contract("BorrowerOperations", async accounts => {
 					ZERO_ADDRESS,
 					troveColl,
 					th._100pct,
-					troveVSTAmount,
+					troveUAmount,
 					bob,
 					bob,
 					{ from: bob, value: troveColl }
@@ -12437,7 +12387,7 @@ contract("BorrowerOperations", async accounts => {
 					erc20.address,
 					troveColl,
 					th._100pct,
-					troveVSTAmount_Asset,
+					troveUAmount_Asset,
 					alice,
 					alice,
 					{ from: alice }
@@ -12446,7 +12396,7 @@ contract("BorrowerOperations", async accounts => {
 					erc20.address,
 					troveColl,
 					th._100pct,
-					troveVSTAmount_Asset,
+					troveUAmount_Asset,
 					bob,
 					bob,
 					{ from: bob }
@@ -12505,14 +12455,14 @@ contract("BorrowerOperations", async accounts => {
 				// --- SETUP --- Create a Liquity instance with an Active Pool and pending rewards (Default Pool)
 				const troveColl = toBN(dec(1000, "ether"))
 				const troveTotalDebt = toBN(dec(100000, 18))
-				const troveVSTAmount = await getOpenTroveVSTAmount(troveTotalDebt, ZERO_ADDRESS)
-				const troveVSTAmount_Asset = await getOpenTroveVSTAmount(troveTotalDebt, erc20.address)
+				const troveUAmount = await getOpenTroveUAmount(troveTotalDebt, ZERO_ADDRESS)
+				const troveUAmount_Asset = await getOpenTroveUAmount(troveTotalDebt, erc20.address)
 
 				await borrowerOperations.openTrove(
 					ZERO_ADDRESS,
 					troveColl,
 					th._100pct,
-					troveVSTAmount,
+					troveUAmount,
 					alice,
 					alice,
 					{ from: alice, value: troveColl }
@@ -12521,7 +12471,7 @@ contract("BorrowerOperations", async accounts => {
 					ZERO_ADDRESS,
 					troveColl,
 					th._100pct,
-					troveVSTAmount,
+					troveUAmount,
 					bob,
 					bob,
 					{ from: bob, value: troveColl }
@@ -12531,7 +12481,7 @@ contract("BorrowerOperations", async accounts => {
 					erc20.address,
 					troveColl,
 					th._100pct,
-					troveVSTAmount_Asset,
+					troveUAmount_Asset,
 					alice,
 					alice,
 					{ from: alice }
@@ -12540,7 +12490,7 @@ contract("BorrowerOperations", async accounts => {
 					erc20.address,
 					troveColl,
 					th._100pct,
-					troveVSTAmount_Asset,
+					troveUAmount_Asset,
 					bob,
 					bob,
 					{ from: bob }
@@ -12600,14 +12550,14 @@ contract("BorrowerOperations", async accounts => {
 				// --- SETUP --- Create a Liquity instance with an Active Pool and pending rewards (Default Pool)
 				const troveColl = toBN(dec(1000, "ether"))
 				const troveTotalDebt = toBN(dec(100000, 18))
-				const troveVSTAmount = await getOpenTroveVSTAmount(troveTotalDebt, ZERO_ADDRESS)
-				const troveVSTAmount_Asset = await getOpenTroveVSTAmount(troveTotalDebt, erc20.address)
+				const troveUAmount = await getOpenTroveUAmount(troveTotalDebt, ZERO_ADDRESS)
+				const troveUAmount_Asset = await getOpenTroveUAmount(troveTotalDebt, erc20.address)
 
 				await borrowerOperations.openTrove(
 					ZERO_ADDRESS,
 					troveColl,
 					th._100pct,
-					troveVSTAmount,
+					troveUAmount,
 					alice,
 					alice,
 					{ from: alice, value: troveColl }
@@ -12616,7 +12566,7 @@ contract("BorrowerOperations", async accounts => {
 					ZERO_ADDRESS,
 					troveColl,
 					th._100pct,
-					troveVSTAmount,
+					troveUAmount,
 					bob,
 					bob,
 					{ from: bob, value: troveColl }
@@ -12626,7 +12576,7 @@ contract("BorrowerOperations", async accounts => {
 					erc20.address,
 					troveColl,
 					th._100pct,
-					troveVSTAmount_Asset,
+					troveUAmount_Asset,
 					alice,
 					alice,
 					{ from: alice }
@@ -12635,7 +12585,7 @@ contract("BorrowerOperations", async accounts => {
 					erc20.address,
 					troveColl,
 					th._100pct,
-					troveVSTAmount_Asset,
+					troveUAmount_Asset,
 					bob,
 					bob,
 					{ from: bob }
@@ -12694,14 +12644,14 @@ contract("BorrowerOperations", async accounts => {
 				// --- SETUP --- Create a Liquity instance with an Active Pool and pending rewards (Default Pool)
 				const troveColl = toBN(dec(1000, "ether"))
 				const troveTotalDebt = toBN(dec(100000, 18))
-				const troveVSTAmount = await getOpenTroveVSTAmount(troveTotalDebt, ZERO_ADDRESS)
-				const troveVSTAmount_Asset = await getOpenTroveVSTAmount(troveTotalDebt, erc20.address)
+				const troveUAmount = await getOpenTroveUAmount(troveTotalDebt, ZERO_ADDRESS)
+				const troveUAmount_Asset = await getOpenTroveUAmount(troveTotalDebt, erc20.address)
 
 				await borrowerOperations.openTrove(
 					ZERO_ADDRESS,
 					troveColl,
 					th._100pct,
-					troveVSTAmount,
+					troveUAmount,
 					alice,
 					alice,
 					{ from: alice, value: troveColl }
@@ -12710,7 +12660,7 @@ contract("BorrowerOperations", async accounts => {
 					ZERO_ADDRESS,
 					troveColl,
 					th._100pct,
-					troveVSTAmount,
+					troveUAmount,
 					bob,
 					bob,
 					{ from: bob, value: troveColl }
@@ -12720,7 +12670,7 @@ contract("BorrowerOperations", async accounts => {
 					erc20.address,
 					troveColl,
 					th._100pct,
-					troveVSTAmount_Asset,
+					troveUAmount_Asset,
 					alice,
 					alice,
 					{ from: alice }
@@ -12729,7 +12679,7 @@ contract("BorrowerOperations", async accounts => {
 					erc20.address,
 					troveColl,
 					th._100pct,
-					troveVSTAmount_Asset,
+					troveUAmount_Asset,
 					bob,
 					bob,
 					{ from: bob }
@@ -12789,14 +12739,14 @@ contract("BorrowerOperations", async accounts => {
 				// --- SETUP --- Create a Liquity instance with an Active Pool and pending rewards (Default Pool)
 				const troveColl = toBN(dec(1000, "ether"))
 				const troveTotalDebt = toBN(dec(100000, 18))
-				const troveVSTAmount = await getOpenTroveVSTAmount(troveTotalDebt, ZERO_ADDRESS)
-				const troveVSTAmount_Asset = await getOpenTroveVSTAmount(troveTotalDebt, erc20.address)
+				const troveUAmount = await getOpenTroveUAmount(troveTotalDebt, ZERO_ADDRESS)
+				const troveUAmount_Asset = await getOpenTroveUAmount(troveTotalDebt, erc20.address)
 
 				await borrowerOperations.openTrove(
 					ZERO_ADDRESS,
 					troveColl,
 					th._100pct,
-					troveVSTAmount,
+					troveUAmount,
 					alice,
 					alice,
 					{ from: alice, value: troveColl }
@@ -12805,7 +12755,7 @@ contract("BorrowerOperations", async accounts => {
 					ZERO_ADDRESS,
 					troveColl,
 					th._100pct,
-					troveVSTAmount,
+					troveUAmount,
 					bob,
 					bob,
 					{ from: bob, value: troveColl }
@@ -12815,7 +12765,7 @@ contract("BorrowerOperations", async accounts => {
 					erc20.address,
 					troveColl,
 					th._100pct,
-					troveVSTAmount_Asset,
+					troveUAmount_Asset,
 					alice,
 					alice,
 					{ from: alice }
@@ -12824,7 +12774,7 @@ contract("BorrowerOperations", async accounts => {
 					erc20.address,
 					troveColl,
 					th._100pct,
-					troveVSTAmount_Asset,
+					troveUAmount_Asset,
 					bob,
 					bob,
 					{ from: bob }
@@ -12887,14 +12837,14 @@ contract("BorrowerOperations", async accounts => {
 				// --- SETUP --- Create a Liquity instance with an Active Pool and pending rewards (Default Pool)
 				const troveColl = toBN(dec(1000, "ether"))
 				const troveTotalDebt = toBN(dec(100000, 18))
-				const troveVSTAmount = await getOpenTroveVSTAmount(troveTotalDebt, ZERO_ADDRESS)
-				const troveVSTAmount_Asset = await getOpenTroveVSTAmount(troveTotalDebt, erc20.address)
+				const troveUAmount = await getOpenTroveUAmount(troveTotalDebt, ZERO_ADDRESS)
+				const troveUAmount_Asset = await getOpenTroveUAmount(troveTotalDebt, erc20.address)
 
 				await borrowerOperations.openTrove(
 					ZERO_ADDRESS,
 					troveColl,
 					th._100pct,
-					troveVSTAmount,
+					troveUAmount,
 					alice,
 					alice,
 					{ from: alice, value: troveColl }
@@ -12903,7 +12853,7 @@ contract("BorrowerOperations", async accounts => {
 					ZERO_ADDRESS,
 					troveColl,
 					th._100pct,
-					troveVSTAmount,
+					troveUAmount,
 					bob,
 					bob,
 					{ from: bob, value: troveColl }
@@ -12913,7 +12863,7 @@ contract("BorrowerOperations", async accounts => {
 					erc20.address,
 					troveColl,
 					th._100pct,
-					troveVSTAmount_Asset,
+					troveUAmount_Asset,
 					alice,
 					alice,
 					{ from: alice }
@@ -12922,7 +12872,7 @@ contract("BorrowerOperations", async accounts => {
 					erc20.address,
 					troveColl,
 					th._100pct,
-					troveVSTAmount_Asset,
+					troveUAmount_Asset,
 					bob,
 					bob,
 					{ from: bob }
@@ -12985,14 +12935,14 @@ contract("BorrowerOperations", async accounts => {
 				// --- SETUP --- Create a Liquity instance with an Active Pool and pending rewards (Default Pool)
 				const troveColl = toBN(dec(1000, "ether"))
 				const troveTotalDebt = toBN(dec(100000, 18))
-				const troveVSTAmount = await getOpenTroveVSTAmount(troveTotalDebt, ZERO_ADDRESS)
-				const troveVSTAmount_Asset = await getOpenTroveVSTAmount(troveTotalDebt, erc20.address)
+				const troveUAmount = await getOpenTroveUAmount(troveTotalDebt, ZERO_ADDRESS)
+				const troveUAmount_Asset = await getOpenTroveUAmount(troveTotalDebt, erc20.address)
 
 				await borrowerOperations.openTrove(
 					ZERO_ADDRESS,
 					troveColl,
 					th._100pct,
-					troveVSTAmount,
+					troveUAmount,
 					alice,
 					alice,
 					{ from: alice, value: troveColl }
@@ -13001,7 +12951,7 @@ contract("BorrowerOperations", async accounts => {
 					ZERO_ADDRESS,
 					troveColl,
 					th._100pct,
-					troveVSTAmount,
+					troveUAmount,
 					bob,
 					bob,
 					{ from: bob, value: troveColl }
@@ -13011,7 +12961,7 @@ contract("BorrowerOperations", async accounts => {
 					erc20.address,
 					troveColl,
 					th._100pct,
-					troveVSTAmount_Asset,
+					troveUAmount_Asset,
 					alice,
 					alice,
 					{ from: alice }
@@ -13020,7 +12970,7 @@ contract("BorrowerOperations", async accounts => {
 					erc20.address,
 					troveColl,
 					th._100pct,
-					troveVSTAmount_Asset,
+					troveUAmount_Asset,
 					bob,
 					bob,
 					{ from: bob }
@@ -13082,14 +13032,14 @@ contract("BorrowerOperations", async accounts => {
 				// --- SETUP --- Create a Liquity instance with an Active Pool and pending rewards (Default Pool)
 				const troveColl = toBN(dec(1000, "ether"))
 				const troveTotalDebt = toBN(dec(100000, 18))
-				const troveVSTAmount = await getOpenTroveVSTAmount(troveTotalDebt, ZERO_ADDRESS)
-				const troveVSTAmount_Asset = await getOpenTroveVSTAmount(troveTotalDebt, erc20.address)
+				const troveUAmount = await getOpenTroveUAmount(troveTotalDebt, ZERO_ADDRESS)
+				const troveUAmount_Asset = await getOpenTroveUAmount(troveTotalDebt, erc20.address)
 
 				await borrowerOperations.openTrove(
 					ZERO_ADDRESS,
 					troveColl,
 					th._100pct,
-					troveVSTAmount,
+					troveUAmount,
 					alice,
 					alice,
 					{ from: alice, value: troveColl }
@@ -13098,7 +13048,7 @@ contract("BorrowerOperations", async accounts => {
 					ZERO_ADDRESS,
 					troveColl,
 					th._100pct,
-					troveVSTAmount,
+					troveUAmount,
 					bob,
 					bob,
 					{ from: bob, value: troveColl }
@@ -13108,7 +13058,7 @@ contract("BorrowerOperations", async accounts => {
 					erc20.address,
 					troveColl,
 					th._100pct,
-					troveVSTAmount_Asset,
+					troveUAmount_Asset,
 					alice,
 					alice,
 					{ from: alice }
@@ -13117,7 +13067,7 @@ contract("BorrowerOperations", async accounts => {
 					erc20.address,
 					troveColl,
 					th._100pct,
-					troveVSTAmount_Asset,
+					troveUAmount_Asset,
 					bob,
 					bob,
 					{ from: bob }
@@ -13179,14 +13129,14 @@ contract("BorrowerOperations", async accounts => {
 				// --- SETUP --- Create a Liquity instance with an Active Pool and pending rewards (Default Pool)
 				const troveColl = toBN(dec(1000, "ether"))
 				const troveTotalDebt = toBN(dec(100000, 18))
-				const troveVSTAmount = await getOpenTroveVSTAmount(troveTotalDebt, ZERO_ADDRESS)
-				const troveVSTAmount_Asset = await getOpenTroveVSTAmount(troveTotalDebt, erc20.address)
+				const troveUAmount = await getOpenTroveUAmount(troveTotalDebt, ZERO_ADDRESS)
+				const troveUAmount_Asset = await getOpenTroveUAmount(troveTotalDebt, erc20.address)
 
 				await borrowerOperations.openTrove(
 					ZERO_ADDRESS,
 					troveColl,
 					th._100pct,
-					troveVSTAmount,
+					troveUAmount,
 					alice,
 					alice,
 					{ from: alice, value: troveColl }
@@ -13195,7 +13145,7 @@ contract("BorrowerOperations", async accounts => {
 					ZERO_ADDRESS,
 					troveColl,
 					th._100pct,
-					troveVSTAmount,
+					troveUAmount,
 					bob,
 					bob,
 					{ from: bob, value: troveColl }
@@ -13205,7 +13155,7 @@ contract("BorrowerOperations", async accounts => {
 					erc20.address,
 					troveColl,
 					th._100pct,
-					troveVSTAmount_Asset,
+					troveUAmount_Asset,
 					alice,
 					alice,
 					{ from: alice }
@@ -13214,7 +13164,7 @@ contract("BorrowerOperations", async accounts => {
 					erc20.address,
 					troveColl,
 					th._100pct,
-					troveVSTAmount_Asset,
+					troveUAmount_Asset,
 					bob,
 					bob,
 					{ from: bob }
@@ -13296,7 +13246,7 @@ contract("BorrowerOperations", async accounts => {
 					alice,
 					{ from: alice }
 				)
-				// Alice sends VST to NonPayable so its VST balance covers its debt
+				// Alice sends U to NonPayable so its U balance covers its debt
 				await vstToken.transfer(nonPayable.address, dec(40000, 18), { from: alice })
 				// open trove from NonPayable proxy contract
 				const _100pctHex = "0xde0b6b3a7640000"
@@ -13351,7 +13301,7 @@ contract("Reset chain state", async accounts => {})
 /* TODO:
 
  1) Test SortedList re-ordering by ICR. ICR ratio
- changes with addColl, withdrawColl, withdrawVST, withdrawVST, etc. Can split them up and put them with
+ changes with addColl, withdrawColl, withdrawU, withdrawU, etc. Can split them up and put them with
  individual functions, or give ordering it's own 'describe' block.
 
  2)In security phase:
