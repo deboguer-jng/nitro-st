@@ -22,6 +22,7 @@ contract('TroveManager', async accounts => {
   let stabilityPool
   let defaultPool
   let borrowerOperations
+  let erc20
 
   beforeEach(async () => {
     contracts = await deploymentHelper.deployLiquityCore()
@@ -34,6 +35,7 @@ contract('TroveManager', async accounts => {
     activePool = contracts.activePool
     defaultPool = contracts.defaultPool
     borrowerOperations = contracts.borrowerOperations
+    erc20 = contracts.erc20
 
     VSTAStaking = VSTAContracts.VSTAStaking
     VSTAToken = VSTAContracts.VSTAToken
@@ -42,7 +44,7 @@ contract('TroveManager', async accounts => {
     await deploymentHelper.connectCoreContracts(contracts, VSTAContracts)
     await deploymentHelper.connectVSTAContractsToCore(VSTAContracts, contracts)
 
-    stabilityPool = await StabilityPool.at(await contracts.stabilityPoolManager.getAssetStabilityPool(ZERO_ADDRESS))
+    stabilityPool = await StabilityPool.at(await contracts.stabilityPoolManager.getAssetStabilityPool(erc20.address))
 
   })
 

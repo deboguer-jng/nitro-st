@@ -131,7 +131,7 @@ contract("VestaParameters", async accounts => {
 			await assertRevert(vestaParameters.setAsDefault(ZERO_ADDRESS, { from: user }))
 			await assertRevert(
 				vestaParameters.setCollateralParameters(
-					ZERO_ADDRESS,
+					erc20.address,
 					MCR,
 					CCR,
 					GAS_COMPENSATION,
@@ -169,7 +169,7 @@ contract("VestaParameters", async accounts => {
 		})
 
 		it("sanitizeParameters: User call sanitizeParameters on Non-Configured Collateral - Set Default Values", async () => {
-			await vestaParameters.sanitizeParameters(ZERO_ADDRESS, { from: user })
+			await vestaParameters.sanitizeParameters(erc20.address, { from: user })
 
 			assert.equal(MCR.toString(), await vestaParameters.MCR(ZERO_ADDRESS))
 			assert.equal(CCR.toString(), await vestaParameters.CCR(ZERO_ADDRESS))
@@ -211,7 +211,7 @@ contract("VestaParameters", async accounts => {
 			const expectedRedemptionFeeFloor = applyDecimalPrecision(newRedemptionFeeFloor)
 
 			await vestaParameters.setCollateralParameters(
-				ZERO_ADDRESS,
+				erc20.address,
 				newMCR,
 				newCCR,
 				newGasComp,
@@ -223,7 +223,7 @@ contract("VestaParameters", async accounts => {
 				{ from: owner }
 			)
 
-			await vestaParameters.sanitizeParameters(ZERO_ADDRESS, { from: user })
+			await vestaParameters.sanitizeParameters(erc20.address, { from: user })
 
 			assert.equal(newMCR.toString(), await vestaParameters.MCR(ZERO_ADDRESS))
 			assert.equal(newCCR.toString(), await vestaParameters.CCR(ZERO_ADDRESS))
@@ -259,14 +259,14 @@ contract("VestaParameters", async accounts => {
 		})
 
 		it("setMCR: Owner change parameter - Failing SafeCheck", async () => {
-			await vestaParameters.sanitizeParameters(ZERO_ADDRESS)
+			await vestaParameters.sanitizeParameters(erc20.address)
 
 			await assertRevert(vestaParameters.setMCR(ZERO_ADDRESS, MCR_SAFETY_MIN.sub(toBN(1))))
 			await assertRevert(vestaParameters.setMCR(ZERO_ADDRESS, MCR_SAFETY_MAX.add(toBN(1))))
 		})
 
 		it("setMCR: Owner change parameter - Valid SafeCheck", async () => {
-			await vestaParameters.sanitizeParameters(ZERO_ADDRESS)
+			await vestaParameters.sanitizeParameters(erc20.address)
 
 			await vestaParameters.setMCR(ZERO_ADDRESS, MCR_SAFETY_MIN)
 			assert.equal(MCR_SAFETY_MIN.toString(), await vestaParameters.MCR(ZERO_ADDRESS))
@@ -276,14 +276,14 @@ contract("VestaParameters", async accounts => {
 		})
 
 		it("setCCR: Owner change parameter - Failing SafeCheck", async () => {
-			await vestaParameters.sanitizeParameters(ZERO_ADDRESS)
+			await vestaParameters.sanitizeParameters(erc20.address)
 
 			await assertRevert(vestaParameters.setCCR(ZERO_ADDRESS, CCR_SAFETY_MIN.sub(toBN(1))))
 			await assertRevert(vestaParameters.setCCR(ZERO_ADDRESS, CCR_SAFETY_MAX.add(toBN(1))))
 		})
 
 		it("setCCR: Owner change parameter - Valid SafeCheck", async () => {
-			await vestaParameters.sanitizeParameters(ZERO_ADDRESS)
+			await vestaParameters.sanitizeParameters(erc20.address)
 
 			await vestaParameters.setCCR(ZERO_ADDRESS, CCR_SAFETY_MIN)
 			assert.equal(CCR_SAFETY_MIN.toString(), await vestaParameters.CCR(ZERO_ADDRESS))
@@ -293,7 +293,7 @@ contract("VestaParameters", async accounts => {
 		})
 
 		it("setUGasCompensation: Owner change parameter - Failing SafeCheck", async () => {
-			await vestaParameters.sanitizeParameters(ZERO_ADDRESS)
+			await vestaParameters.sanitizeParameters(erc20.address)
 
 			await assertRevert(
 				vestaParameters.setUGasCompensation(
@@ -310,7 +310,7 @@ contract("VestaParameters", async accounts => {
 		})
 
 		it("setUGasCompensation: Owner change parameter - Valid SafeCheck", async () => {
-			await vestaParameters.sanitizeParameters(ZERO_ADDRESS)
+			await vestaParameters.sanitizeParameters(erc20.address)
 
 			await vestaParameters.setUGasCompensation(ZERO_ADDRESS, YOU_GAS_COMPENSATION_SAFETY_MIN)
 			assert.equal(
@@ -326,14 +326,14 @@ contract("VestaParameters", async accounts => {
 		})
 
 		it("setMinNetDebt: Owner change parameter - Failing SafeCheck", async () => {
-			await vestaParameters.sanitizeParameters(ZERO_ADDRESS)
+			await vestaParameters.sanitizeParameters(erc20.address)
 			await assertRevert(
 				vestaParameters.setMinNetDebt(ZERO_ADDRESS, MIN_NET_DEBT_SAFETY_MAX.add(toBN(1)))
 			)
 		})
 
 		it("setMinNetDebt: Owner change parameter - Valid SafeCheck", async () => {
-			await vestaParameters.sanitizeParameters(ZERO_ADDRESS)
+			await vestaParameters.sanitizeParameters(ZERO_ADDerc20.addressRESS)
 
 			await vestaParameters.setMinNetDebt(ZERO_ADDRESS, MIN_NET_DEBT_SAFETY_MIN)
 			assert.equal(
@@ -349,7 +349,7 @@ contract("VestaParameters", async accounts => {
 		})
 
 		it("setPercentDivisor: Owner change parameter - Failing SafeCheck", async () => {
-			await vestaParameters.sanitizeParameters(ZERO_ADDRESS)
+			await vestaParameters.sanitizeParameters(erc20.address)
 
 			await assertRevert(
 				vestaParameters.setPercentDivisor(
@@ -380,7 +380,7 @@ contract("VestaParameters", async accounts => {
 		})
 
 		it("setBorrowingFeeFloor: Owner change parameter - Failing SafeCheck", async () => {
-			await vestaParameters.sanitizeParameters(ZERO_ADDRESS)
+			await vestaParameters.sanitizeParameters(erc20.address)
 
 			await assertRevert(
 				vestaParameters.setBorrowingFeeFloor(
@@ -394,7 +394,7 @@ contract("VestaParameters", async accounts => {
 			const expectedMin = applyDecimalPrecision(BORROWING_FEE_FLOOR_SAFETY_MIN)
 			const expectedMax = applyDecimalPrecision(BORROWING_FEE_FLOOR_SAFETY_MAX)
 
-			await vestaParameters.sanitizeParameters(ZERO_ADDRESS)
+			await vestaParameters.sanitizeParameters(erc20.address)
 
 			await vestaParameters.setBorrowingFeeFloor(ZERO_ADDRESS, BORROWING_FEE_FLOOR_SAFETY_MIN)
 			assert.equal(
@@ -411,7 +411,7 @@ contract("VestaParameters", async accounts => {
 		})
 
 		it("setMaxBorrowingFee: Owner change parameter - Failing SafeCheck", async () => {
-			await vestaParameters.sanitizeParameters(ZERO_ADDRESS)
+			await vestaParameters.sanitizeParameters(erc20.address)
 
 			await assertRevert(
 				vestaParameters.setMaxBorrowingFee(
@@ -425,7 +425,7 @@ contract("VestaParameters", async accounts => {
 			const expectedMin = applyDecimalPrecision(MAX_BORROWING_FEE_SAFETY_MIN)
 			const expectedMax = applyDecimalPrecision(MAX_BORROWING_FEE_SAFETY_MAX)
 
-			await vestaParameters.sanitizeParameters(ZERO_ADDRESS)
+			await vestaParameters.sanitizeParameters(erc20.address)
 
 			await vestaParameters.setMaxBorrowingFee(ZERO_ADDRESS, MAX_BORROWING_FEE_SAFETY_MIN)
 			assert.equal(
@@ -441,7 +441,7 @@ contract("VestaParameters", async accounts => {
 		})
 
 		it("setRedemptionFeeFloor: Owner change parameter - Failing SafeCheck", async () => {
-			await vestaParameters.sanitizeParameters(ZERO_ADDRESS)
+			await vestaParameters.sanitizeParameters(erc20.address)
 
 			await assertRevert(
 				vestaParameters.setRedemptionFeeFloor(
@@ -461,7 +461,7 @@ contract("VestaParameters", async accounts => {
 			const expectedMin = applyDecimalPrecision(REDEMPTION_FEE_FLOOR_SAFETY_MIN)
 			const expectedMax = applyDecimalPrecision(REDEMPTION_FEE_FLOOR_SAFETY_MAX)
 
-			await vestaParameters.sanitizeParameters(ZERO_ADDRESS)
+			await vestaParameters.sanitizeParameters(erc20.address)
 
 			await vestaParameters.setRedemptionFeeFloor(
 				ZERO_ADDRESS,
@@ -485,7 +485,7 @@ contract("VestaParameters", async accounts => {
 		it("setCollateralParameters: Owner change parameter - Failing SafeCheck", async () => {
 			await assertRevert(
 				vestaParameters.setCollateralParameters(
-					ZERO_ADDRESS,
+					erc20.address,
 					MCR_SAFETY_MAX.add(toBN(1)),
 					CCR,
 					GAS_COMPENSATION,
@@ -499,7 +499,7 @@ contract("VestaParameters", async accounts => {
 
 			await assertRevert(
 				vestaParameters.setCollateralParameters(
-					ZERO_ADDRESS,
+					erc20.address,
 					MCR,
 					CCR_SAFETY_MAX.add(toBN(1)),
 					GAS_COMPENSATION,
@@ -513,7 +513,7 @@ contract("VestaParameters", async accounts => {
 
 			await assertRevert(
 				vestaParameters.setCollateralParameters(
-					ZERO_ADDRESS,
+					erc20.address,
 					MCR,
 					CCR,
 					YOU_GAS_COMPENSATION_SAFETY_MAX.add(toBN(1)),
@@ -527,7 +527,7 @@ contract("VestaParameters", async accounts => {
 
 			await assertRevert(
 				vestaParameters.setCollateralParameters(
-					ZERO_ADDRESS,
+					erc20.address,
 					MCR,
 					CCR,
 					GAS_COMPENSATION,
@@ -541,7 +541,7 @@ contract("VestaParameters", async accounts => {
 
 			await assertRevert(
 				vestaParameters.setCollateralParameters(
-					ZERO_ADDRESS,
+					erc20.address,
 					MCR,
 					CCR,
 					GAS_COMPENSATION,
@@ -555,7 +555,7 @@ contract("VestaParameters", async accounts => {
 
 			await assertRevert(
 				vestaParameters.setCollateralParameters(
-					ZERO_ADDRESS,
+					erc20.address,
 					MCR,
 					CCR,
 					GAS_COMPENSATION,
@@ -569,7 +569,7 @@ contract("VestaParameters", async accounts => {
 
 			await assertRevert(
 				vestaParameters.setCollateralParameters(
-					ZERO_ADDRESS,
+					erc20.address,
 					MCR,
 					CCR,
 					GAS_COMPENSATION,
@@ -583,7 +583,7 @@ contract("VestaParameters", async accounts => {
 
 			await assertRevert(
 				vestaParameters.setCollateralParameters(
-					ZERO_ADDRESS,
+					erc20.address,
 					MCR,
 					CCR,
 					GAS_COMPENSATION,
@@ -611,7 +611,7 @@ contract("VestaParameters", async accounts => {
 			const expectedRedemptionFeeFloor = applyDecimalPrecision(newRedemptionFeeFloor)
 
 			await vestaParameters.setCollateralParameters(
-				ZERO_ADDRESS,
+				erc20.address,
 				newMCR,
 				newCCR,
 				newGasComp,
@@ -675,7 +675,7 @@ contract("VestaParameters", async accounts => {
 		})
 
 		it("openTrove(): Borrowing at zero base rate charges minimum fee with different borrowingFeeFloor", async () => {
-			await vestaParameters.sanitizeParameters(ZERO_ADDRESS)
+			await vestaParameters.sanitizeParameters(erc20.address)
 			await vestaParameters.sanitizeParameters(erc20.address)
 
 			await vestaParameters.setBorrowingFeeFloor(ZERO_ADDRESS, BORROWING_FEE_FLOOR_SAFETY_MIN)

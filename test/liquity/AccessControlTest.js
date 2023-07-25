@@ -63,7 +63,7 @@ contract(
 			await deploymentHelper.connectCoreContracts(coreContracts, YOUContracts)
 			await deploymentHelper.connectYOUContractsToCore(YOUContracts, coreContracts)
 			stabilityPool = await StabilityPool.at(
-				await coreContracts.stabilityPoolManager.getAssetStabilityPool(EMPTY_ADDRESS)
+				await coreContracts.stabilityPoolManager.getAssetStabilityPool(coreContracts.erc20.address)
 			)
 
 			for (account of accounts.slice(0, 10)) {
@@ -78,6 +78,8 @@ contract(
 
 			// Check CI has been properly funded
 			const bal = await youToken.balanceOf(communityIssuance.address)
+			const ts = await youToken.totalSupply();
+			// console.log('totalYouToken', ts.toString());
 			assert.equal(bal.toString(), expectedCISupplyCap)
 		})
 

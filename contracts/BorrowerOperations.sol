@@ -106,7 +106,8 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		address _sortedTrovesAddress,
 		address _uTokenAddress,
 		address _YOUStakingAddress,
-		address _vestaParamsAddress
+		address _vestaParamsAddress,
+		address _wstETHAddress
 	) external override initializer {
 		require(!isInitialized, "Already initialized");
 		checkContract(_troveManagerAddress);
@@ -117,6 +118,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		checkContract(_uTokenAddress);
 		checkContract(_YOUStakingAddress);
 		checkContract(_vestaParamsAddress);
+		checkContract(_wstETHAddress);
 		isInitialized = true;
 
 		__Ownable_init();
@@ -129,7 +131,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		UToken = IUToken(_uTokenAddress);
 		YOUStakingAddress = _YOUStakingAddress;
 		YOUStaking = IYOUStaking(_YOUStakingAddress);
-
+		wstETH = _wstETHAddress;
 		setVestaParameters(_vestaParamsAddress);
 
 		emit TroveManagerAddressChanged(_troveManagerAddress);
@@ -218,6 +220,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		emit TroveCreated(vars.asset, msg.sender, vars.arrayIndex);
 
 		// Move the ether to the Active Pool, and mint the YOUmount to the borrower
+		// console.log("borrowersOperation:sender", msg.sender);
 		_activePoolAddColl(vars.asset, contractsCache.activePool, _tokenAmount);
 		_withdrawU(
 			vars.asset,
@@ -588,6 +591,8 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 
 		_requireUserAcceptsFee(UFee, _YOUmount, _maxFeePercentage);
 
+		// console.log('borrowerOperAddress:',address(this), msg.sender);
+
 		// Send fee to YOU staking contract
 		_UToken.mint(_asset, YOUStakingAddress, UFee);
 		YOUStaking.increaseF_U(UFee);
@@ -663,6 +668,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		IActivePool _activePool,
 		uint256 _amount
 	) internal {
+		// console.log("borrowersOperation:2sender", msg.sender);
 		if (_asset == ETH_REF_ADDRESS) {
 			(bool success, ) = address(_activePool).call{ value: _amount }("");
 			require(success, "BorrowerOps: Sending ETH to ActivePool failed");

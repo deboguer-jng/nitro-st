@@ -204,7 +204,8 @@ interface ITroveManager is IVestaBase {
 		address _uTokenAddress,
 		address _sortedTrovesAddress,
 		address _YOUStakingAddress,
-		address _vestaParamsAddress
+		address _vestaParamsAddress,
+		address _wstETH
 	) external;
 
 	function stabilityPoolManager() external view returns (IStabilityPoolManager);

@@ -48,7 +48,7 @@ contract(
 			await deploymentHelper.connectCoreContracts(coreContracts, YOUContracts)
 			await deploymentHelper.connectYOUContractsToCore(YOUContracts, coreContracts)
 			stabilityPool = await StabilityPool.at(
-				await coreContracts.stabilityPoolManager.getAssetStabilityPool(ZERO_ADDRESS)
+				await coreContracts.stabilityPoolManager.getAssetStabilityPool(coreContracts.erc20.address)
 			)
 		})
 

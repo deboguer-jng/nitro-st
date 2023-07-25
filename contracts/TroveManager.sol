@@ -105,7 +105,8 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		address _uTokenAddress,
 		address _sortedTrovesAddress,
 		address _youStakingAddress,
-		address _vestaParamsAddress
+		address _vestaParamsAddress,
+		address _wstETHAddress
 	) external override initializer {
 		require(!isInitialized, "!initialized");
 
@@ -117,6 +118,7 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		checkContract(_sortedTrovesAddress);
 		checkContract(_youStakingAddress);
 		checkContract(_vestaParamsAddress);
+		checkContract(_wstETHAddress);
 		isInitialized = true;
 
 		__Ownable_init();
@@ -128,7 +130,8 @@ contract TroveManager is VestaBase, CheckContract, ITroveManager {
 		uToken = IUToken(_uTokenAddress);
 		sortedTroves = ISortedTroves(_sortedTrovesAddress);
 		youStaking = IYOUStaking(_youStakingAddress);
-
+		wstETH = _wstETHAddress;
+		
 		setVestaParameters(_vestaParamsAddress);
 
 		emit BorrowerOperationsAddressChanged(_borrowerOperationsAddress);

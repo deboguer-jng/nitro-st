@@ -88,6 +88,8 @@ module.exports = {
 			blockGasLimit: 15000000,
 			gasPrice: 20000000000,
 			hardfork: "london",
+			throwOnTransactionFailures: true,
+      		loggingEnabled: true,
 		},
 		localhost: {
 			url: "http://localhost:8545",

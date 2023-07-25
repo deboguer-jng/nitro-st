@@ -1,4 +1,5 @@
 const { expectRevert } = require("@openzeppelin/test-helpers")
+const { MAX_INT256 } = require("@openzeppelin/test-helpers/src/constants")
 const { web3 } = require("@openzeppelin/test-helpers/src/setup")
 const BN = require("bn.js")
 const fromWei = web3.utils.fromWei
@@ -376,8 +377,7 @@ class TestHelper {
 
 	// Subtracts the borrowing fee
 	static async getNetBorrowingAmount(contracts, debtWithFee, asset) {
-		if (!asset) asset = this.ZERO_ADDRESS
-
+		if (!asset || asset == this.ZERO_ADDRESS) asset = contracts.erc20.address;
 		const borrowingRate = await contracts.troveManager.getBorrowingRateWithDecay(asset)
 		return this.toBN(debtWithFee)
 			.mul(MoneyValues._1e18BN)
@@ -811,7 +811,7 @@ class TestHelper {
 			extraParams,
 		}
 	) {
-		if (!asset) asset = this.ZERO_ADDRESS
+		if (!asset || asset == this.ZERO_ADDRESS) asset = contracts.erc20.address;
 		if (!maxFeePercentage) maxFeePercentage = this._100pct
 		if (!extraYOUmount) extraYOUmount = this.toBN(0)
 		else if (typeof extraYOUmount == "string") extraYOUmount = this.toBN(extraYOUmount)
@@ -820,10 +820,11 @@ class TestHelper {
 
 		await contracts.vestaParameters.sanitizeParameters(asset)
 
+		const min_net_debt = await contracts.vestaParameters.MIN_NET_DEBT(asset)
 		const MIN_DEBT = (
 			await this.getNetBorrowingAmount(
 				contracts,
-				await contracts.vestaParameters.MIN_NET_DEBT(asset),
+				min_net_debt,
 				asset
 			)
 		).add(this.toBN(1)) // add 1 to avoid rounding issues
@@ -852,7 +853,10 @@ class TestHelper {
 				extraParams.value = assetSent
 			}
 		}
-
+		
+		await contracts.erc20.mint(extraParams.from, assetSent, extraParams);
+		await contracts.erc20.approve(contracts.borrowerOperations.address, MAX_INT256, extraParams);
+		
 		const tx = await contracts.borrowerOperations.openTrove(
 			asset,
 			assetSent,

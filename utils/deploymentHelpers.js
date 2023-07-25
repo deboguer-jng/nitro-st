@@ -118,6 +118,8 @@ class DeploymentHelper {
 
 		await erc20.setDecimals(8)
 
+		// console.log('erc20 address!', erc20.address);
+
 		const coreContracts = {
 			priceFeedTestnet,
 			uToken,
@@ -210,9 +212,9 @@ class DeploymentHelper {
 	static async deployUToken(contracts) {
 		contracts.uToken = await UTokenTester.new(
 			contracts.troveManager.address,
+			contracts.redemptionManager.address,
 			contracts.stabilityPoolManager.address,
-			contracts.borrowerOperations.address,
-			contracts.erc20.address
+			contracts.borrowerOperations.address
 		)
 		return contracts
 	}
@@ -311,7 +313,8 @@ class DeploymentHelper {
 			contracts.uToken.address,
 			contracts.sortedTroves.address,
 			YOUContracts.youStaking.address,
-			contracts.vestaParameters.address
+			contracts.vestaParameters.address,
+			contracts.erc20.address
 		)
 
 		// set contracts in BorrowerOperations
@@ -323,7 +326,8 @@ class DeploymentHelper {
 			contracts.sortedTroves.address,
 			contracts.uToken.address,
 			YOUContracts.youStaking.address,
-			contracts.vestaParameters.address
+			contracts.vestaParameters.address,
+			contracts.erc20.address
 		)
 
 		await contracts.stabilityPoolManager.setAddresses(
@@ -444,7 +448,7 @@ class DeploymentHelper {
 
 		//Set Liquity Configs (since the tests have been designed with it)
 		await coreContracts.vestaParameters.setCollateralParameters(
-			ZERO_ADDRESS,
+			coreContracts.erc20.address,
 			"1100000000000000000",
 			"1500000000000000000",
 			dec(200, 18),
