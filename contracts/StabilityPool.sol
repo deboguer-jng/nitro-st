@@ -108,7 +108,7 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 
 	uint256 public YOUExchangeRate;
 
-	event UPaidToDepositorPreYOU(uint256 U);
+	event UPaidToDepositorPreYOU(address depositor, uint256 U);
 	event IsPreYOUToggled(bool isPreYOU);
 
 	// --- Contract setters ---

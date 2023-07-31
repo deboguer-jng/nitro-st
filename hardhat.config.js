@@ -92,7 +92,7 @@ module.exports = {
 		},
 		mainnet: {
 			url: "https://arb1.arbitrum.io/rpc",
-			gasPrice: process.env.GAS_PRICE ? parseInt(process.env.GAS_PRICE) : 20000000000,
+			gasPrice: process.env.GAS_PRICE ? parseInt(process.env.GAS_PRICE) : 200000000,
 			accounts: [getSecret("DEPLOYER_PRIVATEKEY", "0x0")],
 		},
 		goerli: {

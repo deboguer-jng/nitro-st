@@ -44,7 +44,8 @@ interface IStabilityPool is IDeposit {
 		address _uTokenAddress,
 		address _sortedTrovesAddress,
 		address _communityIssuanceAddress,
-		address _vestaParamsAddress
+		address _vestaParamsAddress,
+		uint256 _YOUExchangeRate
 	) external;
 
 	/*
