@@ -158,8 +158,8 @@ async function addWstETHCollaterals(wstEthAddress) {
 				vestaCore.stabilityPoolV1.address,
 				config.externalAddrs.CHAINLINK_ETHUSD_PROXY,
 				config.externalAddrs.TELLOR_QUERY_ID, /// tellorId
-				dec(100_000, 18),
-				toBN(dec(100_000, 18)).div(toBN(4)),
+				dec(0, 18),
+				toBN(dec(0, 18)).div(toBN(4)),
 				config.REDEMPTION_SAFETY
 			),
 			{

@@ -24,9 +24,9 @@ const gOHMParameters = {
 }
 
 const vestaAddresses = {
-	ADMIN_MULTI: "0x4A4651B31d747D1DdbDDADCF1b1E24a5f6dcc7b0",
-	YOU_SAFE: "0x4A4651B31d747D1DdbDDADCF1b1E24a5f6dcc7b0", // to be passed to YOUToken as the YOU multisig address
-	DEPLOYER: "0x87209dc4B76b14B67BC5E5e5c0737E7d002a219c", // Mainnet REAL deployment address
+	ADMIN_MULTI: "0xdF76df680B31136F9c15CBdbAe8599114819b6Fa",
+	YOU_SAFE: "0xdF76df680B31136F9c15CBdbAe8599114819b6Fa", // to be passed to YOUToken as the YOU multisig address
+	DEPLOYER: "0x9549F9643a04D89f4cF50AC64D2322B27335d01A", // Mainnet REAL deployment address
 }
 
 // Beneficiaries for lockup contracts.

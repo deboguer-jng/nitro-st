@@ -89,14 +89,15 @@ contract AdminContract is ProxyAdmin, ArbitroveBase {
 			clonedStabilityPool,
 			address(this),
 			abi.encodeWithSignature(
-				"setAddresses(address,address,address,address,address,address,address)",
+				"setAddresses(address,address,address,address,address,address,address,uint256)",
 				_asset,
 				borrowerOperationsAddress,
 				troveManagerAddress,
 				uTokenAddress,
 				sortedTrovesAddress,
 				address(communityIssuance),
-				address(vestaParameters)
+				address(vestaParameters),
+				1000
 			)
 		);
 
