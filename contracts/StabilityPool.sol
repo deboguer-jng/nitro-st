@@ -780,10 +780,9 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		// Pay out depositor's YOU gain
 		uint256 depositorYOUGain = getDepositorYOUGain(_depositor);
 		if (isPreYOU) {
-			uToken.transfer(_depositor, depositorYOUGain * 1e18 / YOUExchangeRate);
-			emit UPaidToDepositorPreYOU(_depositor, depositorYOUGain*1e18/YOUExchangeRate);
-		}
-		else {
+			uToken.transfer(_depositor, (depositorYOUGain * 1e18) / YOUExchangeRate);
+			emit UPaidToDepositorPreYOU(_depositor, (depositorYOUGain * 1e18) / YOUExchangeRate);
+		} else {
 			_communityIssuance.sendYOU(_depositor, depositorYOUGain);
 			emit YOUPaidToDepositor(_depositor, depositorYOUGain);
 		}
