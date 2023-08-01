@@ -88,7 +88,7 @@ module.exports = {
 		},
 		localhost: {
 			url: "http://localhost:8545",
-			gas: 20000000, // tx gas limit
+			gas: 2000000, // tx gas limit
 		},
 		mainnet: {
 			url: "https://arb1.arbitrum.io/rpc",

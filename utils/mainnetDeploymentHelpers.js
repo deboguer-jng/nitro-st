@@ -238,9 +238,12 @@ class MainnetDeploymentHelper {
 		const UTokenParams = [
 			troveManager?.address,
 			redemptionManager?.address,
-			stabilityPoolManager.address,
-			borrowerOperations.address,
+			stabilityPoolManager?.address,
+			borrowerOperations?.address,
 		]
+
+		console.log(UTokenParams);
+
 		const uToken = await this.loadOrDeploy(
 			UTokenFactory,
 			"UToken",
@@ -304,6 +307,7 @@ class MainnetDeploymentHelper {
 			deploymentState,
 			true
 		)
+		
 		const communityIssuance = await this.loadOrDeploy(
 			communityIssuanceFactory,
 			"communityIssuance",
@@ -371,7 +375,8 @@ class MainnetDeploymentHelper {
 		contracts,
 		YOUContracts,
 		chainlinkFlagAddress,
-		wstEthAddress
+		wstEthAddress,
+		chainlinkEthUsdOracle
 	) {
 		const gasPrice = this.configParams.GAS_PRICE
 
@@ -381,6 +386,8 @@ class MainnetDeploymentHelper {
 					chainlinkFlagAddress,
 					contracts.adminContract.address,
 					contracts.tellorCaller.address,
+					chainlinkEthUsdOracle,
+					wstEthAddress,
 					{ gasPrice }
 				)
 			))

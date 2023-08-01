@@ -111,8 +111,39 @@ async function mainnetDeploy(configParams) {
 		vestaCore,
 		YOUContracts,
 		config.externalAddrs.CHAINLINK_SEQUENCER_UPTIME_FEED,
-		config.externalAddrs.WST_ETH
+		config.externalAddrs.WST_ETH,
+		config.externalAddrs.CHAINLINK_ETHUSD_PROXY
 	)
+
+	// configure oracle
+	const wstEthAddr = await vestaCore.priceFeed.wstETH();
+	console.log(wstEthAddr, config.externalAddrs.WST_ETH);
+
+	let { isRegistered } = await vestaCore.priceFeed.registeredOracles(wstEthAddr);
+	
+	if(!isRegistered) {
+		console.log('registering wstETH oracle');
+		let txn = await vestaCore.priceFeed.addOracle(
+			config.externalAddrs.WST_ETH,
+			config.externalAddrs.CHAINLINK_WSTETH_ETH_PROXY,
+			ethers.utils.hexZeroPad(config.externalAddrs.TELLOR_QUERY_ID, 32)
+		);
+		// ethers.utils.hexZeroPad('0x', 32)
+		await txn.wait();
+		console.log('oracle added!');
+	}
+
+	// console.log('oracle added!');
+
+	const goodPrice = await vestaCore.priceFeed.lastGoodPrice(config.externalAddrs.WST_ETH);
+
+	console.log("lastGoodPrice", goodPrice.toString());
+
+	// txn = await vestaCore.priceFeed.fetchPrice(config.externalAddrs.WST_ETH);
+	// let receipt = await txn.wait()
+
+	// console.log('priceReceipt', receipt);
+
 
 	console.log("Connect YOU Contract to Core")
 	await mdh.connectYOUContractsToCoreMainnet(YOUContracts, vestaCore, TREASURY_WALLET)
