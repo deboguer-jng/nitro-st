@@ -111,8 +111,13 @@ async function mainnetDeploy(configParams) {
 		vestaCore,
 		YOUContracts,
 		config.externalAddrs.CHAINLINK_SEQUENCER_UPTIME_FEED,
-		config.externalAddrs.WST_ETH
+		config.externalAddrs.WST_ETH,
+		config.externalAddrs.CHAINLINK_ETHUSD_PROXY
 	)
+
+	// configure oracle
+	const wstEthAddr = await vestaCore.priceFeed.wstETH()
+	console.log(wstEthAddr, config.externalAddrs.WST_ETH)
 
 	console.log("Connect YOU Contract to Core")
 	await mdh.connectYOUContractsToCoreMainnet(YOUContracts, vestaCore, TREASURY_WALLET)
@@ -156,7 +161,7 @@ async function addWstETHCollaterals(wstEthAddress) {
 			vestaCore.adminContract.addNewCollateral(
 				wstEthAddress,
 				vestaCore.stabilityPoolV1.address,
-				config.externalAddrs.CHAINLINK_ETHUSD_PROXY,
+				config.externalAddrs.CHAINLINK_WSTETH_ETH_PROXY,
 				config.externalAddrs.TELLOR_QUERY_ID, /// tellorId
 				dec(0, 18),
 				toBN(dec(0, 18)).div(toBN(4)),
