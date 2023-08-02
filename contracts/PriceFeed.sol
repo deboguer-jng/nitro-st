@@ -83,7 +83,7 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed, A
 		address _token,
 		address _chainlinkOracle,
 		bytes32 _tellorId
-	) external override isController onlyWstETH(_token){
+	) external override isController {
 		AggregatorV3Interface priceOracle = AggregatorV3Interface(_chainlinkOracle);
 
 		registeredOracles[_token] = RegisterOracle(priceOracle, true, _tellorId);
@@ -108,7 +108,7 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed, A
 		emit RegisteredNewOracle(_token, _chainlinkOracle, _tellorId);
 	}
 
-	function fetchPrice(address _token) external override onlyWstETH(_token) returns (uint256)  {
+	function fetchPrice(address _token) external override onlyWstETH(_token) returns (uint256) {
 		RegisterOracle storage oracle = registeredOracles[_token];
 		require(oracle.isRegistered, "Oracle is not registered!");
 
@@ -126,7 +126,8 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed, A
 		// --- CASE 1: System fetched last price from Chainlink  ---
 		if (status == Status.chainlinkWorking) {
 			// If Chainlink is broken, try Tellor
-			if (_chainlinkIsBroken(chainlinkResponse, prevChainlinkResponse) || 
+			if (
+				_chainlinkIsBroken(chainlinkResponse, prevChainlinkResponse) ||
 				_chainlinkIsBroken(chainLinkETHUsdResponse, prevChainlinkEthUsdResponse)
 			) {
 				// If Tellor is broken then both oracles are untrusted, so return the last good price
@@ -150,8 +151,7 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed, A
 
 			// If Chainlink is frozen, try Tellor
 			if (
-				_chainlinkIsFrozen(chainlinkResponse) || 
-				_chainlinkIsFrozen(chainLinkETHUsdResponse)
+				_chainlinkIsFrozen(chainlinkResponse) || _chainlinkIsFrozen(chainLinkETHUsdResponse)
 			) {
 				// If Tellor is broken too, remember Tellor broke, and return last good price
 				if (_tellorIsBroken(tellorResponse)) {
@@ -171,7 +171,14 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed, A
 			}
 
 			// If Chainlink price has changed by > 50% between two consecutive rounds, compare it to Tellor's price
-			if (_chainlinkPriceChangeAboveMax(chainlinkResponse, prevChainlinkResponse, chainLinkETHUsdResponse, prevChainlinkEthUsdResponse)) {
+			if (
+				_chainlinkPriceChangeAboveMax(
+					chainlinkResponse,
+					prevChainlinkResponse,
+					chainLinkETHUsdResponse,
+					prevChainlinkEthUsdResponse
+				)
+			) {
 				// If Tellor is broken, both oracles are untrusted, and return last good price
 				if (_tellorIsBroken(tellorResponse)) {
 					_changeStatus(Status.bothOraclesUntrusted);
@@ -188,7 +195,9 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed, A
 				 * If Tellor is live and both oracles have a similar price, conclude that Chainlink's large price deviation between
 				 * two consecutive rounds was likely a legitmate market price movement, and so continue using Chainlink
 				 */
-				if (_bothOraclesSimilarPrice(chainlinkResponse, tellorResponse, chainLinkETHUsdResponse)) {
+				if (
+					_bothOraclesSimilarPrice(chainlinkResponse, tellorResponse, chainLinkETHUsdResponse)
+				) {
 					return _storeChainlinkPrice(_token, chainlinkResponse, chainLinkETHUsdResponse);
 				}
 
@@ -312,7 +321,9 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed, A
 
 			// If Chainlink is live and Tellor is working, compare prices. Switch to Chainlink
 			// if prices are within 5%, and return Chainlink price.
-			if (_bothOraclesSimilarPrice(chainlinkResponse, tellorResponse, chainLinkETHUsdResponse)) {
+			if (
+				_bothOraclesSimilarPrice(chainlinkResponse, tellorResponse, chainLinkETHUsdResponse)
+			) {
 				_changeStatus(Status.chainlinkWorking);
 				return _storeChainlinkPrice(_token, chainlinkResponse, chainLinkETHUsdResponse);
 			}
@@ -351,7 +362,14 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed, A
 
 			// If Chainlink is live but deviated >50% from it's previous price and Tellor is still untrusted, switch
 			// to bothOraclesUntrusted and return last good price
-			if (_chainlinkPriceChangeAboveMax(chainlinkResponse, prevChainlinkResponse, chainLinkETHUsdResponse, prevChainlinkEthUsdResponse)) {
+			if (
+				_chainlinkPriceChangeAboveMax(
+					chainlinkResponse,
+					prevChainlinkResponse,
+					chainLinkETHUsdResponse,
+					prevChainlinkEthUsdResponse
+				)
+			) {
 				_changeStatus(Status.bothOraclesUntrusted);
 				return lastTokenGoodPrice;
 			}
@@ -430,7 +448,8 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed, A
 			return false;
 		}
 
-		return _bothOraclesSimilarPrice(_chainlinkResponse, _tellorResponse, _chainlinkEthUsdResponse);
+		return
+			_bothOraclesSimilarPrice(_chainlinkResponse, _tellorResponse, _chainlinkEthUsdResponse);
 	}
 
 	function _bothOraclesSimilarPrice(
@@ -468,9 +487,9 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed, A
 		internal
 		view
 		returns (
-			ChainlinkResponse memory currentChainlink, 
+			ChainlinkResponse memory currentChainlink,
 			ChainlinkResponse memory prevChainLink,
-			ChainlinkResponse memory currentChainlinkEthUsd, 
+			ChainlinkResponse memory currentChainlinkEthUsd,
 			ChainlinkResponse memory prevChainLinkEthUsd
 		)
 	{
@@ -486,7 +505,6 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed, A
 			currentChainlinkEthUsd.roundId,
 			currentChainlinkEthUsd.decimals
 		);
-
 	}
 
 	function _chainlinkIsBroken(
@@ -584,7 +602,6 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed, A
 		address _token,
 		ChainlinkResponse memory _chainlinkResponse,
 		ChainlinkResponse memory _chainlinkEthUsdResponse
-
 	) internal returns (uint256) {
 		uint256 scaledChainlinkPrice = _scaleChainlinkPriceByDigits(
 			_wstEthPrice(_chainlinkResponse, _chainlinkEthUsdResponse),
@@ -680,8 +697,12 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed, A
 	}
 
 	function _wstEthPrice(
-		ChainlinkResponse memory _chainLinkWstEthEthResponse, 
-		ChainlinkResponse memory _chainlinkEthUsdResponse ) internal pure returns (uint256) {
-			return uint256(_chainLinkWstEthEthResponse.answer) * uint256(_chainlinkEthUsdResponse.answer) / 10**(_chainLinkWstEthEthResponse.decimals);
+		ChainlinkResponse memory _chainLinkWstEthEthResponse,
+		ChainlinkResponse memory _chainlinkEthUsdResponse
+	) internal pure returns (uint256) {
+		return
+			(uint256(_chainLinkWstEthEthResponse.answer) *
+				uint256(_chainlinkEthUsdResponse.answer)) /
+			10 ** (_chainLinkWstEthEthResponse.decimals);
 	}
 }
