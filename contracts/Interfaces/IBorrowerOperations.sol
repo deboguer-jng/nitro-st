@@ -35,7 +35,7 @@ interface IBorrowerOperations {
 		address _sortedTrovesAddress,
 		address _uTokenAddress,
 		address _YOUStakingAddress,
-		address _vestaParamsAddress
+		address _youParamsAddress
 	) external;
 
 	function openTrove(

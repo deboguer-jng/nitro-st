@@ -8,7 +8,7 @@ import "./Dependencies/CheckContract.sol";
 import "./Dependencies/ArbitroveBase.sol";
 
 import "./Interfaces/IStabilityPoolManager.sol";
-import "./Interfaces/IVestaParameters.sol";
+import "./Interfaces/IYOUParameters.sol";
 import "./Interfaces/IStabilityPool.sol";
 import "./Interfaces/ICommunityIssuance.sol";
 
@@ -16,10 +16,10 @@ contract AdminContract is ProxyAdmin, ArbitroveBase {
 	string public constant NAME = "AdminContract";
 
 	bytes32 public constant STABILITY_POOL_NAME_BYTES =
-		0xf704b47f65a99b2219b7213612db4be4a436cdf50624f4baca1373ef0de0aac7;
+		0x4172626974726f76652073746162696c69747920706f6f6c2077737465746820;
 	bool public isInitialized;
 
-	IVestaParameters private vestaParameters;
+	IYOUParameters private youParameters;
 	IStabilityPoolManager private stabilityPoolManager;
 	ICommunityIssuance private communityIssuance;
 
@@ -56,7 +56,7 @@ contract AdminContract is ProxyAdmin, ArbitroveBase {
 		communityIssuance = ICommunityIssuance(_communityIssuanceAddress);
 		wstETH = _wstETHAddress;
 
-		vestaParameters = IVestaParameters(_paramaters);
+		youParameters = IYOUParameters(_paramaters);
 		stabilityPoolManager = IStabilityPoolManager(_stabilityPoolManager);
 	}
 
@@ -79,8 +79,8 @@ contract AdminContract is ProxyAdmin, ArbitroveBase {
 			"Invalid Stability pool"
 		);
 
-		vestaParameters.priceFeed().addOracle(_asset, _chainlinkOracle, _tellorId);
-		vestaParameters.setAsDefaultWithRemptionBlock(_asset, redemptionLockInDay);
+		youParameters.priceFeed().addOracle(_asset, _chainlinkOracle, _tellorId);
+		youParameters.setAsDefaultWithRemptionBlock(_asset, redemptionLockInDay);
 
 		address clonedStabilityPool = ClonesUpgradeable.clone(_stabilityPoolImplementation);
 		require(clonedStabilityPool != address(0), "Failed to clone contract");
@@ -96,7 +96,7 @@ contract AdminContract is ProxyAdmin, ArbitroveBase {
 				uTokenAddress,
 				sortedTrovesAddress,
 				address(communityIssuance),
-				address(vestaParameters),
+				address(youParameters),
 				1000
 			)
 		);

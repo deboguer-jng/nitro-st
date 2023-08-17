@@ -3,9 +3,9 @@ pragma solidity ^0.8.10;
 import "./IActivePool.sol";
 import "./IDefaultPool.sol";
 import "./IPriceFeed.sol";
-import "./IVestaBase.sol";
+import "./IYouBase.sol";
 
-interface IVestaParameters {
+interface IYOUParameters {
 	error SafeCheckError(
 		string parameter,
 		uint256 valueEntered,

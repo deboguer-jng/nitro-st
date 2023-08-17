@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.10;
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
-import "../Dependencies/VestaMath.sol";
+import "../Dependencies/YouMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../Interfaces/IBorrowerOperations.sol";
 import "../Interfaces/ITroveManager.sol";
@@ -18,8 +17,6 @@ contract BorrowerWrappersScript is
 	ETHTransferScript,
 	YOUStakingScript
 {
-	using SafeMathUpgradeable for uint256;
-
 	struct Local_var {
 		address _asset;
 		uint256 _maxFee;
@@ -52,7 +49,7 @@ contract BorrowerWrappersScript is
 		checkContract(address(stabilityPoolCached));
 		stabilityPoolManager = stabilityPoolCached;
 
-		IPriceFeed priceFeedCached = troveManagerCached.vestaParams().priceFeed();
+		IPriceFeed priceFeedCached = troveManagerCached.youParams().priceFeed();
 		checkContract(address(priceFeedCached));
 		priceFeed = priceFeedCached;
 
@@ -88,7 +85,7 @@ contract BorrowerWrappersScript is
 		// already checked in CollSurplusPool
 		assert(balanceAfter > balanceBefore);
 
-		uint256 totalCollateral = balanceAfter.sub(balanceBefore).add(msg.value);
+		uint256 totalCollateral = balanceAfter - balanceBefore + msg.value;
 
 		// Open trove with obtained collateral, plus collateral sent by user
 		borrowerOperations.openTrove{ value: _asset == address(0) ? totalCollateral : 0 }(
@@ -116,7 +113,7 @@ contract BorrowerWrappersScript is
 
 		uint256 collBalanceAfter = address(this).balance;
 		uint256 YOUBalanceAfter = youToken.balanceOf(address(this));
-		uint256 claimedCollateral = collBalanceAfter.sub(collBalanceBefore);
+		uint256 claimedCollateral = collBalanceAfter - collBalanceBefore;
 
 		// Add claimed ETH to trove, get more U and stake it into the Stability Pool
 		if (claimedCollateral > 0) {
@@ -141,7 +138,7 @@ contract BorrowerWrappersScript is
 		}
 
 		// Stake claimed YOU
-		uint256 claimedYOU = YOUBalanceAfter.sub(YOUBalanceBefore);
+		uint256 claimedYOU = YOUBalanceAfter - YOUBalanceBefore;
 		if (claimedYOU > 0) {
 			youStaking.stake(claimedYOU);
 		}
@@ -162,8 +159,8 @@ contract BorrowerWrappersScript is
 		// Claim gains
 		youStaking.unstake(0);
 
-		uint256 gainedCollateral = address(this).balance.sub(collBalanceBefore); // stack too deep issues :'(
-		uint256 gainedU = uToken.balanceOf(address(this)).sub(UBalanceBefore);
+		uint256 gainedCollateral = address(this).balance - collBalanceBefore; // stack too deep issues :'(
+		uint256 gainedU = uToken.balanceOf(address(this)) - UBalanceBefore;
 
 		// Top up trove and get more U, keeping ICR constant
 		if (gainedCollateral > 0) {
@@ -183,13 +180,13 @@ contract BorrowerWrappersScript is
 			);
 		}
 
-		uint256 totalU = gainedU.add(vars.netYOUmount);
+		uint256 totalU = gainedU + vars.netYOUmount;
 		if (totalU > 0) {
 			stabilityPoolManager.getAssetStabilityPool(_asset).provideToSP(totalU);
 
 			// Providing to Stability Pool also triggers YOU claim, so stake it if any
 			uint256 YOUBalanceAfter = youToken.balanceOf(address(this));
-			uint256 claimedYOU = YOUBalanceAfter.sub(YOUBalanceBefore);
+			uint256 claimedYOU = YOUBalanceAfter - YOUBalanceBefore;
 			if (claimedYOU > 0) {
 				youStaking.stake(claimedYOU);
 			}
@@ -200,10 +197,10 @@ contract BorrowerWrappersScript is
 		uint256 price = priceFeed.fetchPrice(_asset);
 		uint256 ICR = troveManager.getCurrentICR(_asset, address(this), price);
 
-		uint256 YOUmount = _collateral.mul(price).div(ICR);
+		uint256 YOUmount = _collateral * price / ICR;
 		uint256 borrowingRate = troveManager.getBorrowingRateWithDecay(_asset);
-		uint256 netDebt = YOUmount.mul(VestaMath.DECIMAL_PRECISION).div(
-			VestaMath.DECIMAL_PRECISION.add(borrowingRate)
+		uint256 netDebt = YOUmount* YouMath.DECIMAL_PRECISION / (
+			YouMath.DECIMAL_PRECISION + borrowingRate
 		);
 
 		return netDebt;

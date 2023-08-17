@@ -11,12 +11,11 @@ import "./Interfaces/ICollSurplusPool.sol";
 import "./Interfaces/ISortedTroves.sol";
 import "./Interfaces/IYOUStaking.sol";
 import "./Interfaces/IStabilityPoolManager.sol";
-import "./Dependencies/VestaBase.sol";
+import "./Dependencies/YouBase.sol";
 import "./Dependencies/CheckContract.sol";
 import "./Dependencies/SafetyTransfer.sol";
 
-contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
-	using SafeMathUpgradeable for uint256;
+contract BorrowerOperations is YouBase, CheckContract, IBorrowerOperations {
 	using SafeERC20Upgradeable for IERC20Upgradeable;
 
 	string public constant NAME = "BorrowerOperations";
@@ -106,7 +105,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		address _sortedTrovesAddress,
 		address _uTokenAddress,
 		address _YOUStakingAddress,
-		address _vestaParamsAddress
+		address _youParamsAddress
 	) external override initializer {
 		require(!isInitialized, "Already initialized");
 		checkContract(_troveManagerAddress);
@@ -116,7 +115,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		checkContract(_sortedTrovesAddress);
 		checkContract(_uTokenAddress);
 		checkContract(_YOUStakingAddress);
-		checkContract(_vestaParamsAddress);
+		checkContract(_youParamsAddress);
 		isInitialized = true;
 
 		__Ownable_init();
@@ -130,7 +129,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		YOUStakingAddress = _YOUStakingAddress;
 		YOUStaking = IYOUStaking(_YOUStakingAddress);
 
-		setVestaParameters(_vestaParamsAddress);
+		setYouParameters(_youParamsAddress);
 
 		emit TroveManagerAddressChanged(_troveManagerAddress);
 		emit StabilityPoolAddressChanged(_stabilityPoolManagerAddress);
@@ -151,18 +150,18 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		address _upperHint,
 		address _lowerHint
 	) external payable override onlyWstETH(_asset) {
-		vestaParams.sanitizeParameters(_asset);
+		youParams.sanitizeParameters(_asset);
 
 		ContractsCache memory contractsCache = ContractsCache(
 			troveManager,
-			vestaParams.activePool(),
+			youParams.activePool(),
 			UToken
 		);
 		LocalVariables_openTrove memory vars;
 		vars.asset = _asset;
 
 		_tokenAmount = getMethodValue(vars.asset, _tokenAmount, false);
-		vars.price = vestaParams.priceFeed().fetchPrice(vars.asset);
+		vars.price = youParams.priceFeed().fetchPrice(vars.asset);
 		bool isRecoveryMode = _checkRecoveryMode(vars.asset, vars.price);
 
 		_requireValidMaxFeePercentage(vars.asset, _maxFeePercentage, isRecoveryMode);
@@ -179,7 +178,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 				_YOUmount,
 				_maxFeePercentage
 			);
-			vars.netDebt = vars.netDebt.add(vars.UFee);
+			vars.netDebt = vars.netDebt + vars.UFee;
 		}
 		_requireAtLeastMinNetDebt(vars.asset, vars.netDebt);
 
@@ -187,8 +186,8 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		vars.compositeDebt = _getCompositeDebt(vars.asset, vars.netDebt);
 		assert(vars.compositeDebt > 0);
 
-		vars.ICR = VestaMath._computeCR(_tokenAmount, vars.compositeDebt, vars.price);
-		vars.NICR = VestaMath._computeNominalCR(_tokenAmount, vars.compositeDebt);
+		vars.ICR = YouMath._computeCR(_tokenAmount, vars.compositeDebt, vars.price);
+		vars.NICR = YouMath._computeNominalCR(_tokenAmount, vars.compositeDebt);
 
 		if (isRecoveryMode) {
 			_requireICRisAboveCCR(vars.asset, vars.ICR);
@@ -233,8 +232,8 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 			contractsCache.activePool,
 			contractsCache.UToken,
 			gasPoolAddress,
-			vestaParams.U_GAS_COMPENSATION(vars.asset),
-			vestaParams.U_GAS_COMPENSATION(vars.asset)
+			youParams.U_GAS_COMPENSATION(vars.asset),
+			youParams.U_GAS_COMPENSATION(vars.asset)
 		);
 
 		emit TroveUpdated(
@@ -374,7 +373,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 	) internal {
 		ContractsCache memory contractsCache = ContractsCache(
 			troveManager,
-			vestaParams.activePool(),
+			youParams.activePool(),
 			UToken
 		);
 		LocalVariables_adjustTrove memory vars;
@@ -385,7 +384,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 			"BorrowerOp: _AssetSent and Msg.value aren't the same!"
 		);
 
-		vars.price = vestaParams.priceFeed().fetchPrice(vars.asset);
+		vars.price = youParams.priceFeed().fetchPrice(vars.asset);
 		bool isRecoveryMode = _checkRecoveryMode(vars.asset, vars.price);
 
 		if (_isDebtIncrease) {
@@ -418,14 +417,14 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 				_UChange,
 				_maxFeePercentage
 			);
-			vars.netDebtChange = vars.netDebtChange.add(vars.UFee); // The raw debt change includes the fee
+			vars.netDebtChange = vars.netDebtChange + vars.UFee; // The raw debt change includes the fee
 		}
 
 		vars.debt = contractsCache.troveManager.getTroveDebt(vars.asset, _borrower);
 		vars.coll = contractsCache.troveManager.getTroveColl(vars.asset, _borrower);
 
 		// Get the trove's old ICR before the adjustment, and what its new ICR will be after the adjustment
-		vars.oldICR = VestaMath._computeCR(vars.coll, vars.debt, vars.price);
+		vars.oldICR = YouMath._computeCR(vars.coll, vars.debt, vars.price);
 		vars.newICR = _getNewICRFromTroveChange(
 			vars.coll,
 			vars.debt,
@@ -453,7 +452,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		if (!_isDebtIncrease && _UChange > 0) {
 			_requireAtLeastMinNetDebt(
 				vars.asset,
-				_getNetDebt(vars.asset, vars.debt).sub(vars.netDebtChange)
+				_getNetDebt(vars.asset, vars.debt) - vars.netDebtChange
 			);
 			_requireValidURepayment(vars.asset, vars.debt, vars.netDebtChange);
 			_requireSufficientUBalance(contractsCache.UToken, _borrower, vars.netDebtChange);
@@ -514,10 +513,10 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 	function closeTrove(address _asset) external override onlyWstETH(_asset) {
 		CloseTroveVars memory vars;
 		ITroveManager troveManagerCached = troveManager;
-		IActivePool activePoolCached = vestaParams.activePool();
+		IActivePool activePoolCached = youParams.activePool();
 		IUToken UTokenCached = UToken;
 		_requireTroveisActive(_asset, troveManagerCached, msg.sender);
-		vars.price = vestaParams.priceFeed().fetchPrice(_asset);
+		vars.price = youParams.priceFeed().fetchPrice(_asset);
 		_requireNotInRecoveryMode(_asset, vars.price);
 
 		troveManagerCached.applyPendingRewards(_asset, msg.sender);
@@ -528,7 +527,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		_requireSufficientUBalance(
 			UTokenCached,
 			msg.sender,
-			vars.debt.sub(vestaParams.U_GAS_COMPENSATION(_asset))
+			vars.debt - youParams.U_GAS_COMPENSATION(_asset)
 		);
 
 		uint256 newTCR = _getNewTCRFromTroveChange(
@@ -552,14 +551,14 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 			activePoolCached,
 			UTokenCached,
 			msg.sender,
-			vars.debt.sub(vestaParams.U_GAS_COMPENSATION(_asset))
+			vars.debt - youParams.U_GAS_COMPENSATION(_asset)
 		);
 		_repayU(
 			_asset,
 			activePoolCached,
 			UTokenCached,
 			gasPoolAddress,
-			vestaParams.U_GAS_COMPENSATION(_asset)
+			youParams.U_GAS_COMPENSATION(_asset)
 		);
 
 		// Send the collateral back to the user
@@ -596,7 +595,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 	}
 
 	function _getUSDValue(uint256 _coll, uint256 _price) internal pure returns (uint256) {
-		uint256 usdValue = _price.mul(_coll).div(DECIMAL_PRECISION);
+		uint256 usdValue = _price * _coll / DECIMAL_PRECISION;
 
 		return usdValue;
 	}
@@ -811,14 +810,14 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 
 	function _requireICRisAboveMCR(address _asset, uint256 _newICR) internal view {
 		require(
-			_newICR >= vestaParams.MCR(_asset),
+			_newICR >= youParams.MCR(_asset),
 			"BorrowerOps: An operation that would result in ICR < MCR is not permitted"
 		);
 	}
 
 	function _requireICRisAboveCCR(address _asset, uint256 _newICR) internal view {
 		require(
-			_newICR >= vestaParams.CCR(_asset),
+			_newICR >= youParams.CCR(_asset),
 			"BorrowerOps: Operation must leave trove with ICR >= CCR"
 		);
 	}
@@ -832,14 +831,14 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 
 	function _requireNewTCRisAboveCCR(address _asset, uint256 _newTCR) internal view {
 		require(
-			_newTCR >= vestaParams.CCR(_asset),
+			_newTCR >= youParams.CCR(_asset),
 			"BorrowerOps: An operation that would result in TCR < CCR is not permitted"
 		);
 	}
 
 	function _requireAtLeastMinNetDebt(address _asset, uint256 _netDebt) internal view {
 		require(
-			_netDebt >= vestaParams.MIN_NET_DEBT(_asset),
+			_netDebt >= youParams.MIN_NET_DEBT(_asset),
 			"BorrowerOps: Trove's net debt must be greater than minimum"
 		);
 	}
@@ -850,7 +849,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		uint256 _debtRepayment
 	) internal view {
 		require(
-			_debtRepayment <= _currentDebt.sub(vestaParams.U_GAS_COMPENSATION(_asset)),
+			_debtRepayment <= _currentDebt - youParams.U_GAS_COMPENSATION(_asset),
 			"BorrowerOps: Amount repaid must not be larger than the Trove's debt"
 		);
 	}
@@ -880,13 +879,13 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 	) internal view {
 		if (_isRecoveryMode) {
 			require(
-				_maxFeePercentage <= vestaParams.DECIMAL_PRECISION(),
+				_maxFeePercentage <= youParams.DECIMAL_PRECISION(),
 				"Max fee percentage must less than or equal to 100%"
 			);
 		} else {
 			require(
-				_maxFeePercentage >= vestaParams.BORROWING_FEE_FLOOR(_asset) &&
-					_maxFeePercentage <= vestaParams.DECIMAL_PRECISION(),
+				_maxFeePercentage >= youParams.BORROWING_FEE_FLOOR(_asset) &&
+					_maxFeePercentage <= youParams.DECIMAL_PRECISION(),
 				"Max fee percentage must be between 0.5% and 100%"
 			);
 		}
@@ -912,7 +911,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 			_isDebtIncrease
 		);
 
-		uint256 newNICR = VestaMath._computeNominalCR(newColl, newDebt);
+		uint256 newNICR = YouMath._computeNominalCR(newColl, newDebt);
 		return newNICR;
 	}
 
@@ -935,7 +934,7 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 			_isDebtIncrease
 		);
 
-		uint256 newICR = VestaMath._computeCR(newColl, newDebt, _price);
+		uint256 newICR = YouMath._computeCR(newColl, newDebt, _price);
 		return newICR;
 	}
 
@@ -950,8 +949,8 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		uint256 newColl = _coll;
 		uint256 newDebt = _debt;
 
-		newColl = _isCollIncrease ? _coll.add(_collChange) : _coll.sub(_collChange);
-		newDebt = _isDebtIncrease ? _debt.add(_debtChange) : _debt.sub(_debtChange);
+		newColl = _isCollIncrease ? _coll + _collChange : _coll - _collChange;
+		newDebt = _isDebtIncrease ? _debt + _debtChange : _debt - _debtChange;
 
 		return (newColl, newDebt);
 	}
@@ -967,10 +966,10 @@ contract BorrowerOperations is VestaBase, CheckContract, IBorrowerOperations {
 		uint256 totalColl = getEntireSystemColl(_asset);
 		uint256 totalDebt = getEntireSystemDebt(_asset);
 
-		totalColl = _isCollIncrease ? totalColl.add(_collChange) : totalColl.sub(_collChange);
-		totalDebt = _isDebtIncrease ? totalDebt.add(_debtChange) : totalDebt.sub(_debtChange);
+		totalColl = _isCollIncrease ? totalColl + _collChange : totalColl - _collChange;
+		totalDebt = _isDebtIncrease ? totalDebt + _debtChange : totalDebt - _debtChange;
 
-		uint256 newTCR = VestaMath._computeCR(totalColl, totalDebt, _price);
+		uint256 newTCR = YouMath._computeCR(totalColl, totalDebt, _price);
 		return newTCR;
 	}
 

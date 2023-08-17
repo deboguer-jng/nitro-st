@@ -4,10 +4,10 @@ pragma solidity ^0.8.10;
 import "../Interfaces/ITroveManager.sol";
 import "../Interfaces/ISortedTroves.sol";
 import "../Interfaces/IPriceFeed.sol";
-import "../Dependencies/VestaMath.sol";
+import "../Dependencies/YouMath.sol";
 
 /* Wrapper contract - used for calculating gas of read-only and internal functions. 
-Not part of the Vesta application. */
+Not part of the You application. */
 contract FunctionCaller {
 	ITroveManager troveManager;
 	address public troveManagerAddress;

@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.10;
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 
-library VestaMath {
-	using SafeMathUpgradeable for uint256;
+library YouMath {
 
 	uint256 internal constant DECIMAL_PRECISION = 1 ether;
 
@@ -35,9 +33,9 @@ library VestaMath {
 	 * Used only inside the exponentiation, _decPow().
 	 */
 	function decMul(uint256 x, uint256 y) internal pure returns (uint256 decProd) {
-		uint256 prod_xy = x.mul(y);
+		uint256 prod_xy = x * y;
 
-		decProd = prod_xy.add(DECIMAL_PRECISION / 2).div(DECIMAL_PRECISION);
+		decProd = (prod_xy + (DECIMAL_PRECISION / 2)) / DECIMAL_PRECISION;
 	}
 
 	/*
@@ -75,12 +73,12 @@ library VestaMath {
 		while (n > 1) {
 			if (n % 2 == 0) {
 				x = decMul(x, x);
-				n = n.div(2);
+				n = n / 2;
 			} else {
 				// if (n % 2 != 0)
 				y = decMul(x, y);
 				x = decMul(x, x);
-				n = (n.sub(1)).div(2);
+				n = (n - 1) / 2;
 			}
 		}
 
@@ -88,12 +86,12 @@ library VestaMath {
 	}
 
 	function _getAbsoluteDifference(uint256 _a, uint256 _b) internal pure returns (uint256) {
-		return (_a >= _b) ? _a.sub(_b) : _b.sub(_a);
+		return (_a >= _b) ? _a - _b : _b - _a;
 	}
 
 	function _computeNominalCR(uint256 _coll, uint256 _debt) internal pure returns (uint256) {
 		if (_debt > 0) {
-			return _coll.mul(NICR_PRECISION).div(_debt);
+			return _coll * NICR_PRECISION / _debt;
 		}
 		// Return the maximal value for uint256 if the Trove has a debt of 0. Represents "infinite" CR.
 		else {
@@ -108,7 +106,7 @@ library VestaMath {
 		uint256 _price
 	) internal pure returns (uint256) {
 		if (_debt > 0) {
-			uint256 newCollRatio = _coll.mul(_price).div(_debt);
+			uint256 newCollRatio = _coll * _price / _debt;
 
 			return newCollRatio;
 		}

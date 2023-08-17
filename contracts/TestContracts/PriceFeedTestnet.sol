@@ -2,14 +2,12 @@
 
 pragma solidity ^0.8.10;
 import "../Interfaces/IPriceFeed.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 /*
  * PriceFeed placeholder for testnet and development. The price is simply set manually and saved in a state
  * variable. The contract does not connect to a live Chainlink price feed.
  */
 contract PriceFeedTestnet is IPriceFeed {
-	using SafeMath for uint256;
 
 	uint256 private _price = 200 ether;
 	uint256 private _index = 1 ether;
@@ -46,7 +44,7 @@ contract PriceFeedTestnet is IPriceFeed {
 		// This lets the subgraph rely on events to get the latest price even when developing locally.
 		emit LastGoodPriceUpdated(_asset, _price);
 		emit LastGoodIndexUpdated(_asset, _price);
-		return _price.mul(_index).div(1 ether);
+		return _price * _index / 1 ether;
 	}
 
 	// Manual external price setter.

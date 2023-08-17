@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.10;
-import "./IVestaParameters.sol";
+import "./IYOUParameters.sol";
 
-interface IVestaBase {
+interface IYouBase {
 	event VaultParametersBaseChanged(address indexed newAddress);
 
-	function vestaParams() external view returns (IVestaParameters);
+	function youParams() external view returns (IYOUParameters);
 }

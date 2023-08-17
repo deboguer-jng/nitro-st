@@ -2,14 +2,13 @@
 
 pragma solidity ^0.8.10;
 
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 import "../Dependencies/BaseMath.sol";
 import "../Dependencies/CheckContract.sol";
-import "../Dependencies/VestaMath.sol";
+import "../Dependencies/YouMath.sol";
 import "../Interfaces/IYOUStaking.sol";
 import "../Interfaces/IDeposit.sol";
 import "../Dependencies/SafetyTransfer.sol";
@@ -22,7 +21,6 @@ contract YOUStaking is
 	BaseMath,
 	ReentrancyGuardUpgradeable
 {
-	using SafeMathUpgradeable for uint256;
 	using SafeERC20Upgradeable for IERC20Upgradeable;
 
 	bool public isInitialized;
@@ -56,6 +54,10 @@ contract YOUStaking is
 	address public borrowerOperationsAddress;
 	address public activePoolAddress;
 	address public treasury;
+
+	constructor() {
+		_disableInitializers();
+	}
 
 	// --- Functions ---
 	function setAddresses(
@@ -127,11 +129,11 @@ contract YOUStaking is
 			_updateUserSnapshots(asset, msg.sender);
 		}
 
-		uint256 newStake = currentStake.add(_YOUamount);
+		uint256 newStake = currentStake + _YOUamount;
 
 		// Increase user’s stake and total YOU staked
 		stakes[msg.sender] = newStake;
-		totalYOUStaked = totalYOUStaked.add(_YOUamount);
+		totalYOUStaked = totalYOUStaked + _YOUamount;
 		emit TotalYOUStakedUpdated(totalYOUStaked);
 
 		// Transfer YOU from caller to this contract
@@ -169,13 +171,13 @@ contract YOUStaking is
 		}
 
 		if (_YOUamount > 0) {
-			uint256 YOUToWithdraw = VestaMath._min(_YOUamount, currentStake);
+			uint256 YOUToWithdraw = YouMath._min(_YOUamount, currentStake);
 
-			uint256 newStake = currentStake.sub(YOUToWithdraw);
+			uint256 newStake = currentStake - YOUToWithdraw;
 
 			// Decrease user's stake and total YOU staked
 			stakes[msg.sender] = newStake;
-			totalYOUStaked = totalYOUStaked.sub(YOUToWithdraw);
+			totalYOUStaked = totalYOUStaked - YOUToWithdraw;
 			emit TotalYOUStakedUpdated(totalYOUStaked);
 
 			// Transfer unstaked YOU to user
@@ -198,7 +200,7 @@ contract YOUStaking is
 		emit TreasuryAddressChanged(_treasury);
 	}
 
-	// --- Reward-per-unit-staked increase functions. Called by Vesta core contracts ---
+	// --- Reward-per-unit-staked increase functions. Called by You core contracts ---
 
 	function increaseF_Asset(
 		address _asset,
@@ -217,10 +219,10 @@ contract YOUStaking is
 		uint256 AssetFeePerYOUStaked;
 
 		if (totalYOUStaked > 0) {
-			AssetFeePerYOUStaked = _AssetFee.mul(DECIMAL_PRECISION).div(totalYOUStaked);
+			AssetFeePerYOUStaked = _AssetFee * DECIMAL_PRECISION / totalYOUStaked;
 		}
 
-		F_ASSETS[_asset] = F_ASSETS[_asset].add(AssetFeePerYOUStaked);
+		F_ASSETS[_asset] = F_ASSETS[_asset] + AssetFeePerYOUStaked;
 		emit F_AssetUpdated(_asset, F_ASSETS[_asset]);
 	}
 
@@ -233,10 +235,10 @@ contract YOUStaking is
 		uint256 UFeePerYOUStaked;
 
 		if (totalYOUStaked > 0) {
-			UFeePerYOUStaked = _UFee.mul(DECIMAL_PRECISION).div(totalYOUStaked);
+			UFeePerYOUStaked = _UFee * DECIMAL_PRECISION / totalYOUStaked;
 		}
 
-		F_U = F_U.add(UFeePerYOUStaked);
+		F_U = F_U + UFeePerYOUStaked;
 		emit F_UUpdated(F_U);
 	}
 
@@ -261,9 +263,7 @@ contract YOUStaking is
 		address _user
 	) internal view returns (uint256) {
 		uint256 F_ASSET_Snapshot = snapshots[_user].F_ASSET_Snapshot[_asset];
-		uint256 AssetGain = stakes[_user].mul(F_ASSETS[_asset].sub(F_ASSET_Snapshot)).div(
-			DECIMAL_PRECISION
-		);
+		uint256 AssetGain = stakes[_user] * (F_ASSETS[_asset] - F_ASSET_Snapshot) / DECIMAL_PRECISION;
 		return AssetGain;
 	}
 
@@ -273,7 +273,7 @@ contract YOUStaking is
 
 	function _getPendingUGain(address _user) internal view returns (uint256) {
 		uint256 F_U_Snapshot = snapshots[_user].F_U_Snapshot;
-		uint256 UGain = stakes[_user].mul(F_U.sub(F_U_Snapshot)).div(DECIMAL_PRECISION);
+		uint256 UGain = stakes[_user] * (F_U - F_U_Snapshot) / DECIMAL_PRECISION;
 		return UGain;
 	}
 

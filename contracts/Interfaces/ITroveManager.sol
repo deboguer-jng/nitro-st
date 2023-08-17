@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.10;
-import "./IVestaBase.sol";
+import "./IYouBase.sol";
 import "./IStabilityPool.sol";
 import "./IUToken.sol";
 import "./IYOUStaking.sol";
@@ -12,7 +12,7 @@ import "./IDefaultPool.sol";
 import "./IStabilityPoolManager.sol";
 
 // Common interface for the Trove Manager.
-interface ITroveManager is IVestaBase {
+interface ITroveManager is IYouBase {
 	enum Status {
 		nonExistent,
 		active,
@@ -204,7 +204,7 @@ interface ITroveManager is IVestaBase {
 		address _uTokenAddress,
 		address _sortedTrovesAddress,
 		address _YOUStakingAddress,
-		address _vestaParamsAddress
+		address _youParamsAddress
 	) external;
 
 	function stabilityPoolManager() external view returns (IStabilityPoolManager);

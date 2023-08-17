@@ -7,7 +7,7 @@ import "./TroveManager.sol";
 import "./SortedTroves.sol";
 import "./Dependencies/ArbitroveBase.sol";
 
-/*  Helper contract for grabbing Trove data for the front end. Not part of the core Vesta system. */
+/*  Helper contract for grabbing Trove data for the front end. Not part of the core You system. */
 contract MultiTroveGetter is ArbitroveBase {
 	struct CombinedTroveData {
 		address owner;

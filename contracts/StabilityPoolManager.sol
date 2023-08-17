@@ -20,6 +20,10 @@ contract StabilityPoolManager is
 	bool public isInitialized;
 	address public adminContract;
 
+	constructor() {
+		_disableInitializers();
+	}
+
 	modifier isController() {
 		require(msg.sender == owner() || msg.sender == adminContract, "Invalid permissions");
 		_;

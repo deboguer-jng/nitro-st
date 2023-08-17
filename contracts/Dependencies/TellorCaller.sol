@@ -3,12 +3,11 @@
 pragma solidity ^0.8.10;
 import "../Interfaces/ITellorCaller.sol";
 import "./ITellor.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 
 /*
  * This contract has a single external function that calls Tellor: getTellorCurrentValue().
  *
- * The function is called by the Vesta contract PriceFeed.sol. If any of its inner calls to Tellor revert,
+ * The function is called by the You contract PriceFeed.sol. If any of its inner calls to Tellor revert,
  * this function will revert, and PriceFeed will catch the failure and handle it accordingly.
  *
  * The function comes from Tellor's own wrapper contract, 'UsingTellor.sol':
@@ -16,7 +15,6 @@ import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
  *
  */
 contract TellorCaller is ITellorCaller {
-	using SafeMathUpgradeable for uint256;
 
 	ITellor public tellor;
 
@@ -51,13 +49,14 @@ contract TellorCaller is ITellorCaller {
 		external
 		view
 		override
-		returns (bool ifRetrieve, uint256 value, uint256 _timestampRetrieved)
+		returns (bool ifRetrieve, uint256 value, uint256 timestampRetrieved)
 	{
-		uint256 _count = tellor.getNewValueCountbyQueryId(_queryId);
-		uint256 _time = tellor.getTimestampbyQueryIdandIndex(_queryId, _count.sub(1));
-		bytes memory _valuesBytes = tellor.retrieveData(_queryId, _time);
-		uint256 _value = _sliceUint(_valuesBytes);
-		if (_value > 0) return (true, _value, _time);
-		return (false, 0, _time);
+
+		(bool _ifRetrieve, bytes memory _value, uint256 _timestampRetrieved) =
+          tellor.getDataBefore(_queryId, block.timestamp - 20 minutes);
+		
+		if (_timestampRetrieved == 0) return (_ifRetrieve, 0, _timestampRetrieved);
+		require(block.timestamp - _timestampRetrieved < 24 hours);
+		return (_ifRetrieve, abi.decode(_value, (uint256)), _timestampRetrieved);
 	}
 }

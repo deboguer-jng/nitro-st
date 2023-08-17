@@ -12,7 +12,7 @@ contract TroveManagerTester is TroveManager {
 		uint256 _debt,
 		uint256 _price
 	) external pure returns (uint256) {
-		return VestaMath._computeCR(_coll, _debt, _price);
+		return YouMath._computeCR(_coll, _debt, _price);
 	}
 
 	function getCollGasCompensation(
@@ -23,7 +23,7 @@ contract TroveManagerTester is TroveManager {
 	}
 
 	function getUGasCompensation(address _asset) external view returns (uint256) {
-		return vestaParams.U_GAS_COMPENSATION(_asset);
+		return youParams.U_GAS_COMPENSATION(_asset);
 	}
 
 	function getCompositeDebt(address _asset, uint256 _debt) external view returns (uint256) {

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.10;
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
@@ -31,7 +30,6 @@ contract ActivePool is
 	IActivePool
 {
 	using SafeERC20Upgradeable for IERC20Upgradeable;
-	using SafeMathUpgradeable for uint256;
 
 	string public constant NAME = "ActivePool";
 	address constant ETH_REF_ADDRESS = address(0);
@@ -48,6 +46,10 @@ contract ActivePool is
 
 	mapping(address => uint256) internal assetsBalance;
 	mapping(address => uint256) internal UDebts;
+
+	constructor() {
+		_disableInitializers();
+	}
 
 	// --- Contract setters ---
 
@@ -122,7 +124,7 @@ contract ActivePool is
 		uint256 safetyTransferAmount = SafetyTransfer.decimalsCorrection(_asset, _amount);
 		if (safetyTransferAmount == 0) return;
 
-		assetsBalance[_asset] = assetsBalance[_asset].sub(_amount);
+		assetsBalance[_asset] = assetsBalance[_asset] - _amount;
 
 		if (_asset != ETH_REF_ADDRESS) {
 			IERC20Upgradeable(_asset).safeTransfer(_account, safetyTransferAmount);
@@ -149,7 +151,7 @@ contract ActivePool is
 		address _asset,
 		uint256 _amount
 	) external override callerIsBOorTroveM onlyWstETH(_asset) {
-		UDebts[_asset] = UDebts[_asset].add(_amount);
+		UDebts[_asset] = UDebts[_asset] + _amount;
 		emit ActivePoolUDebtUpdated(_asset, UDebts[_asset]);
 	}
 
@@ -157,7 +159,7 @@ contract ActivePool is
 		address _asset,
 		uint256 _amount
 	) external override callerIsBOorTroveMorSP onlyWstETH(_asset) {
-		UDebts[_asset] = UDebts[_asset].sub(_amount);
+		UDebts[_asset] = UDebts[_asset] - _amount;
 		emit ActivePoolUDebtUpdated(_asset, UDebts[_asset]);
 	}
 
@@ -196,14 +198,14 @@ contract ActivePool is
 		address _asset,
 		uint256 _amount
 	) external override callerIsBorrowerOperationOrDefaultPool onlyWstETH(_asset) {
-		assetsBalance[_asset] = assetsBalance[_asset].add(_amount);
+		assetsBalance[_asset] = assetsBalance[_asset] + _amount;
 		emit ActivePoolAssetBalanceUpdated(_asset, assetsBalance[_asset]);
 	}
 
 	// --- Fallback function ---
 
 	receive() external payable callerIsBorrowerOperationOrDefaultPool {
-		assetsBalance[ETH_REF_ADDRESS] = assetsBalance[ETH_REF_ADDRESS].add(msg.value);
+		assetsBalance[ETH_REF_ADDRESS] = assetsBalance[ETH_REF_ADDRESS] + msg.value;
 		emit ActivePoolAssetBalanceUpdated(ETH_REF_ADDRESS, assetsBalance[ETH_REF_ADDRESS]);
 	}
 }

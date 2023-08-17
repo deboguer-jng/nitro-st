@@ -4,7 +4,6 @@ pragma solidity ^0.8.10;
 import "./Interfaces/ISortedTroves.sol";
 import "./Interfaces/ITroveManager.sol";
 import "./Interfaces/IBorrowerOperations.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./Dependencies/CheckContract.sol";
 import "./Dependencies/ArbitroveBase.sol";
@@ -33,7 +32,7 @@ import "./Dependencies/ArbitroveBase.sol";
  * https://github.com/livepeer/protocol/blob/master/contracts/libraries/SortedDoublyLL.sol
  *
  *
- * Changes made in the Vesta implementation:
+ * Changes made in the You implementation:
  *
  * - Keys have been removed from nodes
  *
@@ -43,7 +42,6 @@ import "./Dependencies/ArbitroveBase.sol";
  * - Public functions with parameters have been made internal to save gas, and given an external wrapper function for external access
  */
 contract SortedTroves is OwnableUpgradeable, CheckContract, ArbitroveBase, ISortedTroves {
-	using SafeMathUpgradeable for uint256;
 
 	bool public isInitialized;
 
@@ -74,6 +72,10 @@ contract SortedTroves is OwnableUpgradeable, CheckContract, ArbitroveBase, ISort
 	}
 
 	mapping(address => Data) public data;
+
+	constructor() {
+		_disableInitializers();
+	}
 
 	// --- Dependency setters ---
 
@@ -176,7 +178,7 @@ contract SortedTroves is OwnableUpgradeable, CheckContract, ArbitroveBase, ISort
 			data[_asset].nodes[nextId].prevId = _id;
 		}
 
-		data[_asset].size = data[_asset].size.add(1);
+		data[_asset].size = data[_asset].size + 1;
 		emit NodeAdded(_asset, _id, _NICR);
 	}
 
@@ -226,7 +228,7 @@ contract SortedTroves is OwnableUpgradeable, CheckContract, ArbitroveBase, ISort
 		}
 
 		delete data[_asset].nodes[_id];
-		data[_asset].size = data[_asset].size.sub(1);
+		data[_asset].size = data[_asset].size - 1;
 		emit NodeRemoved(_asset, _id);
 	}
 
