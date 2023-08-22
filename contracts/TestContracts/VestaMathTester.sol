@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.10;
+pragma solidity 0.8.17;
 import "../Dependencies/YouMath.sol";
 
 /* Tester contract for math functions in Math.sol library. */
