@@ -353,7 +353,7 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed, A
 			if (chainlinkIsFrozen) {
 				if (!tellorIsFrozen && !tellorIsBroken) {
 					_changeStatus(Status.usingTellorChainlinkFrozen);
-					return _storeTellorPrice(_token, tellorResponse);
+					return lastTokenGoodPrice;
 				}
 
 				_changeStatus(Status.bothOraclesUntrusted);
