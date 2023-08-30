@@ -139,7 +139,7 @@ class MainnetDeploymentHelper {
 		const borrowerOperationsFactory = await this.getFactory("BorrowerOperations")
 		const hintHelpersFactory = await this.getFactory("HintHelpers")
 		const UTokenFactory = await this.getFactory("UToken")
-		const vaultParametersFactory = await this.getFactory("VestaParameters")
+		const youParametersFactory = await this.getFactory("YOUParameters")
 		const lockedYouFactory = await this.getFactory("LockedYOU")
 		const adminContractFactory = await this.getFactory("AdminContract")
 		const tellorCallerFactory = await this.getFactory("TellorCaller")
@@ -207,9 +207,9 @@ class MainnetDeploymentHelper {
 			deploymentState,
 			true
 		)
-		const vestaParameters = await this.loadOrDeploy(
-			vaultParametersFactory,
-			"vestaParameters",
+		const youParameters = await this.loadOrDeploy(
+			youParametersFactory,
+			"youParameters",
 			deploymentState,
 			true
 		)
@@ -242,8 +242,6 @@ class MainnetDeploymentHelper {
 			borrowerOperations?.address,
 		]
 
-		console.log(UTokenParams);
-
 		const uToken = await this.loadOrDeploy(
 			UTokenFactory,
 			"UToken",
@@ -268,7 +266,7 @@ class MainnetDeploymentHelper {
 			await this.verifyContract("borrowerOperations", deploymentState)
 			await this.verifyContract("hintHelpers", deploymentState)
 			await this.verifyContract("UToken", deploymentState, UTokenParams)
-			await this.verifyContract("vestaParameters", deploymentState)
+			await this.verifyContract("youParameters", deploymentState)
 			await this.verifyContract("lockedYou", deploymentState)
 			await this.verifyContract("adminContract", deploymentState)
 			await this.verifyContract("tellorCaller", deploymentState, [tellorMasterAddr])
@@ -289,7 +287,7 @@ class MainnetDeploymentHelper {
 			collSurplusPool,
 			borrowerOperations,
 			hintHelpers,
-			vestaParameters,
+			youParameters,
 			lockedYou,
 			tellorCaller,
 		}
@@ -307,7 +305,7 @@ class MainnetDeploymentHelper {
 			deploymentState,
 			true
 		)
-		
+
 		const communityIssuance = await this.loadOrDeploy(
 			communityIssuanceFactory,
 			"communityIssuance",
@@ -404,9 +402,9 @@ class MainnetDeploymentHelper {
 			(await this.sendAndWaitForTransaction(
 				contracts.lockedYou.setAddresses(YOUContracts.YOUToken.address, { gasPrice })
 			))
-		;(await this.isOwnershipRenounced(contracts.vestaParameters)) ||
+		;(await this.isOwnershipRenounced(contracts.youParameters)) ||
 			(await this.sendAndWaitForTransaction(
-				contracts.vestaParameters.setAddresses(
+				contracts.youParameters.setAddresses(
 					contracts.activePool.address,
 					contracts.defaultPool.address,
 					contracts.priceFeed.address,
@@ -429,7 +427,7 @@ class MainnetDeploymentHelper {
 					contracts.uToken.address,
 					contracts.sortedTroves.address,
 					YOUContracts.YOUStaking.address,
-					contracts.vestaParameters.address,
+					contracts.youParameters.address,
 					{ gasPrice }
 				)
 			)) ||
@@ -448,7 +446,7 @@ class MainnetDeploymentHelper {
 					contracts.sortedTroves.address,
 					contracts.uToken.address,
 					YOUContracts.YOUStaking.address,
-					contracts.vestaParameters.address,
+					contracts.youParameters.address,
 					{ gasPrice }
 				)
 			))
@@ -499,7 +497,7 @@ class MainnetDeploymentHelper {
 		;(await this.isOwnershipRenounced(contracts.adminContract)) ||
 			(await this.sendAndWaitForTransaction(
 				contracts.adminContract.setAddresses(
-					contracts.vestaParameters.address,
+					contracts.youParameters.address,
 					contracts.stabilityPoolManager.address,
 					contracts.borrowerOperations.address,
 					contracts.troveManager.address,
@@ -517,7 +515,7 @@ class MainnetDeploymentHelper {
 				contracts.hintHelpers.setAddresses(
 					contracts.sortedTroves.address,
 					contracts.troveManager.address,
-					contracts.vestaParameters.address,
+					contracts.youParameters.address,
 					{ gasPrice }
 				)
 			))
@@ -591,3 +589,4 @@ class MainnetDeploymentHelper {
 }
 
 module.exports = MainnetDeploymentHelper
+

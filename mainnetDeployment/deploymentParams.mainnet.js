@@ -24,7 +24,7 @@ const gOHMParameters = {
 	BORROWING_FEE_FLOOR: 125,
 }
 
-const vestaAddresses = {
+const youAddresses = {
 	ADMIN_MULTI: "0xdF76df680B31136F9c15CBdbAe8599114819b6Fa",
 	YOU_SAFE: "0xdF76df680B31136F9c15CBdbAe8599114819b6Fa", // to be passed to YOUToken as the YOU multisig address
 	DEPLOYER: "0x9549F9643a04D89f4cF50AC64D2322B27335d01A", // Mainnet REAL deployment address
@@ -103,7 +103,7 @@ const ETHERSCAN_BASE_URL = "https://arbiscan.io/address"
 
 module.exports = {
 	externalAddrs,
-	vestaAddresses,
+	youAddresses,
 	beneficiaries,
 	OUTPUT_FILE,
 	waitFunction,
@@ -115,3 +115,4 @@ module.exports = {
 	gOHMParameters,
 	IsMainnet,
 }
+

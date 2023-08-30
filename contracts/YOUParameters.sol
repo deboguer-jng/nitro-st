@@ -52,6 +52,7 @@ contract YOUParameters is
 
 	bool public isInitialized;
 
+	/// @custom:oz-upgrades-unsafe-allow constructor
 	constructor() {
 		_disableInitializers();
 	}

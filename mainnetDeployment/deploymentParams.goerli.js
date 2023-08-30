@@ -25,7 +25,7 @@ const gOHMParameters = {
 	BORROWING_FEE_FLOOR: 125,
 }
 
-const vestaAddresses = {
+const youAddresses = {
 	ADMIN_MULTI: "0xaD45b73CE1C0cBa2333Fe5f15Ac37df6E08f4111",
 	YOU_SAFE: "0xaD45b73CE1C0cBa2333Fe5f15Ac37df6E08f4111", // TODO
 	DEPLOYER: "0xaD45b73CE1C0cBa2333Fe5f15Ac37df6E08f4111",
@@ -104,7 +104,7 @@ const ETHERSCAN_BASE_URL = "https://goerli.arbiscan.io/address"
 
 module.exports = {
 	externalAddrs,
-	vestaAddresses,
+	youAddresses,
 	beneficiaries,
 	OUTPUT_FILE,
 	waitFunction,
@@ -116,3 +116,4 @@ module.exports = {
 	YOU_TOKEN_ONLY,
 	gOHMParameters,
 }
+
