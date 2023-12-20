@@ -3,6 +3,7 @@
 pragma solidity ^0.8.10;
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/tokens/ERC20/IERC20.sol";
 
 import "./Dependencies/CheckContract.sol";
 import "./Interfaces/IUToken.sol";
@@ -18,13 +19,18 @@ contract UToken is CheckContract, Ownable, IUToken {
 	mapping(address => bool) public emergencyStopMintingCollateral;
 
 	event EmergencyStopMintingCollateral(address _asset, bool state);
+	event SwapMint(address _asset, address _account, uint256 _amount);
+	event SwapRedeem(address _asset, uint256 _amount);
+
+	mapping(IERC20 => bool) public allowedSwapMintTokens;
+	mapping(IERC20 => bool) public allowedSwapRedeemTokens;
 
 	constructor(
 		address _troveManagerAddress,
 		address _redemptionManagerAddress,
 		address _stabilityPoolManagerAddress,
 		address _borrowerOperationsAddress
-	) UERC20Permit("Vesta Stable", "U", 6, 0x3c2269811836af69497E5F486A85D7316753cf62) {
+	) UERC20Permit("U BTC", "uBTC", 8, 0x3c2269811836af69497E5F486A85D7316753cf62) {
 		checkContract(_troveManagerAddress);
 		checkContract(_stabilityPoolManagerAddress);
 		checkContract(_borrowerOperationsAddress);
@@ -50,11 +56,33 @@ contract UToken is CheckContract, Ownable, IUToken {
 		emit EmergencyStopMintingCollateral(_asset, status);
 	}
 
+	function allowSwapMint(IERC20 _asset, bool status) external onlyOwner {
+		allowedSwapMintTokens[_asset] = status;
+	}
+
+	function allowSwapRedeem(IERC20 _asset, bool status) external onlyOwner {
+		allowedSwapRedeemTokens[_asset] = status;
+	}
+
 	function mint(address _asset, address _account, uint256 _amount) external override {
 		_requireCallerIsBorrowerOperations();
 		require(!emergencyStopMintingCollateral[_asset], "Mint is blocked on this collateral");
 
 		_mint(_account, _amount);
+	}
+
+	function swapMint(IERC20 _asset, address _account, uint256 _amount) external {
+		require(allowedSwapMintTokens[_asset], "Minting not allowed on this asset");
+		require(_asset.transferFrom(msg.sender, _amount));
+		_mint(_account, _amount);
+		emit SwapMint(_asset, _account, _amount);
+	}
+
+	function swapRedeem(address _asset, uint256 _amount) external {
+		require(allowedSwapRedeemTokens[_asset], "Redemption not allowed on this asset");
+		require(_asset.transfer(msg.sender, _amount));
+		_burn(msg.sender, _amount);
+		emit SwapRedeem(_asset, _amount);
 	}
 
 	function burn(address _account, uint256 _amount) external override {
