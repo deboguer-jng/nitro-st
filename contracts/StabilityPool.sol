@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.10;
+pragma solidity 0.8.17;
 
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
@@ -13,19 +12,18 @@ import "./Interfaces/ITroveManager.sol";
 import "./Interfaces/IUToken.sol";
 import "./Interfaces/ISortedTroves.sol";
 import "./Interfaces/ICommunityIssuance.sol";
-import "./Dependencies/VestaBase.sol";
-import "./Dependencies/VestaSafeMath128.sol";
+import "./Dependencies/YouBase.sol";
+import "./Dependencies/YouSafeMath128.sol";
 import "./Dependencies/CheckContract.sol";
 import "./Dependencies/SafetyTransfer.sol";
 
-contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
-	using SafeMathUpgradeable for uint256;
-	using VestaSafeMath128 for uint128;
+contract StabilityPool is YouBase, CheckContract, IStabilityPool {
+	using YouSafeMath128 for uint128;
 	using SafeERC20Upgradeable for IERC20Upgradeable;
 
 	string public constant NAME = "StabilityPool";
 	bytes32 public constant STABILITY_POOL_NAME_BYTES =
-		0xf704b47f65a99b2219b7213612db4be4a436cdf50624f4baca1373ef0de0aac7;
+		0x4172626974726f76652073746162696c69747920706f6f6c2077737465746820;
 
 	IBorrowerOperations public borrowerOperations;
 
@@ -110,6 +108,7 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 
 	event UPaidToDepositorPreYOU(address depositor, uint256 U);
 	event IsPreYOUToggled(bool isPreYOU);
+	event SetYOUExchangeRate(uint256 YOUExchangeRate);
 
 	// --- Contract setters ---
 
@@ -128,7 +127,7 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		address _uTokenAddress,
 		address _sortedTrovesAddress,
 		address _communityIssuanceAddress,
-		address _vestaParamsAddress,
+		address _youParamsAddress,
 		uint256 _YOUExchangeRate
 	) external override initializer {
 		require(!isInitialized, "Already initialized");
@@ -137,7 +136,7 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		checkContract(_uTokenAddress);
 		checkContract(_sortedTrovesAddress);
 		checkContract(_communityIssuanceAddress);
-		checkContract(_vestaParamsAddress);
+		checkContract(_youParamsAddress);
 
 		isInitialized = true;
 		isPreYOU = true;
@@ -154,7 +153,7 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		uToken = IUToken(_uTokenAddress);
 		sortedTroves = ISortedTroves(_sortedTrovesAddress);
 		communityIssuance = ICommunityIssuance(_communityIssuanceAddress);
-		setVestaParameters(_vestaParamsAddress);
+		setYouParameters(_youParamsAddress);
 
 		P = DECIMAL_PRECISION;
 
@@ -169,6 +168,11 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 	function togglePreYOU() external onlyOwner {
 		isPreYOU = !isPreYOU;
 		emit IsPreYOUToggled(isPreYOU);
+	}
+
+	function setYOUExchangeRate(uint256 _YOUExchangeRate) external onlyOwner {
+		YOUExchangeRate = _YOUExchangeRate;
+		emit SetYOUExchangeRate(_YOUExchangeRate);
 	}
 
 	// --- Getters for public variables. Required by IPool interface ---
@@ -201,20 +205,20 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		uint256 depositorAssetGainEther = getDepositorAssetGain1e18(msg.sender);
 
 		uint256 compoundedUDeposit = getCompoundedUDeposit(msg.sender);
-		uint256 ULoss = initialDeposit.sub(compoundedUDeposit); // Needed only for event log
+		uint256 ULoss = initialDeposit - compoundedUDeposit; // Needed only for event log
 
 		// First pay out any YOU gains
 		_payOutYOUGains(communityIssuanceCached, msg.sender);
 
 		// Update System stake
 		uint256 compoundedStake = getCompoundedTotalStake();
-		uint256 newStake = compoundedStake.add(_amount);
+		uint256 newStake = compoundedStake + _amount;
 		_updateStakeAndSnapshots(newStake);
 		emit StakeChanged(newStake, msg.sender);
 
 		_sendUtoStabilityPool(msg.sender, _amount);
 
-		uint256 newDeposit = compoundedUDeposit.add(_amount);
+		uint256 newDeposit = compoundedUDeposit + _amount;
 		_updateDepositAndSnapshots(msg.sender, newDeposit);
 
 		emit UserDepositChanged(msg.sender, newDeposit);
@@ -246,22 +250,22 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		uint256 depositorAssetGainEther = getDepositorAssetGain1e18(msg.sender);
 
 		uint256 compoundedUDeposit = getCompoundedUDeposit(msg.sender);
-		uint256 UtoWithdraw = VestaMath._min(_amount, compoundedUDeposit);
-		uint256 ULoss = initialDeposit.sub(compoundedUDeposit); // Needed only for event log
+		uint256 UtoWithdraw = YouMath._min(_amount, compoundedUDeposit);
+		uint256 ULoss = initialDeposit - compoundedUDeposit; // Needed only for event log
 
 		// First pay out any YOU gains
 		_payOutYOUGains(communityIssuanceCached, msg.sender);
 
 		// Update System stake
 		uint256 compoundedStake = getCompoundedTotalStake();
-		uint256 newStake = compoundedStake.sub(UtoWithdraw);
+		uint256 newStake = compoundedStake - UtoWithdraw;
 		_updateStakeAndSnapshots(newStake);
 		emit StakeChanged(newStake, msg.sender);
 
 		_sendUToDepositor(msg.sender, UtoWithdraw);
 
 		// Update deposit
-		uint256 newDeposit = compoundedUDeposit.sub(UtoWithdraw);
+		uint256 newDeposit = compoundedUDeposit - UtoWithdraw;
 		_updateDepositAndSnapshots(msg.sender, newDeposit);
 		emit UserDepositChanged(msg.sender, newDeposit);
 
@@ -289,7 +293,7 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		uint256 depositorAssetGain = getDepositorAssetGain1e18(msg.sender);
 
 		uint256 compoundedUDeposit = getCompoundedUDeposit(msg.sender);
-		uint256 ULoss = initialDeposit.sub(compoundedUDeposit); // Needed only for event log
+		uint256 ULoss = initialDeposit - compoundedUDeposit; // Needed only for event log
 
 		// First pay out any YOU gains
 		_payOutYOUGains(communityIssuanceCached, msg.sender);
@@ -307,7 +311,7 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		emit AssetGainWithdrawn(msg.sender, depositorAssetGain, ULoss);
 		emit UserDepositChanged(msg.sender, compoundedUDeposit);
 
-		assetBalance = assetBalance.sub(depositorAssetGain);
+		assetBalance = assetBalance - depositorAssetGain;
 		emit StabilityPoolAssetBalanceUpdated(assetBalance);
 		emit AssetSent(msg.sender, depositorAssetGain);
 
@@ -337,9 +341,8 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		uint256 YOUPerUnitStaked;
 		YOUPerUnitStaked = _computeYOUPerUnitStaked(_YOUIssuance, totalU);
 
-		uint256 marginalYOUGain = YOUPerUnitStaked.mul(P);
-		epochToScaleToG[currentEpoch][currentScale] = epochToScaleToG[currentEpoch][currentScale]
-			.add(marginalYOUGain);
+		uint256 marginalYOUGain = YOUPerUnitStaked * P;
+		epochToScaleToG[currentEpoch][currentScale] = epochToScaleToG[currentEpoch][currentScale] + marginalYOUGain;
 
 		emit G_Updated(epochToScaleToG[currentEpoch][currentScale], currentEpoch, currentScale);
 	}
@@ -359,10 +362,10 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		 * 4) Store this error for use in the next correction when this function is called.
 		 * 5) Note: static analysis tools complain about this "division before multiplication", however, it is intended.
 		 */
-		uint256 YOUNumerator = _YOUIssuance.mul(DECIMAL_PRECISION).add(lastYOUError);
+		uint256 YOUNumerator = _YOUIssuance * DECIMAL_PRECISION + lastYOUError;
 
-		uint256 YOUPerUnitStaked = YOUNumerator.div(_totalUDeposits);
-		lastYOUError = YOUNumerator.sub(YOUPerUnitStaked.mul(_totalUDeposits));
+		uint256 YOUPerUnitStaked = YOUNumerator / _totalUDeposits;
+		lastYOUError = YOUNumerator - (YOUPerUnitStaked * _totalUDeposits);
 
 		return YOUPerUnitStaked;
 	}
@@ -411,24 +414,24 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		 * 4) Store these errors for use in the next correction when this function is called.
 		 * 5) Note: static analysis tools complain about this "division before multiplication", however, it is intended.
 		 */
-		uint256 AssetNumerator = _collToAdd.mul(DECIMAL_PRECISION).add(lastAssetError_Offset);
+		uint256 AssetNumerator = _collToAdd * DECIMAL_PRECISION + lastAssetError_Offset;
 
 		assert(_debtToOffset <= _totalUDeposits);
 		if (_debtToOffset == _totalUDeposits) {
 			ULossPerUnitStaked = DECIMAL_PRECISION; // When the Pool depletes to 0, so does each deposit
 			lastULossError_Offset = 0;
 		} else {
-			uint256 ULossNumerator = _debtToOffset.mul(DECIMAL_PRECISION).sub(lastULossError_Offset);
+			uint256 ULossNumerator = _debtToOffset * DECIMAL_PRECISION - lastULossError_Offset;
 			/*
 			 * Add 1 to make error in quotient positive. We want "slightly too much" U loss,
 			 * which ensures the error in any given compoundedUDeposit favors the Stability Pool.
 			 */
-			ULossPerUnitStaked = (ULossNumerator.div(_totalUDeposits)).add(1);
-			lastULossError_Offset = (ULossPerUnitStaked.mul(_totalUDeposits)).sub(ULossNumerator);
+			ULossPerUnitStaked = (ULossNumerator / _totalUDeposits) + 1;
+			lastULossError_Offset = (ULossPerUnitStaked * _totalUDeposits) - ULossNumerator;
 		}
 
-		AssetGainPerUnitStaked = AssetNumerator.div(_totalUDeposits);
-		lastAssetError_Offset = AssetNumerator.sub(AssetGainPerUnitStaked.mul(_totalUDeposits));
+		AssetGainPerUnitStaked = AssetNumerator / _totalUDeposits;
+		lastAssetError_Offset = AssetNumerator - (AssetGainPerUnitStaked * _totalUDeposits);
 
 		return (AssetGainPerUnitStaked, ULossPerUnitStaked);
 	}
@@ -446,7 +449,7 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		 * The newProductFactor is the factor by which to change all deposits, due to the depletion of Stability Pool U in the liquidation.
 		 * We make the product factor 0 if there was a pool-emptying. Otherwise, it is (1 - ULossPerUnitStaked)
 		 */
-		uint256 newProductFactor = uint256(DECIMAL_PRECISION).sub(_ULossPerUnitStaked);
+		uint256 newProductFactor = uint256(DECIMAL_PRECISION) - _ULossPerUnitStaked;
 
 		uint128 currentScaleCached = currentScale;
 		uint128 currentEpochCached = currentEpoch;
@@ -459,26 +462,26 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		 *
 		 * Since S corresponds to ETH gain, and P to deposit loss, we update S first.
 		 */
-		uint256 marginalAssetGain = _AssetGainPerUnitStaked.mul(currentP);
-		uint256 newS = currentS.add(marginalAssetGain);
+		uint256 marginalAssetGain = _AssetGainPerUnitStaked * currentP;
+		uint256 newS = currentS + marginalAssetGain;
 		epochToScaleToSum[currentEpochCached][currentScaleCached] = newS;
 		emit S_Updated(newS, currentEpochCached, currentScaleCached);
 
 		// If the Stability Pool was emptied, increment the epoch, and reset the scale and product P
 		if (newProductFactor == 0) {
-			currentEpoch = currentEpochCached.add(1);
+			currentEpoch = currentEpochCached + 1;
 			emit EpochUpdated(currentEpoch);
 			currentScale = 0;
 			emit ScaleUpdated(currentScale);
 			newP = DECIMAL_PRECISION;
 
 			// If multiplying P by a non-zero product factor would reduce P below the scale boundary, increment the scale
-		} else if (currentP.mul(newProductFactor).div(DECIMAL_PRECISION) < SCALE_FACTOR) {
-			newP = currentP.mul(newProductFactor).mul(SCALE_FACTOR).div(DECIMAL_PRECISION);
+		} else if (currentP * newProductFactor / DECIMAL_PRECISION < SCALE_FACTOR) {
+			newP = currentP * newProductFactor * SCALE_FACTOR / DECIMAL_PRECISION;
 			currentScale = currentScaleCached.add(1);
 			emit ScaleUpdated(currentScale);
 		} else {
-			newP = currentP.mul(newProductFactor).div(DECIMAL_PRECISION);
+			newP = currentP * newProductFactor / DECIMAL_PRECISION;
 		}
 
 		assert(newP > 0);
@@ -488,7 +491,7 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 	}
 
 	function _moveOffsetCollAndDebt(uint256 _collToAdd, uint256 _debtToOffset) internal {
-		IActivePool activePoolCached = vestaParams.activePool();
+		IActivePool activePoolCached = youParams.activePool();
 
 		// Cancel the liquidated U debt with the U in the stability pool
 		activePoolCached.decreaseUDebt(assetAddress, _debtToOffset);
@@ -501,7 +504,7 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 	}
 
 	function _decreaseU(uint256 _amount) internal {
-		uint256 newTotalUDeposits = totalUDeposits.sub(_amount);
+		uint256 newTotalUDeposits = totalUDeposits / _amount;
 		totalUDeposits = newTotalUDeposits;
 		emit StabilityPoolUBalanceUpdated(newTotalUDeposits);
 	}
@@ -555,15 +558,10 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		uint256 S_Snapshot = snapshots.S;
 		uint256 P_Snapshot = snapshots.P;
 
-		uint256 firstPortion = epochToScaleToSum[epochSnapshot][scaleSnapshot].sub(S_Snapshot);
-		uint256 secondPortion = epochToScaleToSum[epochSnapshot][scaleSnapshot.add(1)].div(
-			SCALE_FACTOR
-		);
+		uint256 firstPortion = epochToScaleToSum[epochSnapshot][scaleSnapshot] - S_Snapshot;
+		uint256 secondPortion = epochToScaleToSum[epochSnapshot][scaleSnapshot + 1] / SCALE_FACTOR;
 
-		uint256 AssetGain = initialDeposit
-			.mul(firstPortion.add(secondPortion))
-			.div(P_Snapshot)
-			.div(DECIMAL_PRECISION);
+		uint256 AssetGain = initialDeposit * (firstPortion + secondPortion) / P_Snapshot /DECIMAL_PRECISION;
 
 		return AssetGain;
 	}
@@ -598,14 +596,10 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		uint256 G_Snapshot = snapshots.G;
 		uint256 P_Snapshot = snapshots.P;
 
-		uint256 firstPortion = epochToScaleToG[epochSnapshot][scaleSnapshot].sub(G_Snapshot);
-		uint256 secondPortion = epochToScaleToG[epochSnapshot][scaleSnapshot.add(1)].div(
-			SCALE_FACTOR
-		);
+		uint256 firstPortion = epochToScaleToG[epochSnapshot][scaleSnapshot] - G_Snapshot;
+		uint256 secondPortion = epochToScaleToG[epochSnapshot][scaleSnapshot + 1] / SCALE_FACTOR;
 
-		uint256 YOUGain = initialStake.mul(firstPortion.add(secondPortion)).div(P_Snapshot).div(
-			DECIMAL_PRECISION
-		);
+		uint256 YOUGain = initialStake * (firstPortion + secondPortion) / P_Snapshot / DECIMAL_PRECISION;
 
 		return YOUGain;
 	}
@@ -662,9 +656,9 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		 * at least 1e-9 -- so return 0.
 		 */
 		if (scaleDiff == 0) {
-			compoundedStake = initialStake.mul(P).div(snapshot_P);
+			compoundedStake = initialStake * P / snapshot_P;
 		} else if (scaleDiff == 1) {
-			compoundedStake = initialStake.mul(P).div(snapshot_P).div(SCALE_FACTOR);
+			compoundedStake = initialStake * P / snapshot_P / SCALE_FACTOR;
 		} else {
 			compoundedStake = 0;
 		}
@@ -678,7 +672,7 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		 *
 		 * Thus it's unclear whether this line is still really needed.
 		 */
-		if (compoundedStake < initialStake.div(1e9)) {
+		if (compoundedStake < initialStake / 1e9) {
 			return 0;
 		}
 
@@ -690,7 +684,7 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 	// Transfer the U tokens from the user to the Stability Pool's address, and update its recorded U
 	function _sendUtoStabilityPool(address _address, uint256 _amount) internal {
 		uToken.sendToPool(_address, address(this), _amount);
-		uint256 newTotalUDeposits = totalUDeposits.add(_amount);
+		uint256 newTotalUDeposits = totalUDeposits + _amount;
 		totalUDeposits = newTotalUDeposits;
 		emit StabilityPoolUBalanceUpdated(newTotalUDeposits);
 	}
@@ -700,7 +694,7 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 			return;
 		}
 
-		assetBalance = assetBalance.sub(_amountEther);
+		assetBalance = assetBalance - _amountEther;
 
 		if (assetAddress == ETH_REF_ADDRESS) {
 			(bool success, ) = msg.sender.call{ value: _amountEther }("");
@@ -792,7 +786,7 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 
 	function _requireCallerIsActivePool() internal view {
 		require(
-			msg.sender == address(vestaParams.activePool()),
+			msg.sender == address(youParams.activePool()),
 			"StabilityPool: Caller is not ActivePool"
 		);
 	}
@@ -802,11 +796,11 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 	}
 
 	function _requireNoUnderCollateralizedTroves() internal {
-		uint256 price = vestaParams.priceFeed().fetchPrice(assetAddress);
+		uint256 price = youParams.priceFeed().fetchPrice(assetAddress);
 		address lowestTrove = sortedTroves.getLast(assetAddress);
 		uint256 ICR = troveManager.getCurrentICR(assetAddress, lowestTrove, price);
 		require(
-			ICR >= vestaParams.MCR(assetAddress),
+			ICR >= youParams.MCR(assetAddress),
 			"StabilityPool: Cannot withdraw while there are troves with ICR < MCR"
 		);
 	}
@@ -844,14 +838,14 @@ contract StabilityPool is VestaBase, CheckContract, IStabilityPool {
 		require(_asset == assetAddress, "Receiving the wrong asset in StabilityPool");
 
 		if (assetAddress != ETH_REF_ADDRESS) {
-			assetBalance = assetBalance.add(_amount);
+			assetBalance = assetBalance + _amount;
 			emit StabilityPoolAssetBalanceUpdated(assetBalance);
 		}
 	}
 
 	receive() external payable {
 		_requireCallerIsActivePool();
-		assetBalance = assetBalance.add(msg.value);
+		assetBalance = assetBalance + msg.value;
 		emit StabilityPoolAssetBalanceUpdated(assetBalance);
 	}
 }

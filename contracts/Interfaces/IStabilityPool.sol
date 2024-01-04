@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.10;
+pragma solidity 0.8.17;
 
 import "./IDeposit.sol";
 
@@ -34,7 +34,7 @@ interface IStabilityPool is IDeposit {
 	// --- Functions ---
 
 	/*
-	 * Called only once on init, to set addresses of other Vesta contracts
+	 * Called only once on init, to set addresses of other You contracts
 	 * Callable only by owner, renounces ownership at the end
 	 */
 	function setAddresses(
@@ -44,7 +44,7 @@ interface IStabilityPool is IDeposit {
 		address _uTokenAddress,
 		address _sortedTrovesAddress,
 		address _communityIssuanceAddress,
-		address _vestaParamsAddress,
+		address _youParamsAddress,
 		uint256 _YOUExchangeRate
 	) external;
 

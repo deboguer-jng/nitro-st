@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.10;
+pragma solidity 0.8.17;
 pragma experimental ABIEncoderV2;
 
 import "./TroveManager.sol";
 import "./SortedTroves.sol";
 import "./Dependencies/ArbitroveBase.sol";
 
-/*  Helper contract for grabbing Trove data for the front end. Not part of the core Vesta system. */
+/*  Helper contract for grabbing Trove data for the front end. Not part of the core You system. */
 contract MultiTroveGetter is ArbitroveBase {
 	struct CombinedTroveData {
 		address owner;

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.10;
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+pragma solidity 0.8.17;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -9,7 +8,6 @@ import "./Dependencies/CheckContract.sol";
 import "./Interfaces/IUToken.sol";
 
 contract UToken is CheckContract, Ownable, IUToken {
-	using SafeMath for uint256;
 
 	address public immutable troveManagerAddress;
 	address public immutable redemptionManagerAddress;
@@ -48,7 +46,7 @@ contract UToken is CheckContract, Ownable, IUToken {
 		emit BorrowerOperationsAddressChanged(_borrowerOperationsAddress);
 	}
 
-	// --- Functions for intra-Vesta calls ---
+	// --- Functions for intra-You calls ---
 
 	//
 	function emergencyStopMinting(address _asset, bool status) external override onlyOwner {

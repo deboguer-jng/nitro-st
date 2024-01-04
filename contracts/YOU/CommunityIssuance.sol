@@ -1,19 +1,17 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.10;
+pragma solidity 0.8.17;
 
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "../Interfaces/IStabilityPoolManager.sol";
 import "../Interfaces/ICommunityIssuance.sol";
 import "../Dependencies/BaseMath.sol";
-import "../Dependencies/VestaMath.sol";
+import "../Dependencies/YouMath.sol";
 import "../Dependencies/CheckContract.sol";
 
 contract CommunityIssuance is ICommunityIssuance, OwnableUpgradeable, CheckContract, BaseMath {
-	using SafeMathUpgradeable for uint256;
 	using SafeERC20Upgradeable for IERC20Upgradeable;
 
 	string public constant NAME = "CommunityIssuance";
@@ -31,6 +29,10 @@ contract CommunityIssuance is ICommunityIssuance, OwnableUpgradeable, CheckContr
 	address public adminContract;
 
 	bool public isInitialized;
+
+	constructor() {
+		_disableInitializers();
+	}
 
 	modifier activeStabilityPoolOnly(address _pool) {
 		require(lastUpdateTime[_pool] != 0, "CommunityIssuance: Pool needs to be added first.");
@@ -96,7 +98,7 @@ contract CommunityIssuance is ICommunityIssuance, OwnableUpgradeable, CheckContr
 		address _pool,
 		uint256 _fundToRemove
 	) external onlyOwner activeStabilityPoolOnly(_pool) {
-		uint256 newCap = YOUSupplyCaps[_pool].sub(_fundToRemove);
+		uint256 newCap = YOUSupplyCaps[_pool] - _fundToRemove;
 		require(
 			totalYOUIssued[_pool] <= newCap,
 			"CommunityIssuance: Stability Pool doesn't have enough supply."
@@ -148,7 +150,7 @@ contract CommunityIssuance is ICommunityIssuance, OwnableUpgradeable, CheckContr
 		activeStabilityPoolOnly(_target)
 		activeStabilityPoolOnly(_receiver)
 	{
-		uint256 newCap = YOUSupplyCaps[_target].sub(_quantity);
+		uint256 newCap = YOUSupplyCaps[_target] - _quantity;
 		require(
 			totalYOUIssued[_target] <= newCap,
 			"CommunityIssuance: Stability Pool doesn't have enough supply."
@@ -178,10 +180,10 @@ contract CommunityIssuance is ICommunityIssuance, OwnableUpgradeable, CheckContr
 		if (totalYOUIssued[_pool] >= maxPoolSupply) return 0;
 
 		uint256 issuance = _getLastUpdateTokenDistribution(_pool);
-		uint256 totalIssuance = issuance.add(totalYOUIssued[_pool]);
+		uint256 totalIssuance = issuance + totalYOUIssued[_pool];
 
 		if (totalIssuance > maxPoolSupply) {
-			issuance = maxPoolSupply.sub(totalYOUIssued[_pool]);
+			issuance = maxPoolSupply - totalYOUIssued[_pool];
 			totalIssuance = maxPoolSupply;
 		}
 
@@ -196,12 +198,8 @@ contract CommunityIssuance is ICommunityIssuance, OwnableUpgradeable, CheckContr
 		address stabilityPool
 	) internal view returns (uint256) {
 		require(lastUpdateTime[stabilityPool] != 0, "Stability pool hasn't been assigned");
-		uint256 timePassed = block.timestamp.sub(lastUpdateTime[stabilityPool]).div(
-			SECONDS_IN_ONE_MINUTE
-		);
-		uint256 totalDistribuedSinceBeginning = youDistributionsByPool[stabilityPool].mul(
-			timePassed
-		);
+		uint256 timePassed = block.timestamp - lastUpdateTime[stabilityPool] / SECONDS_IN_ONE_MINUTE;
+		uint256 totalDistribuedSinceBeginning = youDistributionsByPool[stabilityPool] * timePassed;
 
 		return totalDistribuedSinceBeginning;
 	}
@@ -221,6 +219,6 @@ contract CommunityIssuance is ICommunityIssuance, OwnableUpgradeable, CheckContr
 		address _stabilityPool,
 		uint256 _weeklyReward
 	) external isController isStabilityPool(_stabilityPool) {
-		youDistributionsByPool[_stabilityPool] = _weeklyReward.div(DISTRIBUTION_DURATION);
+		youDistributionsByPool[_stabilityPool] = _weeklyReward / DISTRIBUTION_DURATION;
 	}
 }

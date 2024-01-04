@@ -1,0 +1,186 @@
+{
+  "manifestVersion": "3.2",
+  "admin": {
+    "address": "0x4E11B79DFb8629E1a1fE15Bc9c7e140e268fDC5c",
+    "txHash": "0x51923568db40a67404a69a6fd5da1d237b7eacca5bd8e99cc64b96e35a5c841f"
+  },
+  "proxies": [
+    {
+      "address": "0x94F68a1Cc3DD4CEECE9Bdc7ad0AB9C997cE8727F",
+      "txHash": "0xb3fec82abfcb3f3598c20c10c037d090ecee0d6c4148c0f6c25f1524115fa02a",
+      "kind": "transparent"
+    }
+  ],
+  "impls": {
+    "2f757a3ab1ebccf3b301a0f7e876af8fc77f13361fe1c2cb18f6f7934c9924e9": {
+      "address": "0x14d1A70796a9378577E53B5ee8BCa08Ab20a1fA4",
+      "txHash": "0x36215957bc1c75a58f8e08aa541fd2d67a6adb79e9b6d1edebf0aecdc181a616",
+      "layout": {
+        "storage": [
+          {
+            "contract": "Initializable",
+            "label": "_initialized",
+            "type": "t_uint8",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:63",
+            "retypedFrom": "bool"
+          },
+          {
+            "contract": "Initializable",
+            "label": "_initializing",
+            "type": "t_bool",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:68"
+          },
+          {
+            "contract": "ContextUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)50_storage",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "contract": "OwnableUpgradeable",
+            "label": "_owner",
+            "type": "t_address",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "contract": "OwnableUpgradeable",
+            "label": "__gap",
+            "type": "t_array(t_uint256)49_storage",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "contract": "ArbitroveBase",
+            "label": "wstETH",
+            "type": "t_address",
+            "src": "contracts/Dependencies/ArbitroveBase.sol:10"
+          },
+          {
+            "contract": "YOUParameters",
+            "label": "MCR",
+            "type": "t_mapping(t_address,t_uint256)",
+            "src": "contracts/YOUParameters.sol:34"
+          },
+          {
+            "contract": "YOUParameters",
+            "label": "CCR",
+            "type": "t_mapping(t_address,t_uint256)",
+            "src": "contracts/YOUParameters.sol:36"
+          },
+          {
+            "contract": "YOUParameters",
+            "label": "U_GAS_COMPENSATION",
+            "type": "t_mapping(t_address,t_uint256)",
+            "src": "contracts/YOUParameters.sol:38"
+          },
+          {
+            "contract": "YOUParameters",
+            "label": "MIN_NET_DEBT",
+            "type": "t_mapping(t_address,t_uint256)",
+            "src": "contracts/YOUParameters.sol:39"
+          },
+          {
+            "contract": "YOUParameters",
+            "label": "PERCENT_DIVISOR",
+            "type": "t_mapping(t_address,t_uint256)",
+            "src": "contracts/YOUParameters.sol:40"
+          },
+          {
+            "contract": "YOUParameters",
+            "label": "BORROWING_FEE_FLOOR",
+            "type": "t_mapping(t_address,t_uint256)",
+            "src": "contracts/YOUParameters.sol:41"
+          },
+          {
+            "contract": "YOUParameters",
+            "label": "REDEMPTION_FEE_FLOOR",
+            "type": "t_mapping(t_address,t_uint256)",
+            "src": "contracts/YOUParameters.sol:42"
+          },
+          {
+            "contract": "YOUParameters",
+            "label": "MAX_BORROWING_FEE",
+            "type": "t_mapping(t_address,t_uint256)",
+            "src": "contracts/YOUParameters.sol:43"
+          },
+          {
+            "contract": "YOUParameters",
+            "label": "redemptionBlock",
+            "type": "t_mapping(t_address,t_uint256)",
+            "src": "contracts/YOUParameters.sol:44"
+          },
+          {
+            "contract": "YOUParameters",
+            "label": "hasCollateralConfigured",
+            "type": "t_mapping(t_address,t_bool)",
+            "src": "contracts/YOUParameters.sol:46"
+          },
+          {
+            "contract": "YOUParameters",
+            "label": "activePool",
+            "type": "t_contract(IActivePool)818",
+            "src": "contracts/YOUParameters.sol:48"
+          },
+          {
+            "contract": "YOUParameters",
+            "label": "defaultPool",
+            "type": "t_contract(IDefaultPool)847",
+            "src": "contracts/YOUParameters.sol:49"
+          },
+          {
+            "contract": "YOUParameters",
+            "label": "priceFeed",
+            "type": "t_contract(IPriceFeed)1002",
+            "src": "contracts/YOUParameters.sol:50"
+          },
+          {
+            "contract": "YOUParameters",
+            "label": "adminContract",
+            "type": "t_address",
+            "src": "contracts/YOUParameters.sol:51"
+          },
+          {
+            "contract": "YOUParameters",
+            "label": "isInitialized",
+            "type": "t_bool",
+            "src": "contracts/YOUParameters.sol:53"
+          }
+        ],
+        "types": {
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)"
+          },
+          "t_address": {
+            "label": "address"
+          },
+          "t_uint256": {
+            "label": "uint256"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)"
+          },
+          "t_bool": {
+            "label": "bool"
+          },
+          "t_contract(IActivePool)818": {
+            "label": "contract IActivePool"
+          },
+          "t_contract(IDefaultPool)847": {
+            "label": "contract IDefaultPool"
+          },
+          "t_contract(IPriceFeed)1002": {
+            "label": "contract IPriceFeed"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]"
+          },
+          "t_uint8": {
+            "label": "uint8"
+          }
+        }
+      }
+    }
+  }
+}

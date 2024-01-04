@@ -1,4 +1,4 @@
-pragma solidity ^0.8.10;
+pragma solidity 0.8.17;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
@@ -19,6 +19,10 @@ contract StabilityPoolManager is
 
 	bool public isInitialized;
 	address public adminContract;
+
+	constructor() {
+		_disableInitializers();
+	}
 
 	modifier isController() {
 		require(msg.sender == owner() || msg.sender == adminContract, "Invalid permissions");

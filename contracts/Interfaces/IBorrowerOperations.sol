@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.10;
+pragma solidity 0.8.17;
 
 // Common interface for the Trove Manager.
 interface IBorrowerOperations {
@@ -35,7 +35,7 @@ interface IBorrowerOperations {
 		address _sortedTrovesAddress,
 		address _uTokenAddress,
 		address _YOUStakingAddress,
-		address _vestaParamsAddress
+		address _youParamsAddress
 	) external;
 
 	function openTrove(

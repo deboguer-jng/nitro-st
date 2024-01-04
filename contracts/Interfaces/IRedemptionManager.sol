@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.10;
-import "./IVestaBase.sol";
+pragma solidity 0.8.17;
+import "./IYouBase.sol";
 import "./IStabilityPool.sol";
 import "./IUToken.sol";
 import "./IYOUStaking.sol";
@@ -12,7 +12,7 @@ import "./IDefaultPool.sol";
 import "./IStabilityPoolManager.sol";
 
 // Common interface for the Trove Manager.
-interface IRedemptionManager is IVestaBase {
+interface IRedemptionManager is IYouBase {
 	enum Status {
 		nonExistent,
 		active,

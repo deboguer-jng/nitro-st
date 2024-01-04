@@ -1,6 +1,7 @@
 const IsMainnet = true
 
 const externalAddrs = {
+	CHAINLINK_WSTETH_ETH_PROXY: "0xb523ae262d20a936bc152e6023996e46fdc2a95d",
 	CHAINLINK_ETHUSD_PROXY: "0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612",
 	CHAINLINK_BTCUSD_PROXY: "0x6ce185860a4963106506C203335A2910413708e9",
 	CHAINLINK_OHM_PROXY: "0x761aaeBf021F19F198D325D7979965D0c7C9e53b",
@@ -23,7 +24,7 @@ const gOHMParameters = {
 	BORROWING_FEE_FLOOR: 125,
 }
 
-const vestaAddresses = {
+const youAddresses = {
 	ADMIN_MULTI: "0xdF76df680B31136F9c15CBdbAe8599114819b6Fa",
 	YOU_SAFE: "0xdF76df680B31136F9c15CBdbAe8599114819b6Fa", // to be passed to YOUToken as the YOU multisig address
 	DEPLOYER: "0x9549F9643a04D89f4cF50AC64D2322B27335d01A", // Mainnet REAL deployment address
@@ -102,7 +103,7 @@ const ETHERSCAN_BASE_URL = "https://arbiscan.io/address"
 
 module.exports = {
 	externalAddrs,
-	vestaAddresses,
+	youAddresses,
 	beneficiaries,
 	OUTPUT_FILE,
 	waitFunction,
@@ -114,3 +115,4 @@ module.exports = {
 	gOHMParameters,
 	IsMainnet,
 }
+
