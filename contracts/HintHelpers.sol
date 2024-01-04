@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.10;
+pragma solidity 0.8.17;
 import "./Interfaces/ITroveManager.sol";
 import "./Interfaces/ISortedTroves.sol";
-import "./Dependencies/VestaBase.sol";
+import "./Dependencies/YouBase.sol";
 import "./Dependencies/CheckContract.sol";
 
-contract HintHelpers is VestaBase, CheckContract {
-	using SafeMathUpgradeable for uint256;
+contract HintHelpers is YouBase, CheckContract {
 	string public constant NAME = "HintHelpers";
 
 	struct LocalRedemptionVars {
@@ -48,7 +47,7 @@ contract HintHelpers is VestaBase, CheckContract {
 		emit SortedTrovesAddressChanged(_sortedTrovesAddress);
 		emit TroveManagerAddressChanged(_troveManagerAddress);
 
-		setVestaParameters(_vaultParametersAddress);
+		setYouParameters(_vaultParametersAddress);
 	}
 
 	// --- Functions ---
@@ -64,7 +63,7 @@ contract HintHelpers is VestaBase, CheckContract {
 	 *     or zero in case of no partial redemption.
 	 *  - `truncatedUamount` is the maximum amount that can be redeemed out of the the provided `_Uamount`. This can be lower than
 	 *    `_Uamount` when redeeming the full amount would leave the last Trove of the redemption sequence with less net debt than the
-	 *    minimum allowed value (i.e. vestaParams.MIN_NET_DEBT()).
+	 *    minimum allowed value (i.e. youParams.MIN_NET_DEBT()).
 	 *
 	 * The number of Troves to consider for redemption can be capped by passing a non-zero value as `_maxIterations`, while passing zero
 	 * will leave it uncapped.
@@ -100,7 +99,7 @@ contract HintHelpers is VestaBase, CheckContract {
 		while (
 			currentTroveuser != address(0) &&
 			troveManager.getCurrentICR(vars._asset, currentTroveuser, _price) <
-			vestaParams.MCR(vars._asset)
+			youParams.MCR(vars._asset)
 		) {
 			currentTroveuser = sortedTrovesCached.getPrev(vars._asset, currentTroveuser);
 		}
@@ -115,36 +114,35 @@ contract HintHelpers is VestaBase, CheckContract {
 			uint256 netUDebt = _getNetDebt(
 				vars._asset,
 				troveManager.getTroveDebt(vars._asset, currentTroveuser)
-			).add(troveManager.getPendingUDebtReward(vars._asset, currentTroveuser));
+			) + troveManager.getPendingUDebtReward(vars._asset, currentTroveuser);
 
 			if (netUDebt > remainingU) {
-				if (netUDebt > vestaParams.MIN_NET_DEBT(vars._asset)) {
-					uint256 maxRedeemableU = VestaMath._min(
+				if (netUDebt > youParams.MIN_NET_DEBT(vars._asset)) {
+					uint256 maxRedeemableU = YouMath._min(
 						remainingU,
-						netUDebt.sub(vestaParams.MIN_NET_DEBT(vars._asset))
+						netUDebt - youParams.MIN_NET_DEBT(vars._asset)
 					);
 
-					uint256 ETH = troveManager.getTroveColl(vars._asset, currentTroveuser).add(
-						troveManager.getPendingAssetReward(vars._asset, currentTroveuser)
-					);
+					uint256 ETH = troveManager.getTroveColl(vars._asset, currentTroveuser) + 
+						troveManager.getPendingAssetReward(vars._asset, currentTroveuser);
 
-					uint256 newColl = ETH.sub(maxRedeemableU.mul(DECIMAL_PRECISION).div(_price));
-					uint256 newDebt = netUDebt.sub(maxRedeemableU);
+					uint256 newColl = ETH - maxRedeemableU * DECIMAL_PRECISION / _price;
+					uint256 newDebt = netUDebt - maxRedeemableU;
 
 					uint256 compositeDebt = _getCompositeDebt(vars._asset, newDebt);
-					partialRedemptionHintNICR = VestaMath._computeNominalCR(newColl, compositeDebt);
+					partialRedemptionHintNICR = YouMath._computeNominalCR(newColl, compositeDebt);
 
-					remainingU = remainingU.sub(maxRedeemableU);
+					remainingU = remainingU - maxRedeemableU;
 				}
 				break;
 			} else {
-				remainingU = remainingU.sub(netUDebt);
+				remainingU = remainingU - netUDebt;
 			}
 
 			currentTroveuser = sortedTrovesCached.getPrev(vars._asset, currentTroveuser);
 		}
 
-		truncatedUamount = _Uamount.sub(remainingU);
+		truncatedUamount = _Uamount - remainingU;
 	}
 
 	/* getApproxHint() - return address of a Trove that is, on average, (length / numTrials) positions away in the 
@@ -174,7 +172,7 @@ contract HintHelpers is VestaBase, CheckContract {
 		}
 
 		hintAddress = sortedTroves.getLast(_asset);
-		diff = VestaMath._getAbsoluteDifference(
+		diff = YouMath._getAbsoluteDifference(
 			_CR,
 			troveManager.getNominalICR(_asset, hintAddress)
 		);
@@ -190,7 +188,7 @@ contract HintHelpers is VestaBase, CheckContract {
 			uint256 currentNICR = troveManager.getNominalICR(_asset, currentAddress);
 
 			// check if abs(current - CR) > abs(closest - CR), and update closest if current is closer
-			uint256 currentDiff = VestaMath._getAbsoluteDifference(currentNICR, _CR);
+			uint256 currentDiff = YouMath._getAbsoluteDifference(currentNICR, _CR);
 
 			if (currentDiff < diff) {
 				diff = currentDiff;
@@ -201,7 +199,7 @@ contract HintHelpers is VestaBase, CheckContract {
 	}
 
 	function computeNominalCR(uint256 _coll, uint256 _debt) external pure returns (uint256) {
-		return VestaMath._computeNominalCR(_coll, _debt);
+		return YouMath._computeNominalCR(_coll, _debt);
 	}
 
 	function computeCR(
@@ -209,6 +207,6 @@ contract HintHelpers is VestaBase, CheckContract {
 		uint256 _debt,
 		uint256 _price
 	) external pure returns (uint256) {
-		return VestaMath._computeCR(_coll, _debt, _price);
+		return YouMath._computeCR(_coll, _debt, _price);
 	}
 }

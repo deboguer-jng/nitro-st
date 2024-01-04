@@ -81,7 +81,7 @@ class DeploymentHelper {
 		const stabilityPoolTemplate = await StabilityPool.new()
 		const stabilityPoolTemplateV2 = await StabilityPool.new()
 		const stabilityPoolManager = await StabilityPoolManager.new()
-		const vestaParameters = await VestaParameters.new()
+		const youParameters = await VestaParameters.new()
 		const gasPool = await GasPool.new()
 		const defaultPool = await DefaultPool.new()
 		const collSurplusPool = await CollSurplusPool.new()
@@ -109,7 +109,7 @@ class DeploymentHelper {
 		FunctionCaller.setAsDeployed(functionCaller)
 		BorrowerOperations.setAsDeployed(borrowerOperations)
 		HintHelpers.setAsDeployed(hintHelpers)
-		VestaParameters.setAsDeployed(vestaParameters)
+		VestaParameters.setAsDeployed(youParameters)
 		ERC20Test.setAsDeployed(erc20)
 		AdminContract.setAsDeployed(adminContract)
 
@@ -125,7 +125,7 @@ class DeploymentHelper {
 		await stabilityPoolTemplate.setWstETH(erc20.address)
 		await stabilityPoolTemplateV2.setWstETH(erc20.address)
 		await troveManager.setWstETH(erc20.address)
-		await vestaParameters.setWstETH(erc20.address)
+		await youParameters.setWstETH(erc20.address)
 
 		const coreContracts = {
 			priceFeedTestnet,
@@ -136,7 +136,7 @@ class DeploymentHelper {
 			stabilityPoolTemplate,
 			stabilityPoolTemplateV2,
 			stabilityPoolManager,
-			vestaParameters,
+			youParameters,
 			gasPool,
 			defaultPool,
 			collSurplusPool,
@@ -162,7 +162,7 @@ class DeploymentHelper {
 		testerContracts.defaultPool = await DefaultPoolTester.new()
 		testerContracts.stabilityPoolTemplate = await StabilityPoolTester.new()
 		testerContracts.stabilityPoolManager = await StabilityPoolManager.new()
-		testerContracts.vestaParameters = await VestaParameters.new()
+		testerContracts.youParameters = await VestaParameters.new()
 		testerContracts.gasPool = await GasPool.new()
 		testerContracts.collSurplusPool = await CollSurplusPool.new()
 		testerContracts.math = await VestaMathTester.new()
@@ -187,7 +187,7 @@ class DeploymentHelper {
 		await testerContracts.stabilityPoolTemplate.setWstETH(testerContracts.erc20.address)
 		await testerContracts.stabilityPoolManager.setWstETH(testerContracts.erc20.address)
 		await testerContracts.troveManager.setWstETH(testerContracts.erc20.address)
-		await testerContracts.vestaParameters.setWstETH(testerContracts.erc20.address)
+		await testerContracts.youParameters.setWstETH(testerContracts.erc20.address)
 
 		return testerContracts
 	}
@@ -299,7 +299,7 @@ class DeploymentHelper {
 		await contracts.functionCaller.setTroveManagerAddress(contracts.troveManager.address)
 		await contracts.functionCaller.setSortedTrovesAddress(contracts.sortedTroves.address)
 
-		await contracts.vestaParameters.setAddresses(
+		await contracts.youParameters.setAddresses(
 			contracts.activePool.address,
 			contracts.defaultPool.address,
 			contracts.priceFeedTestnet.address,
@@ -315,7 +315,7 @@ class DeploymentHelper {
 			contracts.uToken.address,
 			contracts.sortedTroves.address,
 			YOUContracts.youStaking.address,
-			contracts.vestaParameters.address
+			contracts.youParameters.address
 		)
 
 		// set contracts in BorrowerOperations
@@ -327,13 +327,13 @@ class DeploymentHelper {
 			contracts.sortedTroves.address,
 			contracts.uToken.address,
 			YOUContracts.youStaking.address,
-			contracts.vestaParameters.address
+			contracts.youParameters.address
 		)
 
 		await contracts.stabilityPoolManager.setAddresses(contracts.adminContract.address)
 
 		await contracts.adminContract.setAddresses(
-			contracts.vestaParameters.address,
+			contracts.youParameters.address,
 			contracts.stabilityPoolManager.address,
 			contracts.borrowerOperations.address,
 			contracts.troveManager.address,
@@ -365,7 +365,7 @@ class DeploymentHelper {
 		await contracts.hintHelpers.setAddresses(
 			contracts.sortedTroves.address,
 			contracts.troveManager.address,
-			contracts.vestaParameters.address
+			contracts.youParameters.address
 		)
 	}
 
@@ -437,7 +437,7 @@ class DeploymentHelper {
 		if (!liquitySettings) return
 
 		//Set Liquity Configs (since the tests have been designed with it)
-		await coreContracts.vestaParameters.setCollateralParameters(
+		await coreContracts.youParameters.setCollateralParameters(
 			ZERO_ADDRESS,
 			"1100000000000000000",
 			"1500000000000000000",
@@ -449,7 +449,7 @@ class DeploymentHelper {
 			50
 		)
 
-		await coreContracts.vestaParameters.setCollateralParameters(
+		await coreContracts.youParameters.setCollateralParameters(
 			coreContracts.erc20.address,
 			"1100000000000000000",
 			"1500000000000000000",
@@ -463,3 +463,4 @@ class DeploymentHelper {
 	}
 }
 module.exports = DeploymentHelper
+

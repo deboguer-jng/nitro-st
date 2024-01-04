@@ -12,7 +12,7 @@ const externalAddrs = {
 	GOHM: "NONE",
 }
 
-const vestaAddresses = {
+const youAddresses = {
 	ADMIN_MULTI: "0x03859cff40DcC115D5DF6225E8167d5955E68FF1",
 	YOU_SAFE: "0x03859cff40DcC115D5DF6225E8167d5955E68FF1", // TODO
 	DEPLOYER: "0x03859cff40DcC115D5DF6225E8167d5955E68FF1",
@@ -37,7 +37,7 @@ const TX_CONFIRMATIONS = 1 // for local fork test
 
 module.exports = {
 	externalAddrs,
-	vestaAddresses,
+	youAddresses,
 	beneficiaries,
 	OUTPUT_FILE,
 	waitFunction,
@@ -46,3 +46,4 @@ module.exports = {
 	REDEMPTION_SAFETY,
 	IsMainnet,
 }
+

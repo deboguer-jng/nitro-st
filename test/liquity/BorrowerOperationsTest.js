@@ -38,7 +38,7 @@ contract("BorrowerOperations", async accounts => {
 	let borrowerOperations
 	let vstaStaking
 	let vstaToken
-	let vestaParams
+	let youParams
 	let erc20
 
 	let contracts
@@ -89,23 +89,23 @@ contract("BorrowerOperations", async accounts => {
 			defaultPool = contracts.defaultPool
 			borrowerOperations = contracts.borrowerOperations
 			hintHelpers = contracts.hintHelpers
-			vestaParams = contracts.vestaParameters
+			youParams = contracts.youParameters
 
 			vstaStaking = VSTAContracts.vstaStaking
 			vstaToken = VSTAContracts.vstaToken
 			communityIssuance = VSTAContracts.communityIssuance
 			erc20 = contracts.erc20
 
-			await vestaParams.sanitizeParameters(ZERO_ADDRESS)
-			await vestaParams.sanitizeParameters(erc20.address)
+			await youParams.sanitizeParameters(ZERO_ADDRESS)
+			await youParams.sanitizeParameters(erc20.address)
 
-			VST_GAS_COMPENSATION = await vestaParams.VST_GAS_COMPENSATION(ZERO_ADDRESS)
-			MIN_NET_DEBT = await vestaParams.MIN_NET_DEBT(ZERO_ADDRESS)
-			BORROWING_FEE_FLOOR = await vestaParams.BORROWING_FEE_FLOOR(ZERO_ADDRESS)
+			VST_GAS_COMPENSATION = await youParams.VST_GAS_COMPENSATION(ZERO_ADDRESS)
+			MIN_NET_DEBT = await youParams.MIN_NET_DEBT(ZERO_ADDRESS)
+			BORROWING_FEE_FLOOR = await youParams.BORROWING_FEE_FLOOR(ZERO_ADDRESS)
 
-			VST_GAS_COMPENSATION_ERC20 = await vestaParams.VST_GAS_COMPENSATION(erc20.address)
-			MIN_NET_DEBT_ERC20 = await vestaParams.MIN_NET_DEBT(erc20.address)
-			BORROWING_FEE_FLOOR_ERC20 = await vestaParams.BORROWING_FEE_FLOOR(erc20.address)
+			VST_GAS_COMPENSATION_ERC20 = await youParams.VST_GAS_COMPENSATION(erc20.address)
+			MIN_NET_DEBT_ERC20 = await youParams.MIN_NET_DEBT(erc20.address)
+			BORROWING_FEE_FLOOR_ERC20 = await youParams.BORROWING_FEE_FLOOR(erc20.address)
 
 			await vstaToken.unprotectedMint(multisig, dec(5, 24))
 
@@ -5958,8 +5958,8 @@ contract("BorrowerOperations", async accounts => {
 				extraParams: { from: bob },
 			})
 
-			const CCR = await vestaParams.CCR(ZERO_ADDRESS)
-			const CCRERC20 = await vestaParams.CCR(erc20.address)
+			const CCR = await youParams.CCR(ZERO_ADDRESS)
+			const CCRERC20 = await youParams.CCR(erc20.address)
 
 			assert.isFalse(await th.checkRecoveryMode(contracts))
 			assert.isFalse(await th.checkRecoveryMode(contracts, erc20.address))
@@ -6050,8 +6050,8 @@ contract("BorrowerOperations", async accounts => {
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
-			const CCR = await vestaParams.CCR(ZERO_ADDRESS)
-			const CCRERC20 = await vestaParams.CCR(erc20.address)
+			const CCR = await youParams.CCR(ZERO_ADDRESS)
+			const CCRERC20 = await youParams.CCR(erc20.address)
 
 			assert.isFalse(await th.checkRecoveryMode(contracts))
 			assert.isFalse(await th.checkRecoveryMode(contracts, erc20.address))
@@ -6210,8 +6210,8 @@ contract("BorrowerOperations", async accounts => {
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
-			const CCR = await vestaParams.CCR(ZERO_ADDRESS)
-			const CCRERC20 = await vestaParams.CCR(erc20.address)
+			const CCR = await youParams.CCR(ZERO_ADDRESS)
+			const CCRERC20 = await youParams.CCR(erc20.address)
 
 			assert.isFalse(await th.checkRecoveryMode(contracts))
 			assert.isFalse(await th.checkRecoveryMode(contracts, erc20.address))
@@ -6308,8 +6308,8 @@ contract("BorrowerOperations", async accounts => {
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
-			const CCR = await vestaParams.CCR(ZERO_ADDRESS)
-			const CCRERC20 = await vestaParams.CCR(erc20.address)
+			const CCR = await youParams.CCR(ZERO_ADDRESS)
+			const CCRERC20 = await youParams.CCR(erc20.address)
 
 			assert.isFalse(await th.checkRecoveryMode(contracts))
 			assert.isFalse(await th.checkRecoveryMode(contracts, erc20.address))
@@ -6442,8 +6442,8 @@ contract("BorrowerOperations", async accounts => {
 				ICR: toBN(dec(2, 18)),
 				extraParams: { from: bob },
 			})
-			const CCR = await vestaParams.CCR(ZERO_ADDRESS)
-			const CCRERC20 = await vestaParams.CCR(erc20.address)
+			const CCR = await youParams.CCR(ZERO_ADDRESS)
+			const CCRERC20 = await youParams.CCR(erc20.address)
 
 			assert.isFalse(await th.checkRecoveryMode(contracts))
 			assert.isFalse(await th.checkRecoveryMode(contracts, erc20.address))
@@ -13357,3 +13357,4 @@ contract("Reset chain state", async accounts => {})
  2)In security phase:
  -'Negative' tests for all the above functions.
  */
+

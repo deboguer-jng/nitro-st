@@ -1,18 +1,18 @@
-pragma solidity ^0.8.10;
+pragma solidity 0.8.17;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "./Dependencies/CheckContract.sol";
 import "./Dependencies/ArbitroveBase.sol";
-import "./Interfaces/IVestaParameters.sol";
+import "./Interfaces/IYOUParameters.sol";
 
-contract VestaParameters is
-	IVestaParameters,
+contract YOUParameters is
+	IYOUParameters,
 	OwnableUpgradeable,
 	CheckContract,
 	ArbitroveBase
 {
-	string public constant NAME = "VestaParameters";
+	string public constant NAME = "YOUParameters";
 
 	uint256 public constant override DECIMAL_PRECISION = 1 ether;
 	uint256 public constant override _100pct = 1 ether; // 1e18 == 100%
@@ -51,6 +51,11 @@ contract VestaParameters is
 	address public adminContract;
 
 	bool public isInitialized;
+
+	/// @custom:oz-upgrades-unsafe-allow constructor
+	constructor() {
+		_disableInitializers();
+	}
 
 	modifier isController() {
 		require(msg.sender == owner() || msg.sender == adminContract, "Invalid Permissions");

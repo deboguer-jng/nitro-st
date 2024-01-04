@@ -90,9 +90,9 @@
 		"verification": "https://goerli.arbiscan.io/address/0x80DDF1BF498b7DD636F8879192d2A3F03768F60A#code"
 	},
 	"priceFeed": {
-		"address": "0x99f48Be62af0D2076eCdFBA6580C043Bd66427A4",
-		"txHash": "0x3ce1741407d356a2037281ff1fc9ce1e2cb99c20246421a8178b3dd22fd8612a",
-		"verification": "https://goerli.arbiscan.io/address/0x99f48Be62af0D2076eCdFBA6580C043Bd66427A4#code"
+		"address": "0x1730a475E124fA5ceAd771eDd76f1ACe99dCe82c",
+		"txHash": "0x186c5ce9daf09c9f70a92512240fcf578df9284932a046fb9720817117529643",
+		"verification": "https://goerli.arbiscan.io/address/0x1730a475E124fA5ceAd771eDd76f1ACe99dCe82c#code"
 	},
 	"adminContract": {
 		"address": "0xfD1c5912a9F9f4D3806d366859CA75787F69c441",
@@ -103,5 +103,10 @@
 		"address": "0x865069f6a678245bd260Aa91390477D7B76085b9",
 		"txHash": "0x56244d337eff7841d926a3e88243a8c56187d32cf2d80d7f12ee0ec1a0c8c645",
 		"verification": "https://goerli.arbiscan.io/address/0x865069f6a678245bd260Aa91390477D7B76085b9#code"
+	},
+	"youParameters": {
+		"address": "0x94F68a1Cc3DD4CEECE9Bdc7ad0AB9C997cE8727F",
+		"txHash": "0xb3fec82abfcb3f3598c20c10c037d090ecee0d6c4148c0f6c25f1524115fa02a",
+		"verification": "https://goerli.arbiscan.io/address/0x94F68a1Cc3DD4CEECE9Bdc7ad0AB9C997cE8727F#code"
 	}
 }

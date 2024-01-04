@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.10;
+pragma solidity 0.8.17;
 
 import "./Interfaces/IRedemptionManager.sol";
 import "./TroveManager.sol";
-import "./Dependencies/VestaBase.sol";
+import "./Dependencies/YouBase.sol";
 import "./Dependencies/CheckContract.sol";
 
-contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
-	using SafeMathUpgradeable for uint256;
+contract RedemptionManager is YouBase, CheckContract, IRedemptionManager {
 	string public constant NAME = "RedemptionManager";
 
 	TroveManager public troveManager;
@@ -53,16 +52,16 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 		);
 		TroveManager.Trove memory trove = troveManager.getTrove(vars._borrower, vars._asset);
 		// Determine the remaining amount (lot) to be redeemed, capped by the entire debt of the Trove minus the liquidation reserve
-		singleRedemption.ULot = VestaMath._min(
+		singleRedemption.ULot = YouMath._min(
 			_maxUamount,
-			trove.debt.sub(vestaParams.U_GAS_COMPENSATION(_asset))
+			trove.debt - youParams.U_GAS_COMPENSATION(_asset)
 		);
 		// Get the ETHLot of equivalent value in USD
-		singleRedemption.ETHLot = singleRedemption.ULot.mul(DECIMAL_PRECISION).div(_price);
+		singleRedemption.ETHLot = singleRedemption.ULot * DECIMAL_PRECISION / _price;
 		// Decrease the debt and collateral of the current Trove according to the U lot and corresponding ETH to send
-		uint256 newDebt = trove.debt.sub(singleRedemption.ULot);
-		uint256 newColl = trove.coll.sub(singleRedemption.ETHLot);
-		if (newDebt == vestaParams.U_GAS_COMPENSATION(_asset)) {
+		uint256 newDebt = trove.debt - singleRedemption.ULot;
+		uint256 newColl = trove.coll - singleRedemption.ETHLot;
+		if (newDebt == youParams.U_GAS_COMPENSATION(_asset)) {
 			// No debt left in the Trove (except for the liquidation reserve), therefore the trove gets closed
 			troveManager.removeStake(vars._asset, vars._borrower);
 			troveManager.closeTroveByRedemption(vars._asset, vars._borrower);
@@ -70,7 +69,7 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 				vars._asset,
 				_contractsCache,
 				vars._borrower,
-				vestaParams.U_GAS_COMPENSATION(vars._asset),
+				youParams.U_GAS_COMPENSATION(vars._asset),
 				newColl
 			);
 			emit TroveUpdated(
@@ -82,7 +81,7 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 				TroveManagerOperation.redeemCollateral
 			);
 		} else {
-			uint256 newNICR = VestaMath._computeNominalCR(newColl, newDebt);
+			uint256 newNICR = YouMath._computeNominalCR(newColl, newDebt);
 			/*
 			 * If the provided hint is out of date, we bail since trying to reinsert without a good hint will almost
 			 * certainly result in running out of gas.
@@ -91,7 +90,7 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 			 */
 			if (
 				newNICR != _partialRedemptionHintNICR ||
-				_getNetDebt(vars._asset, newDebt) < vestaParams.MIN_NET_DEBT(vars._asset)
+				_getNetDebt(vars._asset, newDebt) < youParams.MIN_NET_DEBT(vars._asset)
 			) {
 				singleRedemption.cancelledPartial = true;
 				return singleRedemption;
@@ -158,18 +157,18 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 			_firstRedemptionHint == address(0) ||
 			!_sortedTroves.contains(_asset, _firstRedemptionHint) ||
 			troveManager.getCurrentICR(_asset, _firstRedemptionHint, _price) <
-			vestaParams.MCR(_asset)
+			youParams.MCR(_asset)
 		) {
 			return false;
 		}
 		address nextTrove = _sortedTroves.getNext(_asset, _firstRedemptionHint);
 		return
 			nextTrove == address(0) ||
-			troveManager.getCurrentICR(_asset, nextTrove, _price) < vestaParams.MCR(_asset);
+			troveManager.getCurrentICR(_asset, nextTrove, _price) < youParams.MCR(_asset);
 	}
 
 	function _requireTCRoverMCR(address _asset, uint256 _price) internal view {
-		require(_getTCR(_asset, _price) >= vestaParams.MCR(_asset), "TroveManager: !TCR < MCR");
+		require(_getTCR(_asset, _price) >= youParams.MCR(_asset), "TroveManager: !TCR < MCR");
 	}
 
 	function _requireValidMaxFeePercentage(
@@ -177,7 +176,7 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 		uint256 _maxFeePercentage
 	) internal view {
 		require(
-			_maxFeePercentage >= vestaParams.REDEMPTION_FEE_FLOOR(_asset) &&
+			_maxFeePercentage >= youParams.REDEMPTION_FEE_FLOOR(_asset) &&
 				_maxFeePercentage <= DECIMAL_PRECISION,
 			"Max fee percent must be between 0.5% and 100%"
 		);
@@ -220,8 +219,8 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 		uint256 _baseRate
 	) internal view returns (uint256) {
 		return
-			VestaMath._min(
-				vestaParams.REDEMPTION_FEE_FLOOR(_asset).add(_baseRate),
+			YouMath._min(
+				youParams.REDEMPTION_FEE_FLOOR(_asset) + _baseRate,
 				DECIMAL_PRECISION
 			);
 	}
@@ -240,7 +239,7 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 		uint256 _redemptionRate,
 		uint256 _assetDraw
 	) internal pure returns (uint256) {
-		uint256 redemptionFee = _redemptionRate.mul(_assetDraw).div(DECIMAL_PRECISION);
+		uint256 redemptionFee = _redemptionRate * _assetDraw / DECIMAL_PRECISION;
 		require(redemptionFee < _assetDraw, "TroveManager: Too much fee");
 		return redemptionFee;
 	}
@@ -268,10 +267,10 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 	) internal returns (uint256) {
 		uint256 decayedBaseRate = troveManager.calcDecayedBaseRate(_asset);
 
-		uint256 redeemedUFraction = _ETHDrawn.mul(_price).div(_totalUSupply);
+		uint256 redeemedUFraction = _ETHDrawn * _price / _totalUSupply;
 
-		uint256 newBaseRate = decayedBaseRate.add(redeemedUFraction.div(BETA));
-		newBaseRate = VestaMath._min(newBaseRate, DECIMAL_PRECISION);
+		uint256 newBaseRate = decayedBaseRate + (redeemedUFraction / BETA);
+		newBaseRate = YouMath._min(newBaseRate, DECIMAL_PRECISION);
 		assert(newBaseRate > 0);
 
 		troveManager.updateBaseRateAndLastFeeOpTime(_asset, newBaseRate);
@@ -315,13 +314,13 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 			require(redemptionWhitelist[msg.sender], "Not whitelisted for Redemption");
 		}
 		require(
-			block.timestamp >= vestaParams.redemptionBlock(_asset),
+			block.timestamp >= youParams.redemptionBlock(_asset),
 			"TroveManager: Redemption is blocked"
 		);
 		RedeemCollateralVars memory vars;
 		ContractsCache memory contractsCache = ContractsCache(
-			vestaParams.activePool(),
-			vestaParams.defaultPool(),
+			youParams.activePool(),
+			youParams.defaultPool(),
 			troveManager.uToken(),
 			troveManager.youStaking(),
 			troveManager.sortedTroves(),
@@ -330,7 +329,7 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 		);
 		RedemptionTotals memory totals;
 		_requireValidMaxFeePercentage(_asset, _maxFeePercentage);
-		totals.price = vestaParams.priceFeed().fetchPrice(_asset);
+		totals.price = youParams.priceFeed().fetchPrice(_asset);
 		_requireTCRoverMCR(_asset, totals.price);
 		_requireAmountGreaterThanZero(_Uamount);
 		_requireUBalanceCoversRedemption(contractsCache.uToken, msg.sender, _Uamount);
@@ -351,7 +350,7 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 			while (
 				vars.currentBorrower != address(0) &&
 				troveManager.getCurrentICR(_asset, vars.currentBorrower, totals.price) <
-				vestaParams.MCR(_asset)
+				youParams.MCR(_asset)
 			) {
 				vars.currentBorrower = contractsCache.sortedTroves.getPrev(
 					_asset,
@@ -384,9 +383,9 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 				_partialRedemptionHintNICR
 			);
 			if (singleRedemption.cancelledPartial) break; // Partial redemption was cancelled (out-of-date hint, or new net debt < minimum), therefore we could not redeem from the last Trove
-			totals.totalUToRedeem = totals.totalUToRedeem.add(singleRedemption.ULot);
-			totals.totalAssetDrawn = totals.totalAssetDrawn.add(singleRedemption.ETHLot);
-			totals.remainingU = totals.remainingU.sub(singleRedemption.ULot);
+			totals.totalUToRedeem = totals.totalUToRedeem + singleRedemption.ULot;
+			totals.totalAssetDrawn = totals.totalAssetDrawn + singleRedemption.ETHLot;
+			totals.remainingU = totals.remainingU - singleRedemption.ULot;
 			vars.currentBorrower = vars.nextUserToCheck;
 		}
 		require(totals.totalAssetDrawn > 0, "TroveManager: Unable to redeem");
@@ -408,7 +407,7 @@ contract RedemptionManager is VestaBase, CheckContract, IRedemptionManager {
 			totals.ETHFee
 		);
 		contractsCache.youStaking.increaseF_Asset(_asset, totals.ETHFee);
-		totals.ETHToSendToRedeemer = totals.totalAssetDrawn.sub(totals.ETHFee);
+		totals.ETHToSendToRedeemer = totals.totalAssetDrawn - totals.ETHFee;
 		emit Redemption(
 			_asset,
 			_Uamount,

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.10;
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
+pragma solidity 0.8.17;
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
@@ -18,7 +17,6 @@ import "./Dependencies/ArbitroveBase.sol";
  * from the Default Pool to the Active Pool.
  */
 contract DefaultPool is OwnableUpgradeable, CheckContract, ArbitroveBase, IDefaultPool {
-	using SafeMathUpgradeable for uint256;
 	using SafeERC20Upgradeable for IERC20Upgradeable;
 
 	string public constant NAME = "DefaultPool";
@@ -33,6 +31,10 @@ contract DefaultPool is OwnableUpgradeable, CheckContract, ArbitroveBase, IDefau
 
 	mapping(address => uint256) internal assetsBalance;
 	mapping(address => uint256) internal UDebts; // debt
+
+	constructor() {
+		_disableInitializers();
+	}
 
 	// --- Dependency setters ---
 
@@ -92,7 +94,7 @@ contract DefaultPool is OwnableUpgradeable, CheckContract, ArbitroveBase, IDefau
 		uint256 safetyTransferAmount = SafetyTransfer.decimalsCorrection(_asset, _amount);
 		if (safetyTransferAmount == 0) return;
 
-		assetsBalance[_asset] = assetsBalance[_asset].sub(_amount);
+		assetsBalance[_asset] = assetsBalance[_asset] - _amount;
 
 		if (_asset != ETH_REF_ADDRESS) {
 			IERC20Upgradeable(_asset).safeTransfer(activePool, safetyTransferAmount);
@@ -110,7 +112,7 @@ contract DefaultPool is OwnableUpgradeable, CheckContract, ArbitroveBase, IDefau
 		address _asset,
 		uint256 _amount
 	) external override onlyWstETH(_asset) callerIsTroveManager {
-		UDebts[_asset] = UDebts[_asset].add(_amount);
+		UDebts[_asset] = UDebts[_asset] + _amount;
 		emit DefaultPoolUDebtUpdated(_asset, UDebts[_asset]);
 	}
 
@@ -118,7 +120,7 @@ contract DefaultPool is OwnableUpgradeable, CheckContract, ArbitroveBase, IDefau
 		address _asset,
 		uint256 _amount
 	) external override onlyWstETH(_asset) callerIsTroveManager {
-		UDebts[_asset] = UDebts[_asset].sub(_amount);
+		UDebts[_asset] = UDebts[_asset] - _amount;
 		emit DefaultPoolUDebtUpdated(_asset, UDebts[_asset]);
 	}
 
@@ -143,14 +145,14 @@ contract DefaultPool is OwnableUpgradeable, CheckContract, ArbitroveBase, IDefau
 	) external override onlyWstETH(_asset) callerIsActivePool {
 		require(_asset != ETH_REF_ADDRESS, "ETH Cannot use this functions");
 
-		assetsBalance[_asset] = assetsBalance[_asset].add(_amount);
+		assetsBalance[_asset] = assetsBalance[_asset] + _amount;
 		emit DefaultPoolAssetBalanceUpdated(_asset, assetsBalance[_asset]);
 	}
 
 	// --- Fallback function ---
 
 	receive() external payable callerIsActivePool {
-		assetsBalance[ETH_REF_ADDRESS] = assetsBalance[ETH_REF_ADDRESS].add(msg.value);
+		assetsBalance[ETH_REF_ADDRESS] = assetsBalance[ETH_REF_ADDRESS] + msg.value;
 		emit DefaultPoolAssetBalanceUpdated(ETH_REF_ADDRESS, assetsBalance[ETH_REF_ADDRESS]);
 	}
 }

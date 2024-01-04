@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.10;
+pragma solidity 0.8.17;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import "./Interfaces/ICollSurplusPool.sol";
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./Dependencies/CheckContract.sol";
 import "./Dependencies/SafetyTransfer.sol";
@@ -17,7 +16,6 @@ contract CollSurplusPool is
 	ArbitroveBase,
 	ICollSurplusPool
 {
-	using SafeMathUpgradeable for uint256;
 	using SafeERC20Upgradeable for IERC20Upgradeable;
 
 	string public constant NAME = "CollSurplusPool";
@@ -34,6 +32,10 @@ contract CollSurplusPool is
 	mapping(address => uint256) balances;
 	// Collateral surplus claimable by trove owners
 	mapping(address => mapping(address => uint256)) internal userBalances;
+
+	constructor() {
+		_disableInitializers();
+	}
 
 	// --- Contract setters ---
 
@@ -91,7 +93,7 @@ contract CollSurplusPool is
 	) external override onlyWstETH(_asset) {
 		_requireCallerIsTroveManager();
 
-		uint256 newAmount = userBalances[_account][_asset].add(_amount);
+		uint256 newAmount = userBalances[_account][_asset] + _amount;
 		userBalances[_account][_asset] = newAmount;
 
 		emit CollBalanceUpdated(_account, newAmount);
@@ -114,7 +116,7 @@ contract CollSurplusPool is
 		userBalances[_account][_asset] = 0;
 		emit CollBalanceUpdated(_account, 0);
 
-		balances[_asset] = balances[_asset].sub(claimableCollEther);
+		balances[_asset] = balances[_asset] - claimableCollEther;
 		emit AssetSent(_account, safetyTransferclaimableColl);
 
 		if (_asset == ETH_REF_ADDRESS) {
@@ -130,7 +132,7 @@ contract CollSurplusPool is
 		uint256 _amount
 	) external override onlyWstETH(_asset) {
 		_requireCallerIsActivePool();
-		balances[_asset] = balances[_asset].add(_amount);
+		balances[_asset] = balances[_asset] + _amount;
 	}
 
 	// --- 'require' functions ---
@@ -157,6 +159,6 @@ contract CollSurplusPool is
 
 	receive() external payable {
 		_requireCallerIsActivePool();
-		balances[ETH_REF_ADDRESS] = balances[ETH_REF_ADDRESS].add(msg.value);
+		balances[ETH_REF_ADDRESS] = balances[ETH_REF_ADDRESS] + msg.value;
 	}
 }

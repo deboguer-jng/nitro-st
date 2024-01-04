@@ -1,28 +1,31 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.10;
+pragma solidity 0.8.17;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import "./BaseMath.sol";
-import "./VestaMath.sol";
+import "./YouMath.sol";
 import "./ArbitroveBase.sol";
 import "../Interfaces/IActivePool.sol";
 import "../Interfaces/IDefaultPool.sol";
 import "../Interfaces/IPriceFeed.sol";
-import "../Interfaces/IVestaBase.sol";
+import "../Interfaces/IYouBase.sol";
 
 /*
  * Base contract for TroveManager, BorrowerOperations and StabilityPool. Contains global system constants and
  * common functions.
  */
-contract VestaBase is ArbitroveBase, BaseMath, IVestaBase, OwnableUpgradeable {
-	using SafeMathUpgradeable for uint256;
+contract YouBase is ArbitroveBase, BaseMath, IYouBase, OwnableUpgradeable {
 	address public constant ETH_REF_ADDRESS = address(0);
 
-	IVestaParameters public override vestaParams;
+	IYOUParameters public override youParams;
 
-	function setVestaParameters(address _vaultParams) public onlyOwner {
-		vestaParams = IVestaParameters(_vaultParams);
+	constructor() {
+		_disableInitializers();
+	}
+
+	function setYouParameters(address _vaultParams) public onlyOwner {
+		youParams = IYOUParameters(_vaultParams);
 		emit VaultParametersBaseChanged(_vaultParams);
 	}
 
@@ -30,11 +33,11 @@ contract VestaBase is ArbitroveBase, BaseMath, IVestaBase, OwnableUpgradeable {
 
 	// Returns the composite debt (drawn debt + gas compensation) of a trove, for the purpose of ICR calculation
 	function _getCompositeDebt(address _asset, uint256 _debt) internal view returns (uint256) {
-		return _debt.add(vestaParams.U_GAS_COMPENSATION(_asset));
+		return _debt + youParams.U_GAS_COMPENSATION(_asset);
 	}
 
 	function _getNetDebt(address _asset, uint256 _debt) internal view returns (uint256) {
-		return _debt.sub(vestaParams.U_GAS_COMPENSATION(_asset));
+		return _debt - youParams.U_GAS_COMPENSATION(_asset);
 	}
 
 	// Return the amount of ETH to be drawn from a trove's collateral and sent as gas compensation.
@@ -42,28 +45,28 @@ contract VestaBase is ArbitroveBase, BaseMath, IVestaBase, OwnableUpgradeable {
 		address _asset,
 		uint256 _entireColl
 	) internal view returns (uint256) {
-		return _entireColl / vestaParams.PERCENT_DIVISOR(_asset);
+		return _entireColl / youParams.PERCENT_DIVISOR(_asset);
 	}
 
 	function getEntireSystemColl(address _asset) public view returns (uint256 entireSystemColl) {
-		uint256 activeColl = vestaParams.activePool().getAssetBalance(_asset);
-		uint256 liquidatedColl = vestaParams.defaultPool().getAssetBalance(_asset);
+		uint256 activeColl = youParams.activePool().getAssetBalance(_asset);
+		uint256 liquidatedColl = youParams.defaultPool().getAssetBalance(_asset);
 
-		return activeColl.add(liquidatedColl);
+		return activeColl + liquidatedColl;
 	}
 
 	function getEntireSystemDebt(address _asset) public view returns (uint256 entireSystemDebt) {
-		uint256 activeDebt = vestaParams.activePool().getUDebt(_asset);
-		uint256 closedDebt = vestaParams.defaultPool().getUDebt(_asset);
+		uint256 activeDebt = youParams.activePool().getUDebt(_asset);
+		uint256 closedDebt = youParams.defaultPool().getUDebt(_asset);
 
-		return activeDebt.add(closedDebt);
+		return activeDebt + closedDebt;
 	}
 
 	function _getTCR(address _asset, uint256 _price) internal view returns (uint256 TCR) {
 		uint256 entireSystemColl = getEntireSystemColl(_asset);
 		uint256 entireSystemDebt = getEntireSystemDebt(_asset);
 
-		TCR = VestaMath._computeCR(entireSystemColl, entireSystemDebt, _price);
+		TCR = YouMath._computeCR(entireSystemColl, entireSystemDebt, _price);
 
 		return TCR;
 	}
@@ -71,7 +74,7 @@ contract VestaBase is ArbitroveBase, BaseMath, IVestaBase, OwnableUpgradeable {
 	function _checkRecoveryMode(address _asset, uint256 _price) internal view returns (bool) {
 		uint256 TCR = _getTCR(_asset, _price);
 
-		return TCR < vestaParams.CCR(_asset);
+		return TCR < youParams.CCR(_asset);
 	}
 
 	function _requireUserAcceptsFee(
@@ -79,7 +82,7 @@ contract VestaBase is ArbitroveBase, BaseMath, IVestaBase, OwnableUpgradeable {
 		uint256 _amount,
 		uint256 _maxFeePercentage
 	) internal view {
-		uint256 feePercentage = _fee.mul(vestaParams.DECIMAL_PRECISION()).div(_amount);
+		uint256 feePercentage = _fee * youParams.DECIMAL_PRECISION() / _amount;
 		require(feePercentage <= _maxFeePercentage, "Fee exceeded provided maximum");
 	}
 }

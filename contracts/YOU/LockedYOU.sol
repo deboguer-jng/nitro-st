@@ -1,6 +1,5 @@
-pragma solidity ^0.8.10;
+pragma solidity 0.8.17;
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -11,7 +10,6 @@ This contract is reserved for Linear Vesting to the Team members and the Advisor
 */
 contract LockedYOU is Ownable, CheckContract {
 	using SafeERC20 for IERC20;
-	using SafeMath for uint256;
 
 	struct Rule {
 		uint256 createdDate;
@@ -55,8 +53,8 @@ contract LockedYOU is Ownable, CheckContract {
 		entitiesVesting[_entity] = Rule(
 			block.timestamp,
 			_totalSupply,
-			block.timestamp.add(SIX_MONTHS),
-			block.timestamp.add(TWO_YEARS),
+			block.timestamp + SIX_MONTHS,
+			block.timestamp + TWO_YEARS,
 			0
 		);
 
@@ -82,8 +80,8 @@ contract LockedYOU is Ownable, CheckContract {
 		sendYOUTokenToEntity(_entity);
 		Rule memory vestingRule = entitiesVesting[_entity];
 
-		assignedYOUTokens = assignedYOUTokens.sub(
-			vestingRule.totalSupply.sub(vestingRule.claimed)
+		assignedYOUTokens = assignedYOUTokens - (
+			vestingRule.totalSupply - vestingRule.claimed
 		);
 
 		delete entitiesVesting[_entity];
@@ -100,7 +98,7 @@ contract LockedYOU is Ownable, CheckContract {
 		Rule storage entityRule = entitiesVesting[_entity];
 		entityRule.claimed += unclaimedAmount;
 
-		assignedYOUTokens = assignedYOUTokens.sub(unclaimedAmount);
+		assignedYOUTokens = assignedYOUTokens - unclaimedAmount;
 		youToken.safeTransfer(_entity, unclaimedAmount);
 	}
 
@@ -119,20 +117,16 @@ contract LockedYOU is Ownable, CheckContract {
 		if (entityRule.startVestingDate > block.timestamp) return claimable;
 
 		if (block.timestamp >= entityRule.endVestingDate) {
-			claimable = entityRule.totalSupply.sub(entityRule.claimed);
+			claimable = entityRule.totalSupply - entityRule.claimed;
 		} else {
-			claimable = entityRule
-				.totalSupply
-				.div(TWO_YEARS)
-				.mul(block.timestamp.sub(entityRule.createdDate))
-				.sub(entityRule.claimed);
+			claimable = entityRule.totalSupply / TWO_YEARS * (block.timestamp - entityRule.createdDate) - entityRule.claimed;
 		}
 
 		return claimable;
 	}
 
 	function getUnassignYOUTokensAmount() public view returns (uint256) {
-		return youToken.balanceOf(address(this)).sub(assignedYOUTokens);
+		return youToken.balanceOf(address(this)) - assignedYOUTokens;
 	}
 
 	function isEntityExits(address _entity) public view returns (bool) {

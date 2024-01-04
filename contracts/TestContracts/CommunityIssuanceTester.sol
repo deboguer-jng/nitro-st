@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.10;
+pragma solidity 0.8.17;
 import "../YOU/CommunityIssuance.sol";
 
 contract CommunityIssuanceTester is CommunityIssuance {
-	using SafeMathUpgradeable for uint256;
 
 	function obtainYOU(uint256 _amount) external {
 		youToken.transfer(msg.sender, _amount);

@@ -1,4 +1,4 @@
-pragma solidity ^0.8.10;
+pragma solidity 0.8.17;
 import "../YOU/CommunityIssuance.sol";
 
 import "@chainlink/contracts/src/v0.8/interfaces/FlagsInterface.sol";
