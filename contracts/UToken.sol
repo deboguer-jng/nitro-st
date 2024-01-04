@@ -3,7 +3,7 @@
 pragma solidity ^0.8.10;
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/tokens/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "./Dependencies/CheckContract.sol";
 import "./Interfaces/IUToken.sol";
@@ -73,16 +73,16 @@ contract UToken is CheckContract, Ownable, IUToken {
 
 	function swapMint(IERC20 _asset, address _account, uint256 _amount) external {
 		require(allowedSwapMintTokens[_asset], "Minting not allowed on this asset");
-		require(_asset.transferFrom(msg.sender, _amount));
+		require(_asset.transferFrom(msg.sender, address(this), _amount));
 		_mint(_account, _amount);
-		emit SwapMint(_asset, _account, _amount);
+		emit SwapMint(address(_asset), _account, _amount);
 	}
 
-	function swapRedeem(address _asset, uint256 _amount) external {
+	function swapRedeem(IERC20 _asset, uint256 _amount) external {
 		require(allowedSwapRedeemTokens[_asset], "Redemption not allowed on this asset");
 		require(_asset.transfer(msg.sender, _amount));
 		_burn(msg.sender, _amount);
-		emit SwapRedeem(_asset, _amount);
+		emit SwapRedeem(address(_asset), _amount);
 	}
 
 	function burn(address _account, uint256 _amount) external override {
