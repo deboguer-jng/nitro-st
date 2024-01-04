@@ -21,7 +21,7 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed, A
 	ITellorCaller public tellorCaller;
 
 	// Use to convert a price answer to an 18-digit precision uint
-	uint256 public constant TARGET_DIGITS = 18;
+	uint256 public constant TARGET_DIGITS = 8;
 	uint256 public constant TELLOR_DIGITS = 18;
 
 	uint256 public constant TIMEOUT = 4 hours;
@@ -490,7 +490,7 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed, A
 	}
 
 	function _scaleTellorPriceByDigits(uint256 _price) internal pure returns (uint256) {
-		return _price * 10 ** (TARGET_DIGITS - TELLOR_DIGITS);
+		return _price / 10 ** (TELLOR_DIGITS - TARGET_DIGITS);
 	}
 
 	function _getChainlinkResponses(
