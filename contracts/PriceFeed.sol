@@ -21,10 +21,10 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed, A
 	ITellorCaller public tellorCaller;
 
 	// Use to convert a price answer to an 18-digit precision uint
-	uint256 public constant TARGET_DIGITS = 18;
+	uint256 public constant TARGET_DIGITS = 8;
 	uint256 public constant TELLOR_DIGITS = 18;
 
-	uint256 public constant TIMEOUT = 4 hours;
+	uint256 public constant TIMEOUT = 20 hours;
 
 	uint256 private constant GRACE_PERIOD_TIME = 3600;
 
@@ -490,7 +490,7 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed, A
 	}
 
 	function _scaleTellorPriceByDigits(uint256 _price) internal pure returns (uint256) {
-		return _price * 10 ** (TARGET_DIGITS - TELLOR_DIGITS);
+		return _price / 10 ** (TELLOR_DIGITS - TARGET_DIGITS);
 	}
 
 	function _getChainlinkResponses(
@@ -505,17 +505,20 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed, A
 			ChainlinkResponse memory prevChainLinkEthUsd
 		)
 	{
-		currentChainlink = _getCurrentChainlinkResponse(_chainLinkOracle);
+		currentChainlink = _getCurrentChainlinkResponse(_chainLinkOracle, false, 0);
 		prevChainLink = _getPrevChainlinkResponse(
 			_chainLinkOracle,
 			currentChainlink.roundId,
-			currentChainlink.decimals
+			currentChainlink.originalDecimals,
+			false, 0
 		);
-		currentChainlinkEthUsd = _getCurrentChainlinkResponse(chainLinkETHUsdOracle);
+		currentChainlinkEthUsd = _getCurrentChainlinkResponse(chainLinkETHUsdOracle, true, 8);
 		prevChainLinkEthUsd = _getPrevChainlinkResponse(
 			chainLinkETHUsdOracle,
 			currentChainlinkEthUsd.roundId,
-			currentChainlinkEthUsd.decimals
+			currentChainlinkEthUsd.originalDecimals,
+			true,
+			8
 		);
 	}
 
@@ -632,8 +635,10 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed, A
 	// --- Oracle response wrapper functions ---
 
 	function _getCurrentChainlinkResponse(
-		AggregatorV3Interface _priceAggregator
-	) internal view returns (ChainlinkResponse memory chainlinkResponse) {
+		AggregatorV3Interface _priceAggregator,
+		bool reverse,
+		uint8 targetDecimals
+	) public view returns (ChainlinkResponse memory chainlinkResponse) {
 		// prettier-ignore
 		(
 				/*uint80 roundID*/,
@@ -656,6 +661,32 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed, A
 		if (timeSinceUp <= GRACE_PERIOD_TIME) {
 			return chainlinkResponse;
 		}
+
+		if (reverse) {
+			try _priceAggregator.decimals() returns (uint8 decimals) {
+				chainlinkResponse.decimals = decimals;
+			} catch {
+				return chainlinkResponse;
+			}
+
+			try _priceAggregator.latestRoundData() returns (
+				uint80 roundId,
+				int256 data,
+				uint256 /* startedAt */,
+				uint256 timestamp,
+				uint80 /* answeredInRound */
+			) {
+				chainlinkResponse.roundId = roundId;
+				chainlinkResponse.answer = int256(int256((10 ** chainlinkResponse.decimals) * (10 ** chainlinkResponse.decimals)) / data / int256(10 ** (chainlinkResponse.decimals - targetDecimals)));
+				chainlinkResponse.originalDecimals = chainlinkResponse.decimals;
+				chainlinkResponse.decimals = targetDecimals;
+				chainlinkResponse.timestamp = timestamp;
+				chainlinkResponse.success = true;
+				return chainlinkResponse;
+			} catch {
+				return chainlinkResponse;
+			}
+		}
 		try _priceAggregator.decimals() returns (uint8 decimals) {
 			chainlinkResponse.decimals = decimals;
 		} catch {
@@ -670,6 +701,7 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed, A
 			uint80 /* answeredInRound */
 		) {
 			chainlinkResponse.roundId = roundId;
+			chainlinkResponse.originalDecimals = chainlinkResponse.decimals;
 			chainlinkResponse.answer = data;
 			chainlinkResponse.timestamp = timestamp;
 			chainlinkResponse.success = true;
@@ -682,10 +714,33 @@ contract PriceFeed is OwnableUpgradeable, CheckContract, BaseMath, IPriceFeed, A
 	function _getPrevChainlinkResponse(
 		AggregatorV3Interface _priceAggregator,
 		uint80 _currentRoundId,
-		uint8 _currentDecimals
-	) internal view returns (ChainlinkResponse memory prevChainlinkResponse) {
+		uint8 _currentDecimals,
+		bool reverse,
+		uint8 targetDecimals
+	) public view returns (ChainlinkResponse memory prevChainlinkResponse) {
 		if (_currentRoundId == 0) {
 			return prevChainlinkResponse;
+		}
+
+		if (reverse) {
+			unchecked {
+				try _priceAggregator.getRoundData(_currentRoundId - 1) returns (
+					uint80 roundId,
+					int256 answer,
+					uint256 /* startedAt */,
+					uint256 timestamp,
+					uint80 /* answeredInRound */
+				) {
+					prevChainlinkResponse.roundId = roundId;
+					prevChainlinkResponse.answer = int256(int256((10 ** _currentDecimals) * (10 ** _currentDecimals)) / answer / int256(10 ** (_currentDecimals - targetDecimals)));
+					prevChainlinkResponse.timestamp = timestamp;
+					prevChainlinkResponse.decimals = targetDecimals;
+					prevChainlinkResponse.success = true;
+					return prevChainlinkResponse;
+				} catch {
+					return prevChainlinkResponse;
+				}
+			}
 		}
 
 		unchecked {

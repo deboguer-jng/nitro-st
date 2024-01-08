@@ -3,7 +3,8 @@
 pragma solidity 0.8.17;
 import "../StabilityPool.sol";
 
-contract StabilityPoolTester is StabilityPool {
+abstract contract StabilityPoolTester is StabilityPool {
+	using SafeMathUpgradeable for uint256;
 
 	function unprotectedPayable() external payable {
 		assetBalance = assetBalance + msg.value;
