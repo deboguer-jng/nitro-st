@@ -13,13 +13,13 @@ contract YOUToken is CheckContract, UERC20Permit {
 
 	constructor(
 		address _treasurySig
-	) UERC20Permit("U Protocol Token", "YOU", 18, 0x3c2269811836af69497E5F486A85D7316753cf62) {
+	) UERC20Permit("Your Omnichain U Protocol Governance Token", "YOU", 18, 0x3c2269811836af69497E5F486A85D7316753cf62) {
 		require(_treasurySig != address(0), "Invalid Treasury Sig");
 		treasury = _treasurySig;
 
 		//Lazy Mint to setup protocol.
 		//After the deployment scripts, deployer addr automatically send the fund to the treasury.
-		_mint(msg.sender, _1_MILLION * 50);
-		_mint(_treasurySig, _1_MILLION * 50);
+		_mint(msg.sender, _1_MILLION * 500);
+		_mint(_treasurySig, _1_MILLION * 500);
 	}
 }

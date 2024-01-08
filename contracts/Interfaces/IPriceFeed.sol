@@ -10,6 +10,7 @@ interface IPriceFeed {
 		uint256 timestamp;
 		bool success;
 		uint8 decimals;
+		uint8 originalDecimals;
 	}
 
 	struct TellorResponse {
